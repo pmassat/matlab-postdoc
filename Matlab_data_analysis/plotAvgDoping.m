@@ -1,4 +1,4 @@
-function plotAvgDoping(x,lgdarray,varargin)
+function plotAvgDoping(mystruct,lgdarray,startidx,endidx,varargin)
 %% Optional arguments
 nvarargs = length(varargin);
 optargs = {'Heat capacity of TmVO_4',true,'C_p (J\cdotmol^{-1}\cdotK^{-1})'};
@@ -8,16 +8,9 @@ optargs(1:nvarargs) = varargin;
 %% Actual plot
 close 
 figure
-if yerrbar==true
-for i=1:length(mystruct)
+for i=startidx:endidx
     errorbar(mystruct(i).T,mystruct(i).Cp,mystruct(i).stdCp,'.','MarkerSize',18,'DisplayName',['x = ',num2str(lgdarray(i))])
     hold on
-end
-else
-    for i=1:length(mystruct)
-        plot(mystruct(i).T,mystruct(i).Cp,'.','MarkerSize',18,'DisplayName',['x = ',num2str(lgdarray(i))])
-        hold on
-    end
 end
 xlabel('Temperature (K)')
 ylabel(ylbl)
