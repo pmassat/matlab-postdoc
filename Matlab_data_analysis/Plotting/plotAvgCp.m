@@ -1,4 +1,4 @@
-function plotAvgDoping(mystruct,lgdarray,startidx,endidx,varargin)
+function plotAvgCp(mystruct,lgdarray,startidx,endidx,varargin)
 %% Optional arguments
 nvarargs = length(varargin);
 optargs = {'Heat capacity of TmVO_4',true,'C_p (J\cdotmol^{-1}\cdotK^{-1})'};
