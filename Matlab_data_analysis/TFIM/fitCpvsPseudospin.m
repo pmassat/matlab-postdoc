@@ -37,7 +37,7 @@ opts.StartPoint = 0.868155684306992;
 % Plot fit with data.
 figure( 'Name', 'MF fit' );
 h = plot( fitresult, xData, yData );
-legend( h, 'Cp vs. gamma', 'MF fit', 'Location', 'NorthEast' );
+% legend( h, 'Cp vs. gamma', 'MF fit', 'Location', 'NorthEast' );
 % Label axes
 xlabel 'Total pseudospin'
 ylabel(ylbl)
