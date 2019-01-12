@@ -168,4 +168,14 @@ disp("Structure containing averaged data is called avgData")
 % 
 % 
 % 
+%% Export averaged Cp data to text file
+% savepath = 'C:\Users\Pierre\Desktop\Postdoc\YTmVO4\YTmVO4_HeatCapacity\YTmVO4_Cp_anaLsis\2018-10-17_YTmVO4_averaged_Cp\';
+% for i=L-3:L
+%     dpg(i);
+%     expstr(i) = fullfile(savepath, ['AnaLzeCpDRdoping_2018-11-30_YTmVO4_x=',num2str(dpg(i)),'.txt']);
+%     fid = fopen(expstr(i), 'wt');
+%     fprintf(fid, '%s\n', ['Exported from AnaLzeCpDRdoping_2018-10-10_YTmVO4_VTmAsO4.mlx on ',date]);  % header
+%     fclose(fid);
+%     dlmwrite(expstr(i),cat(2,avgData(i).T',avgData(i).Cp',avgData(i).stdCp'),'-append','delimiter','\t')
+% end
 % 
