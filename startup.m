@@ -9,5 +9,5 @@ set(0,'defaultAxesXMinorTick', 'on')
 
 % Ensure that the figure toolbar appears when opening a figure window
 % This setting is only for MatlabR2018b
-% set(groot,'defaultFigureCreateFcn',@(fig,~)addToolbarExplorationButtons(fig))
-% set(groot,'defaultAxesCreateFcn',@(ax,~)set(ax.Toolbar,'Visible','off'))
+set(groot,'defaultFigureCreateFcn',@(fig,~)addToolbarExplorationButtons(fig))
+set(groot,'defaultAxesCreateFcn',@(ax,~)set(ax.Toolbar,'Visible','off'))

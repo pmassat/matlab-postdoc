@@ -1,9 +1,9 @@
-function val = voigtIkedaCarpenter(t,params)
-a = params(1);
-b = params(4);
-R = params(5);
-gamma = params(2);
-sigma = params(3);
+function val = voigtIkedaCarpenter_ord(t,params)
+a = params(2);
+b = params(3);
+R = params(1);
+gamma = params(4);
+sigma = params(5);
 k = params(6);
 t0 = params(7);
 xi = t - t0;

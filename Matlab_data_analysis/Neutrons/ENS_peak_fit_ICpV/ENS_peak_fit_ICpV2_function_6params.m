@@ -1,4 +1,4 @@
-function [fitresult, gof] = ENS_peak_fit_ICpV_function_4params(hh0, I, hCenter, varargin)
+function [fitresult, gof] = ENS_peak_fit_ICpV2_function_6params(hh0, I, hCenter, varargin)
 %CREATEFIT(HH067,I67)
 %  Create a fit.
 %
@@ -19,19 +19,24 @@ function [fitresult, gof] = ENS_peak_fit_ICpV_function_4params(hh0, I, hCenter, 
 [xData, yData] = prepareCurveData(hh0,I);
 if nargin>3
     dataExcl = varargin{1};
-%     dataExcl = hh0<hCenter-.15 | hh0>hCenter+varargin{1};
 else dataExcl = hh0<hCenter-.15 | hh0>hCenter+0.2;
 end
+peak1InitCenter = hCenter-0.03;
+peak2InitCenter = hCenter*1.0;
 
+% I1*voigtIkedaCarpenter(x,[140,gamma1,6.6e-3,1,0,0.05,x01])+I2*voigtIkedaCarpenter(x,[140,gamma2,6.6e-3,1,0,0.05,x02])
 % Set up fittype and options.
-ft = fittype( 'I*voigtIkedaCarpenter(x,[alpha,gamma,6.6e-3,1,0,0.05,x0])', 'independent', 'x', 'dependent', 'y' );
-% ft = fittype( 'I*voigtIkedaCarpenter(x,[gamma,sigma,140,1,0,0.05,x0])', 'independent', 'x', 'dependent', 'y' );
+ft = fittype( ['I1*voigtIkedaCarpenter_ord(x,[0,140,0,gamma1,6.6e-3,0.05,x01])+',...
+    'I2*voigtIkedaCarpenter_ord(x,[0,140,0,gamma2,6.6e-3,0.05,x02])'],...
+    'independent', 'x', 'dependent', 'y' );
 excludedPoints = excludedata( xData, yData, 'Indices', dataExcl );
 opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
 opts.Display = 'Off';
-opts.Lower = [0 0 0 -Inf];
-opts.StartPoint = [2e5 200 1e-3 -8];% Initial parameter values when holding sigma constant
-% opts.StartPoint = [2e5 1e-3 0.01 -8];% Initial parameter values when holding alpha constant
+opts.Lower = [0 0 0 0 -Inf -Inf];
+opts.StartPoint = [2e5 2e5 1e-3 1e-3 peak1InitCenter peak2InitCenter];
+% the choice of initial parameters is critical to the convergence of the fit
+% *NOTE*: Matlab orders the fit parameters by alphabetical order and puts
+% capital letters before small ones
 opts.Exclude = excludedPoints;
 
 % Fit model to data.

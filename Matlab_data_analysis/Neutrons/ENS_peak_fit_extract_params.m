@@ -2,6 +2,8 @@ function [g,relErrGn,varargout] = ENS_peak_fit_extract_params(data_struct,dsfiel
 % function [g,relErrGn,a,relErrAn,s,relErrSn] = ENS_peak_fit_extract_params(data_struct,dsfield,varargin)
     if isfield(data_struct,dsfield)
 % dsfield should be of type 'cfit' or 'sfit'
+    message1 = "Positive and negative error bars are ";
+    message2 = "the same for parameter ";
 
 %% Compute confidence intervals of fit
     % dfe = cell2mat( arrayfun(@(c) c.gof.dfe, data_struct.', 'Uniform', 0) );
@@ -16,52 +18,63 @@ function [g,relErrGn,varargout] = ENS_peak_fit_extract_params(data_struct,dsfiel
     cftp = cft(2:2:end,:);% extract upper bounds of interval
 
 %% Extract fit parameter gamma
-        g = extract_structure_field(data_struct,dsfield,'gamma');
-        % Use confidence intervals to determine the error on the fit parameters
-        errGn = abs(g-cftm(:,3));errGp = abs(g-cftp(:,3));% standard errors
-        relErrGn = errGn./g;relErrGp = errGp./g;% relative standard errors
+    g = extract_structure_field(data_struct,dsfield,'gamma');
 
-%% Same for parameter alpha, if it exists
-        try % if the fit object does not have any parameter called "alpha", just ignore and continue
+%% Extract fit parameter alpha if it exists and compute error on gamma
+        try % if the fit object has a parameter called "alpha", extract this parameter
             a = extract_structure_field(data_struct,dsfield,'alpha');
             varargout{1} = a;
             errAn = abs(a-cftm(:,2));errAp = abs(a-cftp(:,2));% negative and positive
             relErrAn = errAn./a;relErrAp = errAp./a;% negative and positive
             varargout{2} = relErrAn;
+% along with error on gamma, which will come in third position in the cfit
+% object and hence the corresponding erros bars will be in 3rd position in
+% the confidence interval
+            % Use confidence intervals to determine the error on the fit parameters
+            errGn = abs(g-cftm(:,3));errGp = abs(g-cftp(:,3));% standard errors
+            relErrGn = errGn./g;relErrGp = errGp./g;% relative errors
+            if nargin>2
+% Check that negative and positive errors on alpha are equal when rounded to the 6th 
+% digit in relative value (they can be different if not rounded due to
+% numerical discretization)
+                if isequal(round(relErrAn,6),round(relErrAp,6))%
+                    disp(message1 + message2 + "alpha")
+                else warning(message1 + "NOT " + message2 + "alpha")
+                end
+            end
+        catch % otherwise extract only parameter gamma, which then comes in second position in the cfit object
+            errGn = abs(g-cftm(:,2));errGp = abs(g-cftp(:,2));% standard errors
+            relErrGn = errGn./g;relErrGp = errGp./g;% relative errors
+        end
+
+        if nargin>2
+% Check that negative and positive errors on gamma are equal when rounded to the 6th 
+% digit in relative value (they can be different if not rounded due to
+% numerical discretization)
+            if isequal(round(relErrGn,6),round(relErrGp,6))%
+                disp(message1 + message2 + "gamma")
+            else warning(message1 + "NOT " + message2 + "gamma")
+            end
         end
         
 %% Same for parameter sigma, if it exists
-        try % if the fit object does not have any parameter called "sigma", just ignore and continue
+        try % if the fit object has a parameter called "sigma", extract this parameter
             s = extract_structure_field(data_struct,dsfield,'sigma');
             varargout{3} = s;
             errSn = abs(s-cftm(:,4));errSp = abs(s-cftp(:,4));
             relErrSn = errSn./s;relErrSp = errSp./s;
             varargout{4} = relErrSn;
-        end
-%     if isfield(data_struct,dsfield)
-% % When dsfield is of the type 'gof'
-%         r = extract_structure_field(data_struct,dsfield,'rsquare');
-%     end
-%     gamma = cell2mat( arrayfun(@(c) c.fitresult.gamma, data_struct.', 'Uniform', 0) );
-%     sigma = cell2mat( arrayfun(@(c) c.fitresult.sigma, data_struct.', 'Uniform', 0) );
-%     alpha = cell2mat( arrayfun(@(c) c.fitresult.alpha, data_struct.', 'Uniform', 0) );
-%     rsquare = cell2mat( arrayfun(@(c) c.gof.rsquare, data_struct.', 'Uniform', 0) );
-% 
-% 	if nargin>2
-% Check that negative and positive errors are equal when rounded to the 6th 
+            if nargin>2
+% Check that negative and positive errors on sigma are equal when rounded to the 6th 
 % digit in relative value (they can be different if not rounded due to
 % numerical discretization)
-%         message = "Positive and negative error bars are the same for parameter ";
-%         if isequal(round(relErrAn,6),round(relErrAp,6))%
-%             disp(message + "alpha")
-%         end
-%         if isequal(round(relErrGn,6),round(relErrGp,6))%
-%             disp(message + "gamma")
-%         end
-%         if isequal(round(relErrSn,6),round(relErrSp,6))%
-%             disp(message + "sigma")
-%         end
-%     end
+                if isequal(round(relErrSn,6),round(relErrSp,6))%
+                    disp(message1 + message2 + "sigma")
+                else warning(message1 + "NOT " + message2 + "sigma")
+                end
+            end
+        end % otherwise just ignore and continue (no 'catch' statement)
+
     else
         warning(['Structure does not have any field called "' dsfield '"'])
     end

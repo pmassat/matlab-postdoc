@@ -1,4 +1,4 @@
-function [fitresult, gof] = ENS_peak_fit_ICpV_function_3params(hh0, I, hCenter)
+function [fitresult, gof] = ENS_peak_fit_ICpV_function_3params(hh0, I, hCenter, varargin)
 %CREATEFIT(HH067,I67)
 %  Create a fit.
 %
@@ -17,29 +17,25 @@ function [fitresult, gof] = ENS_peak_fit_ICpV_function_3params(hh0, I, hCenter)
 
 %% Fit: 'untitled fit 1'.
 [xData, yData] = prepareCurveData(hh0,I);
-dataExcl = hh0<hCenter-.15 | hh0>hCenter+0.2;
-peak1InitCenter = hCenter*1.0025;
-peak2InitCenter = hCenter*0.9975;
+if nargin>3
+    dataExcl = varargin{1};
+else dataExcl = hh0<hCenter-.15 | hh0>hCenter+0.2;
+end
 
 % Set up fittype and options.
-ft = fittype( 'I*voigtIkedaCarpenter(x,[gamma,0.0066,1.38e+02,1,0,0.05,x0])', 'independent', 'x', 'dependent', 'y' );
+% ft = fittype( 'I*voigtIkedaCarpenter(x,[140,gamma,6.6e-3,1,0,0.05,x0])',...
+% ft = fittype( 'I*voigtIkedaCarpenter_ord(x,[0.34,140,0.18,gamma,6.6e-3,0.05,x0])',...
+ft = fittype( 'I*voigtIkedaCarpenter_ord(x,[0,140,0,gamma,6.6e-3,0.05,x0])',...
+    'independent', 'x', 'dependent', 'y' );
 excludedPoints = excludedata( xData, yData, 'Indices', dataExcl );
 opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
 opts.Display = 'Off';
 opts.Lower = [0 0 -Inf];
-opts.StartPoint = [200000 0.01 -8];
+opts.StartPoint = [5e5 1e-3 hCenter];
+% the choice of initial parameters is critical to the convergence of the fit
 opts.Exclude = excludedPoints;
 
 % Fit model to data.
 [fitresult, gof] = fit( xData, yData, ft, opts );
-
-% % Plot fit with data.
-% figure( 'Name', 'untitled fit 1' );
-% h = plot( fitresult, xData, yData, excludedPoints );
-% legend( h, 'I vs. hh0', 'Excluded I vs. hh0', 'fit ICpV', 'Location', 'NorthEast' );
-% % Label axes
-% xlabel("hh0")
-% ylabel("I (a.u.)")
-% grid on
 
 

@@ -1,4 +1,4 @@
-function [fitresult, gof] = ENS_peak_fit_gauss2(hh0, I, hCenter)
+function [fitresult, gof] = ENS_peak_fit_gauss2_function(hh0, I, hCenter)
 %CREATEFIT(HH0,I)
 %  Create a fit.
 %

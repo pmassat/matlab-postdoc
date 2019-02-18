@@ -1,4 +1,4 @@
-function [fitresult, gof] = ENS_peak_fit_ICpV_function_4params(hh0, I, hCenter, varargin)
+function [fitresult, gof] = ENS_peak_fit_ICpV_function_7params(hh0, I, hCenter, varargin)
 %CREATEFIT(HH067,I67)
 %  Create a fit.
 %
@@ -24,17 +24,17 @@ else dataExcl = hh0<hCenter-.15 | hh0>hCenter+0.2;
 end
 
 % Set up fittype and options.
-ft = fittype( 'I*voigtIkedaCarpenter(x,[alpha,gamma,6.6e-3,1,0,0.05,x0])', 'independent', 'x', 'dependent', 'y' );
-% ft = fittype( 'I*voigtIkedaCarpenter(x,[gamma,sigma,140,1,0,0.05,x0])', 'independent', 'x', 'dependent', 'y' );
+% ft = fittype( 'I*voigtIkedaCarpenter(x,[alpha,gamma,sigma,beta,R,0.05,x0])', 'independent', 'x', 'dependent', 'y' );
+ft = fittype( 'I*voigtIkedaCarpenter_ord(x,[R,alpha,beta,gamma,sigma,0.05,x0])', 'independent', 'x', 'dependent', 'y' );
 excludedPoints = excludedata( xData, yData, 'Indices', dataExcl );
 opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
 opts.Display = 'Off';
-opts.Lower = [0 0 0 -Inf];
-opts.StartPoint = [2e5 200 1e-3 -8];% Initial parameter values when holding sigma constant
-% opts.StartPoint = [2e5 1e-3 0.01 -8];% Initial parameter values when holding alpha constant
+opts.Lower = [0 0 0 0 0 0 -Inf];
+opts.StartPoint = [5e5 0.5 200 1 1e-3 0.01 hCenter];
+% fit parameters are computed in alphabetical order, with capital letters
+% preceding small ones
 opts.Exclude = excludedPoints;
 
 % Fit model to data.
 [fitresult, gof] = fit( xData, yData, ft, opts );
-
 

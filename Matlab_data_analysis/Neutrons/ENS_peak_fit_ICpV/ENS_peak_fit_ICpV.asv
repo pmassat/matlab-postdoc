@@ -158,17 +158,17 @@ tbl3 = table(field,gamma3,relErrGn3,rsquare3,'VariableNames',...
 %% Identify peak maximum and width
 xM2 = ones(istart,1);
 fwhm2 = ones(istart,1);
-for i=istart:-1:iend
-    I = nDatap94(i).fit3rslt.I;
-    gamma = nDatap94(i).fit3rslt.gamma;
-    x0 = nDatap94(i).fit3rslt.x0;
+for i=istart%:-1:iend
+    I = nDatap94(i).fit3rslt.I
+    gamma = nDatap94(i).fit3rslt.gamma
+    x0 = nDatap94(i).fit3rslt.x0
     fnfit = @(x)-I*voigtIkedaCarpenter_ord(x,[0,140,0,gamma,6.6e-3,0.05,x0]);%fnfit = -1*[fit function] so that the maximum becomes a minimum
-    xM2(i) = fminbnd(fnfit,hc-.2,hc+.2);% Identify position of the maximum on interval [hc-0.2 hc+0.2]
-    M = -fnfit(xM2(i));% compute value of the maximum
+    xM2() = fminbnd(fnfit,hc-.2,hc+.2)% Identify position of the maximum on interval [hc-0.2 hc+0.2]
+    M = -fnfit(xM2)% compute value of the maximum
     fd = @(x)abs(fnfit(x)+M/2);
-    xhm1 = fminbnd(fd,xM2(i)-0.2,xM2(i));% identify x value for which function equals M/2 on interval [xM-0.2 xM]
-    xhm2 = fminbnd(fd,xM2(i),xM2(i)+0.2);% same on interval [xM xM+0.2]
-    fwhm2(i) = xhm2 - xhm1;% FWHM of big peak
+    xhm1 = fminbnd(fd,xM2-0.2,xM2);% identify x value for which function equals M/2 on interval [xM-0.2 xM]
+    xhm2 = fminbnd(fd,xM2,xM2+0.2);% same on interval [xM xM+0.2]
+    fwhm2 = xhm2 - xhm1;% FWHM of big peak
 end
 %%
 
@@ -201,5 +201,69 @@ for i=1:5:iend
     disp(nDatap94(i).fit6rslt)
 end
 
-
-
+%%
+lsplt = 30;
+for i=1:length(H)
+    if isequal(nDatap94(i).fit5rslt,[])
+        lsplt = i-1;
+        break
+    end
+    nDatap94(i).a1 = nDatap94(i).fit5rslt.a1;
+    nDatap94(i).b1 = nDatap94(i).fit5rslt.b1;
+    nDatap94(i).c1 = nDatap94(i).fit5rslt.c1;
+    nDatap94(i).a2 = nDatap94(i).fit5rslt.a2;
+    nDatap94(i).b2 = nDatap94(i).fit5rslt.b2;
+    nDatap94(i).c2 = nDatap94(i).fit5rslt.c2;
+    levelCfd = 2*tcdf(-1,nDatap94(i).gof.dfe);% level of confidence of fit
+    cft = confint(nDatap94(i).fit5rslt,1-levelCfd);% confidence interval of fit
+    stdC1= (cft(2,2)-cft(1,2))/2;% standard error on parameter b1
+    stdC2= (cft(2,5)-cft(1,5))/2;% standard error on parameter b2
+    nDatap94(i).splitting = abs(nDatap94(i).fit5rslt.b2-nDatap94(i).fit5rslt.b1)/8;
+    nDatap94(i).dsplt = (stdC2+stdC1)/8;
+end
+%%
+ntDatap94 = struct2table(nDatap94);
+%%
+hh0p85 = nDatap94(67).hh0;
+Ip85 = nDatap94(67).I;
+%%
+Msplit = cell2mat(ntDatap94.splitting);% convert splitting table into array
+Mdsplit = cell2mat(ntDatap94.dsplt);% same with error bars
+MH = H(1:lsplt);% field array with same length as splitting array
+avgtemp = round(mean(ntDatap94.temp),2);% average temperature of the full dataset
+%%
+A = 5.7e-3; Hc = 0.88;% fit parameters determined from Curve Fitting Tool
+fsplit = @(x) A*sqrt(1-(x/Hc)^2);% fitting function
+figure
+fplot(fsplit,'-r','LineWidth',2);% plot fit
+hold on
+indsep = 30;% index of last element used for fit
+errorbar(MH(1:indsep),Msplit(1:indsep),Mdsplit(1:indsep),'.b','MarkerSize',12);% plot data
+plot(MH(indsep+1:end),Msplit(indsep+1:end),'xk','MarkerSize',6);% plot exclude data points
+xlim([0 0.9]); ylim([0 6e-3]);
+title(strcat("Splitting of [880] ENS peak along [hh0] at ",num2str(avgtemp),"K"))
+xlabel("H (T)");ylabel("Relative peak splitting");
+%%
+figure
+plot(H(1:lsplt),extractfield(nDatap94,'a1'),'.')
+xlabel("H (T)");ylabel("a1");
+%%
+figure
+plot(H(1:lsplt),extractfield(nDatap94,'a2'),'.')
+xlabel("H (T)");ylabel("a2");
+%%
+figure
+plot(H(1:lsplt),extractfield(nDatap94,'b1'),'.')
+xlabel("H (T)");ylabel("b1");
+%%
+figure
+plot(H(1:lsplt),extractfield(nDatap94,'b2'),'.')
+xlabel("H (T)");ylabel("b2");
+%%
+figure
+plot(H(1:lsplt),extractfield(nDatap94,'c1'),'.')
+xlabel("H (T)");ylabel("c1");
+%%
+figure
+plot(H(1:lsplt),extractfield(nDatap94,'c2'),'.')
+xlabel("H (T)");ylabel("c2");

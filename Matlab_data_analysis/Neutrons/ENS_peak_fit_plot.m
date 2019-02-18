@@ -1,4 +1,4 @@
-function ENS_peak_fit_plot(hh0,I,hCenter,fitresult)
+function ENS_peak_fit_plot(hh0,I,hCenter,fitresult,varargin)
 %  Plot a fit.
 %
 %  Data for 'ICpV' (Ikeda-Carpenter-pseudo-Voigt) fit:
@@ -15,9 +15,11 @@ function ENS_peak_fit_plot(hh0,I,hCenter,fitresult)
 
 %% Plot fit result
 [xData, yData] = prepareCurveData(hh0,I);
-dataExcl = hh0<hCenter-.15 | hh0>hCenter+0.2;
-peak1InitCenter = hCenter*1.0025;
-peak2InitCenter = hCenter*0.9975;
+if nargin>4
+    dataExcl = varargin{1};
+%     dataExcl = hh0<hCenter-.15 | hh0>hCenter+varargin{1};
+else dataExcl = hh0<hCenter-.15 | hh0>hCenter+0.2;
+end
 excludedPoints = excludedata( xData, yData, 'Indices', dataExcl );
 
 % Plot fit with data.
