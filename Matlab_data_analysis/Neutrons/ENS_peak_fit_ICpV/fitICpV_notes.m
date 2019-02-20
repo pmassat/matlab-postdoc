@@ -1,6 +1,7 @@
 % Notes on fitICpV class:
 % Ideally: 
-% * Plot function with subplots if there is a double peak plot
+% * Plot function with subplots if there is a double peak plot, and with
+% possibility of input different number of free parameters for each peak
 % 
 % Steps:
 % * Finish adapting compute_fit method for single peak fit
