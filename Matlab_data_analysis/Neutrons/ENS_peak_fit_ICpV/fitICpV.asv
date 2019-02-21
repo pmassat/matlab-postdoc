@@ -1,28 +1,25 @@
 classdef fitICpV %< handle
     properties 
         X; Y;% X and Y data
+        hc;% peak center
         dataExcl;% logical that determines which data points to exclude from fit
         I = 2e5;% default value for the first fit parameter, if constrained (see function fitEqStr)
-% Defining these fit parameters as object properties allows to call
-% them both for fitting and plotting. The user must be careful however not
-% to change them between fitting and plotting, otherwise the plotted fit
-% will not correspond to the calculated one
+% On second thought, I am not sure if it is really useful to leave these
+% default parameters as object properties. The only case 
         R = 0;
         alpha = 140;
         beta = 0;
         gamma = 1e-3;
         sigma = 6.6e-3;
-        k = 0.05;
-        x0;% last fit parameter; 
-% Note that x0 is also the estimated peak position and is therefore also
-% used to determine the default range of excluded data points (see constructor)
+        k = 0.05;% default value for the last fit parameter
+        x0 = hc;
         freeParams; % cell array of cell arrays, each sub-cell array containing
 % the names of the free parameters for each fit. By default, it is assumed
 % that there is only one fit, i.e. one peak, with 2 free parameters:
 % intensity and position
     end
     methods
-        function obj = fitICpV(X, Y, xCenter)
+        function obj = fitICpV(X, Y, hCenter)
 %  Create a fit.
 %  Data for 'ICpV' (Ikeda-Carpenter-pseudo-Voigt) fit:
 %      X Input (numeric array), e.g. hh0, cut of data along hh0 direction
@@ -30,8 +27,8 @@ classdef fitICpV %< handle
 %      hCenter (integer): position (ideally center) of peak, in reciprocal space units 
             obj.X = X;
             obj.Y = Y;
-            obj.x0 = xCenter;
-            obj.dataExcl = obj.X<obj.x0-.15 | obj.X>obj.x0+0.2; 
+            obj.hc = hCenter;
+            obj.dataExcl = obj.X<obj.hc-.15 | obj.X>obj.hc+0.2; 
             obj.freeParams = {{'I',obj.I;'x0',obj.x0}};
         end
         function [fitresult, gof] = compute_fit(obj,varargin)
@@ -83,17 +80,17 @@ classdef fitICpV %< handle
                     % otherwise use the associated numerical value
                     end
                 end
-                infname = inFuncName(obj,paramName{1},freeParamSinglePeak);
+                infname = inFuncName(paramName{1},freeParamSinglePeak);
                 fitstr = strcat(infname,"*voigtIkedaCarpenter_ord(x,[");
                 % beginning of string defining the fit equation
                 for j2=2:length(paramName)-1
 % loop through each possible additional free parameter, in the order of eqParamName
-                    infname = inFuncName(obj,paramName{j2},freeParamSinglePeak);
+                    infname = inFuncName(paramName{j2},freeParamSinglePeak);
                     fitstr = strcat(fitstr,infname,",");
 % depending whether a parameter should be free or constrained in the fit,
 % add its name or its value, respectively
                 end
-                infname = inFuncName(obj,paramName{end},freeParamSinglePeak);
+                infname = inFuncName(paramName{end},freeParamSinglePeak);
                 fitstr = strcat(fitstr,string(infname),"])");
                 % end of string defining the fit equation
             end
