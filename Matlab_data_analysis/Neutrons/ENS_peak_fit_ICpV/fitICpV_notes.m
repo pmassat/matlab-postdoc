@@ -10,3 +10,5 @@
 % function for initialization of fit parameters
 
 % for j1=1:nPeaks;peaksParam{j1} = cell(length(eqParamName),2);for k1=1:length(eqParamName);peaksParam{j1}{k1,1} = strcat(eqParamName{k1},sprintf("%i",j1));end;end
+
+% 2019-02-20: start over with debugging of function 'inFuncName'

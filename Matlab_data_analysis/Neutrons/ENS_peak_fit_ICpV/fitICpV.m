@@ -49,34 +49,51 @@ classdef fitICpV < handle
 % Output:
 %       fitresult : a fit object representing the fit.
 %       gof : structure with goodness-of fit info.
-            obj.freeParams = varargin;
+            if nargin>1
+                obj.freeParams = varargin;
+                if nargin==2
+                    warning("Fit is unlikely to converge with only one "+...
+                        "fit parameter; it is advised to input at least two, "+...
+                        "or none, in which case peak intensity and position "+...
+                        "will be used.")
+                end
+            end
             nPeaks = length(obj.freeParams);
             eqParamName = {'I','R','alpha','beta','gamma','sigma','k','x0'};
 % Generic names of free parameters for the Ikeda-Carpenter-pseudo-Voigt fit
 % They are listed in the same order as specified in the definition of voigtIkedaCarpenter_ord
-            peaksParam = cell(1,nPeaks);
-            % Create list of parameter names for each peak, consisting of
-            % the names stored in the above 'eqParamName' cell array, each
-            % of them being concatenated with a peak number
+%             freeFitParams = repmat(obj.freeParams,1);
+%             % Create list of parameter names for each peak, consisting of
+%             % the names stored in the above 'eqParamName' cell array, each
+%             % of them being concatenated with a peak number
+            totalNumFreeParams = 0;% count the total number of free parameters
             for j1=1:nPeaks% j1 is the peak number
+                totalNumFreeParams = totalNumFreeParams + size(obj.freeParams{j1},1);
+                % the number of free parameters input by the user for
+                % peak #j1 equals the number of rows in 'obj.freeParams{j1}'
                 if size(obj.freeParams{j1},2)~=2
-                    warning(strcat("The free parameters for each peak ",...
-                        "should be formatted as a N x 2 cell array"...
-                        + newline + "e.g. {'gamma',1e-3;'alpha',200;",...
+                    error(strcat("Error: The array of free parameters for each peak ",...
+                        "should be formatted as a N x 2 cell array, ",...
+                        "each row containing the name and initial value ",...
+                        "of a parameter, ",...
+                        "e.g. {'gamma',1e-3;'alpha',200;",...
                         "'x0',-8.1},{'gamma',1e-3;'x0',-7.9}"));
                     break
                 end
-                peaksParam{j1} = cell(length(eqParamName),2);
-                % for each peak, create a cell array with 2 columns and as
-                % many rows as there are parameters
-                for k1=1:length(eqParamName)
+%                 freeFitParams{j1} = cell(length(eqParamName),2);
+%                 % for each peak, create a cell array with 2 columns and as
+%                 % many rows as there are parameters
+                for k1=1:size(obj.freeParams{j1},1)
 %                     peaksParam{j1}{k1} = cell(1,2);
-                    peaksParam{j1}{k1,1} = strcat(eqParamName{k1},sprintf("%i",j1));
-                    % the first column contains the parameter names,
-                    % including the peak number
-                    peaksParam{j1}{k1,2} = obj.(eqParamName{k1});
-                    % the second column contains the default value of the
-                    % parameter,
+                    if ~any(strcmp(obj.freeParams{j1}{k1,1},eqParamName),'all')
+                        error("Error: parameter names must be one of the following: " +...
+                            join(string(eqParamName)))
+                    end
+                    obj.freeParams{j1}{k1,1} = strcat(obj.freeParams{j1}{k1,1},sprintf("%i",j1));
+                    % rename the free parameter to include the peak number
+%                     obj.freeParams{j1}{k1,2} = obj.(eqParamName{k1});
+%                     % the second column contains the default value of the
+%                     % parameter,
                 end
             end
             
@@ -89,18 +106,23 @@ classdef fitICpV < handle
                 function inFName = inFuncName(obj,varName,paramsCell)
 % This function determines if string varName is contained in cell array paramsCell,
 % which should be a N x 2 array containing parameter names as strings in the first column, 
-% and the associated numerical value in the second column
-                    if any(strcmp(varName,string(paramsCell)),'all')
+% and the associated numerical value in the second column, even though this
+% second column is not used here
+                    paramsCellStr = string(paramsCell);
+                    % conversion to string array guaranties that all
+                    % elements of paramsCell will be taken into account
+                    % when performing the following 'strcmp' test
+                    if any(strcmp(varName,paramsCellStr),'all')
 % argument 'all' is needed for function any to test on all elements and
 % return a logical scalar, otherwise it returns a logical array, which does
 % not work with 'if' statement
                     % if string varName is contained in cell array paramsCell
-                        paramsCellStr = string(paramsCell);
                         idx = strcmp(varName,paramsCellStr);% index of string
                         inFName = paramsCellStr(idx,1);
                     % use it as is in the string used to define the fit in fittype
-                    else inFName = obj.(varName);
-                    % otherwise use the associated numerical value
+                    else; inFName = obj.(varName);
+                    % otherwise use the associated numerical value defined
+                    % as object property
                     end
                 end
                 infname = inFuncName(obj,paramName{1},freeParamSinglePeak);
@@ -121,15 +143,12 @@ classdef fitICpV < handle
             fullFitStr = fitEqStr(obj,eqParamName,obj.freeParams{1});
             % equation string for first peak
             if nPeaks>1
-                for i1 = 1:nPeaks
+                for i1=2:nPeaks
                     fullFitStr = fullFitStr + " + " + ...
                         fitEqStr(obj,eqParamName,obj.freeParams{i1});
                 end
             end
 %% Create arrays containing lower bounds and initial values of fit parameters
-            totalNumFreeParams = sum([size(obj.freeParams{1},1) size(obj.freeParams{end},1)]); 
-            % Given that each element of obj.freeParams should be shaped as
-            % a Ni x 2 array, where i is the element index in obj.freeParams
             lowBounds = zeros(1,totalNumFreeParams);%
             initParams = zeros(1,totalNumFreeParams);%
             % initialize arrays containing all the lower bounds and initial
@@ -154,7 +173,7 @@ classdef fitICpV < handle
 %% Perform fit
             [xData, yData] = prepareCurveData(obj.X,obj.Y);
             % Set up fittype and options.
-            ft = fittype( fitstr,'independent', 'x', 'dependent', 'y' );
+            ft = fittype( fullFitStr,'independent', 'x', 'dependent', 'y' );
             excludedPoints = excludedata( xData, yData, 'Indices', obj.dataExcl );
             opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
             opts.Display = 'Off';
