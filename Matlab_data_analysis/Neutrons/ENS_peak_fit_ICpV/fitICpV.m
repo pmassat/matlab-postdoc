@@ -1,4 +1,4 @@
-classdef fitICpV %< handle
+classdef fitICpV < handle
     properties 
         X; Y;% X and Y data
         dataExcl;% logical that determines which data points to exclude from fit
@@ -55,25 +55,45 @@ classdef fitICpV %< handle
 % Generic names of free parameters for the Ikeda-Carpenter-pseudo-Voigt fit
 % They are listed in the same order as specified in the definition of voigtIkedaCarpenter_ord
             peaksParam = cell(1,nPeaks);
-            for j1=1:nPeaks
+            % Create list of parameter names for each peak, consisting of
+            % the names stored in the above 'eqParamName' cell array, each
+            % of them being concatenated with a peak number
+            for j1=1:nPeaks% j1 is the peak number
+                if size(obj.freeParams{j1},2)~=2
+                    warning(strcat("The free parameters for each peak ",...
+                        "should be formatted as a N x 2 cell array"...
+                        + newline + "e.g. {'gamma',1e-3;'alpha',200;",...
+                        "'x0',-8.1},{'gamma',1e-3;'x0',-7.9}"));
+                    break
+                end
                 peaksParam{j1} = cell(length(eqParamName),2);
+                % for each peak, create a cell array with 2 columns and as
+                % many rows as there are parameters
                 for k1=1:length(eqParamName)
-                    peaksParam{j1}{k1} = cell(1,2);
-                    peaksParam{j1}{k1}{1} = strcat(eqParamName{k1},sprintf("%i",j1));
-                    peaksParam{j1}{k1}{2} = obj.(eqParamName{k1});
+%                     peaksParam{j1}{k1} = cell(1,2);
+                    peaksParam{j1}{k1,1} = strcat(eqParamName{k1},sprintf("%i",j1));
+                    % the first column contains the parameter names,
+                    % including the peak number
+                    peaksParam{j1}{k1,2} = obj.(eqParamName{k1});
+                    % the second column contains the default value of the
+                    % parameter,
                 end
             end
-            %% Identify free fit parameters
+            
+            %% Create full fit equation string 
+% depending on the number of peaks and the number of free fit parameters
+% for each peak
             function fitstr = fitEqStr(obj,paramName,freeParamSinglePeak)
-% Construct string defining the fit equation, depending on how many
+% Construct string defining the fit equation for a single peak, depending on how many
 % free parameters the object contains, as defined in obj.freeParams
-% peakIndex is the index of the peak i.e. of the fit: one can fit several peaks
-% at once if they 
                 function inFName = inFuncName(obj,varName,paramsCell)
 % This function determines if string varName is contained in cell array paramsCell,
 % which should be a N x 2 array containing parameter names as strings in the first column, 
 % and the associated numerical value in the second column
-                    if any(strcmp(varName,string(paramsCell)))
+                    if any(strcmp(varName,string(paramsCell)),'all')
+% argument 'all' is needed for function any to test on all elements and
+% return a logical scalar, otherwise it returns a logical array, which does
+% not work with 'if' statement
                     % if string varName is contained in cell array paramsCell
                         paramsCellStr = string(paramsCell);
                         idx = strcmp(varName,paramsCellStr);% index of string
@@ -98,31 +118,48 @@ classdef fitICpV %< handle
                 % end of string defining the fit equation
             end
             
-%% Create arrays containing lower bounds and initial values of fit parameters
-            lowBounds = zeros(sum([length(obj.freeParams{1}):length(obj.freeParams{end})]),1);
-            for j3=1:length(obj.freeParams)
-                lowBnds = zeros(length(obj.freeParams{j3})+2,1);% Most fit parameters have zero as lower bound
-                lowBnds(end) = -Inf;% except x0 which can be negative
-                initParam = ones(length(obj.freeParams{j3})+2,1);
-% Initilize array with length that depends on how many free parameters the
-% use wants in addition to intensity and position
-                initParam(1) = obj.I;% First free parameter is intensity
-                initParam(end) = obj.x0;% Last free parameter is position
-                for i=1:length(obj.freeParams{j3})% If the user inputs other free parameters
-                    initParam(i+1) = obj.(obj.freeParams{j3}{i});% initiliaze them
+            fullFitStr = fitEqStr(obj,eqParamName,obj.freeParams{1});
+            % equation string for first peak
+            if nPeaks>1
+                for i1 = 1:nPeaks
+                    fullFitStr = fullFitStr + " + " + ...
+                        fitEqStr(obj,eqParamName,obj.freeParams{i1});
                 end
             end
-            
+%% Create arrays containing lower bounds and initial values of fit parameters
+            totalNumFreeParams = sum([size(obj.freeParams{1},1) size(obj.freeParams{end},1)]); 
+            % Given that each element of obj.freeParams should be shaped as
+            % a Ni x 2 array, where i is the element index in obj.freeParams
+            lowBounds = zeros(1,totalNumFreeParams);%
+            initParams = zeros(1,totalNumFreeParams);%
+            % initialize arrays containing all the lower bounds and initial
+            % values of free fit parameters, so that their length is sum(Ni)
+            cntr = 0;% counter that increments at each iteration of the following loop
+            for j3=1:nPeaks
+                L = length(obj.freeParams{j3});
+                lowBnds = zeros(1,L);% Most fit parameters have zero as lower bound
+                    if any(strcmp("x0",string(obj.freeParams{j3})),'all')
+                        lowBnds(end) = -Inf;% except x0 which can be negative                        
+                    end
+                initPrm = ones(1,L);
+% Initilize array with length that depends on how many free parameters the user input
+                for i=1:length(obj.freeParams{j3})% If the user inputs free parameters
+                    initPrm(i) = obj.freeParams{j3}{i,2};% initiliaze them using the user input value
+                end
+                cntr = cntr + L;
+                lowBounds(cntr+1:cntr+L) = lowBnds;
+                initParams(cntr+1:cntr+L) = initPrm;
+            end
+
 %% Perform fit
             [xData, yData] = prepareCurveData(obj.X,obj.Y);
-            
             % Set up fittype and options.
             ft = fittype( fitstr,'independent', 'x', 'dependent', 'y' );
             excludedPoints = excludedata( xData, yData, 'Indices', obj.dataExcl );
             opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
             opts.Display = 'Off';
-            opts.Lower = lowBnds;% use the above defined arrays for lower bounds
-            opts.StartPoint = initParam;% and starting parameter values
+            opts.Lower = lowBounds;% use the above defined arrays for lower bounds
+            opts.StartPoint = initParams;% and starting parameter values
 % the choice of initial parameters is critical to the convergence of the fit
             opts.Exclude = excludedPoints;
             % Fit model to data.
