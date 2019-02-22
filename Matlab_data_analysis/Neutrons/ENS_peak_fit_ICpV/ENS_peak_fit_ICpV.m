@@ -10,8 +10,6 @@ for i=1:length(fieldinfo0p94K.FileName)
     nDatap94(i).field = fieldinfo0p94K.H_T(i);
     nDatap94(i).temp = fieldinfo0p94K.T_K(i);
 end
-%% Extract field column from data structure
-field = cell2mat( arrayfun(@(c) c.field, nDatap94(1:istart).', 'Uniform', 0) );
 %% Data formatting for curve fitting tool analysis
 i=67;
 hh67 = nDatap94(i).hh0;
@@ -24,23 +22,26 @@ hc = -8;% value of h in reciprocal space
 H = extractfield(nDatap94,'field');
 istart = length(H);
 iend = 37;
-datExcld = nDatap94(istart).hh0<hc-.7 | nDatap94(istart).hh0>hc+0.55 | (nDatap94(istart).hh0>hc-.35 & nDatap94(istart).hh0<hc-0.15)...
+field = cell2mat( arrayfun(@(c) c.field, nDatap94(1:istart).', 'Uniform', 0) );
+datExcld = nDatap94(istart).hh0<hc-.7 | nDatap94(istart).hh0>hc+0.55 |...
+    (nDatap94(istart).hh0>hc-.35 & nDatap94(istart).hh0<hc-0.15)...
      | (nDatap94(istart).hh0>hc+0.15 & nDatap94(istart).hh0<hc+0.2);% Exclude 
 % data points that correspond to other peaks as well as those that are too far away
 
 %% Perform fit with all 7 free parameters
-for i=istart:-1:iend
-    [nDatap94(i).fit7rslt, nDatap94(i).gof7] = ENS_peak_fit_ICpV_function_7params(...
-        nDatap94(i).hh0,nDatap94(i).I,hc,datExcld);%ufb);
+for i=istart%:-1:iend
+    myfit = fitICpV(nDatap94(i).hh0,nDatap94(i).I,hc)
+    myfit.dataExcl = datExcld;
+    [nDatap94(i).fit7rslt, nDatap94(i).gof7] = myfit.compute_fit({'I',5e5;...
+        'R',0.5;'alpha',200;'beta',1;'gamma',1e-3;'sigma',1e-2;'x0',hc});
     label = strcat("T=",num2str(round(nDatap94(i).temp,2)),"K & H=",...
         num2str(nDatap94(i).field),"T & 7 params fit");
     if mod(i,10)==7% plot data every 10 fields
-        ENS_peak_fit_plot(nDatap94(i).hh0,nDatap94(i).I,hc,nDatap94(i).fit7rslt,datExcld);%,ufb)
-        title(strcat("ENS pattern cut along [hh0] at ",label))
-        xlim([hc-.75 hc+.6]);
+%         myfit.plot_fit(nDatap94(i).fit7rslt);
+        title(strcat("ENS pattern cut along [hh0] at ",label));
+        xlim([hc-.8 hc+.6]);
     end
-    disp(strcat("ICpV1: ",label));
-    disp(nDatap94(i).fit7rslt);
+    disp(strcat("ICpV1: ",label)); disp(nDatap94(i).fit7rslt);
 end
 %% Extract 7-fit parameters from data structure
 [gamma7,relErrGm7,alpha7,relErrAm7,sigma7,relErrSm7] = ENS_peak_fit_extract_params(nDatap94(istart:-1:iend),'fit7rslt');

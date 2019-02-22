@@ -16,27 +16,23 @@ classdef fitICpV < handle
         x0;% last fit parameter; 
 % Note that x0 is also the estimated peak position and is therefore also
 % used to determine the default range of excluded data points (see constructor)
-%         fitEqn;
         freeParams; % cell array of cell arrays, each sub-cell array containing
-% % the names of the free parameters for each fit. By default, it is assumed
-% % that there is only one fit, i.e. one peak, with 2 free parameters:
-% % intensity and position
+% the names of the free parameters for each fit. By default, it is assumed
+% that there is only one fit, i.e. one peak, with 2 free parameters:
+% intensity and position
     end
     methods
-        function obj = fitICpV(X, Y, xCenter)
+        function obj = fitICpV(X, Y, xPeak)
 %  Create a fit.
 %  Data for 'ICpV' (Ikeda-Carpenter-pseudo-Voigt) fit:
 %      X Input (numeric array), e.g. hh0, cut of data along hh0 direction
 %      Y Input (numeric array), e.g. I, neutrons intensity received by detector, in arb. units
-%      hCenter (integer): position (ideally center) of peak, in reciprocal space units 
+%      xPeak (integer): position of peak, in reciprocal space units 
             obj.X = X;
             obj.Y = Y;
-            obj.x0 = xCenter;
+            obj.x0 = xPeak;
             obj.dataExcl = obj.X<obj.x0-.15 | obj.X>obj.x0+0.2; 
             obj.freeParams = {{'I1',obj.I;'x01',obj.x0}};
-%             obj.fitEqn = {strcat("I1*voigtIkedaCarpenter_ord(x,[",...
-%                 sprintf("%d,%d,%d,%d,%d,%d",obj.R,obj.alpha,obj.beta,obj.gamma,obj.sigma,obj.k),...
-%                 ",x01])")};
         end
         function [fitresult, gof] = compute_fit(obj,varargin)
 % Input: in addition to data defined in object (see constructor)
@@ -223,21 +219,14 @@ classdef fitICpV < handle
                         [obj.X(minIndex) obj.X(maxIndex)],'LineWidth',2);
                 end
             end
-            pfit = plot(Xfit,Yfit,'r-');
             pdat = plot(xData,yData,'xb','MarkerSize',9);
             pexcl = plot(obj.X(excludedPoints),obj.Y(excludedPoints),'xk',...
                 'MarkerSize',9);
-%             h = plot( fitresult, xData, yData, excludedPoints );
-%             legend( h, 'I vs. hh0', 'Excluded I vs. hh0', 'fit ICpV', 'Location', 'NorthEast' );
-%             legend(pdat,{'I vs. hh0'},pexcl,{'Excluded'},pfit,{'fit ICpV'});
+            pfit = plot(Xfit,Yfit,'r-');
             legend([pdat,pexcl,pfit],'I vs. hh0','Excluded','fit ICpV');
             % Label axes
-            xlabel("hh0"); ylabel("I (a.u.)")
-            if nargin>2
-                if isa(varargin{1},'double') && isequal(size(varargin{1}),[1 2])
-                    xlim(varargin{1});
-                end
-            end
+            xlabel("hh0"); ylabel("I (a.u.)");
+            xlim([obj.X(minIndex)-0.05 obj.X(maxIndex)+0.05]);
             grid on
         end
         
