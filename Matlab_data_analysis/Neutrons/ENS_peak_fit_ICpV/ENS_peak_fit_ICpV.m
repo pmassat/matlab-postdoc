@@ -2,7 +2,6 @@
 fieldinfo0p94K.FileName = strcat("HH0_",num2str(fieldinfo0p94K.FileID));
 for i=1:length(fieldinfo0p94K.FileName)
     tbl2 = ImportNeutronsLineCut(strcat(fieldinfo0p94K.FileName(i,:),".txt"));
-%     i = i+length(fieldsOrtho);
     nDatap94(i).file = fieldinfo0p94K.FileName(i,:);
     nDatap94(i).hh0 = tbl2.hh0;
     nDatap94(i).I = tbl2.I;
@@ -30,27 +29,23 @@ datExcld = nDatap94(istart).hh0<hc-.7 | nDatap94(istart).hh0>hc+0.55 |...
 
 %% Perform fit with all 7 free parameters
 for i=istart%:-1:iend
-    myfit = fitICpV(nDatap94(i).hh0,nDatap94(i).I,hc)
-    myfit.dataExcl = datExcld;
+    label = strcat("T=",num2str(round(nDatap94(i).temp,2)),"K & H=",num2str(nDatap94(i).field),"T & 7 params fit");
+    myfit = fitICpV(nDatap94(i).hh0,nDatap94(i).I,hc); myfit.dataExcl = datExcld;
     [nDatap94(i).fit7rslt, nDatap94(i).gof7] = myfit.compute_fit({'I',5e5;...
         'R',0.5;'alpha',200;'beta',1;'gamma',1e-3;'sigma',1e-2;'x0',hc});
-    label = strcat("T=",num2str(round(nDatap94(i).temp,2)),"K & H=",...
-        num2str(nDatap94(i).field),"T & 7 params fit");
     if mod(i,10)==7% plot data every 10 fields
-%         myfit.plot_fit(nDatap94(i).fit7rslt);
-        title(strcat("ENS pattern cut along [hh0] at ",label));
-        xlim([hc-.8 hc+.6]);
+        myfit.plot_fit(nDatap94(i).fit7rslt);
+        title(strcat("ENS pattern cut along [hh0] at ",label));% xlim([hc-.8 hc+.6]);
     end
     disp(strcat("ICpV1: ",label)); disp(nDatap94(i).fit7rslt);
 end
-%% Extract 7-fit parameters from data structure
+%% Extract 7-fit parameters from data structure and create table containing fit parameters 
 [gamma7,relErrGm7,alpha7,relErrAm7,sigma7,relErrSm7] = ENS_peak_fit_extract_params(nDatap94(istart:-1:iend),'fit7rslt');
 % [gamma7,relErrGm7,alpha7,relErrAm7,sigma7,relErrSm7] = ENS_peak_fit_extract_params(nDatap94(istart:-1:iend),'fit7rslt',1);
 % Add third argument (e.g. value 1) to check equality of positive and negative error bars for all three parameters
 % Note: the case where they are not equal has not been tested, so it may
 % raise an error when that happens (although it is unlikely)
 rsquare7 = extract_structure_field(nDatap94(istart:-1:iend),'gof7','rsquare');
-%% Create table containing fit parameters and corresponding relative standard errors
 % Check that both the values and errors make sense
 tbl7 = table(field,gamma7,relErrGm7,alpha7,relErrAm7,sigma7,relErrSm7,rsquare7,'VariableNames',...
     {'Field_Oe','gamma7','relErrG','alpha7','relErrA','sigma7','relErrS','rsquare7'})
@@ -68,16 +63,18 @@ for j=1:20
 end
 
 %% Perform fit with 5 free parameters: I, alpha, gamma, sigma, x0
-for i=istart:-1:iend
-    [nDatap94(i).fit5rslt, nDatap94(i).gof5] = ENS_peak_fit_ICpV_function_5params(...
-        nDatap94(i).hh0,nDatap94(i).I,hc,datExcld);%ufb);
-    label = strcat("T=",num2str(round(nDatap94(i).temp,2)),"K & H=",...
-        num2str(nDatap94(i).field),"T");
-%     ENS_peak_fit_plot(nDatap94(i).hh0,nDatap94(i).I,hc,nDatap94(i).fit5rslt,datExcld);%,ufb)
-%     title(strcat("ENS pattern cut along [hh0] at ",label))
-%     xlim([hc-.75 hc+.6]);
-    disp(strcat("Fit ICpV1 5 parameters at ",label));
-    disp(nDatap94(i).fit5rslt);
+for i=istart%:-1:iend
+    label = strcat("T=",num2str(round(nDatap94(i).temp,2)),"K & H=",num2str(nDatap94(i).field),"T");
+    myfit = fitICpV(nDatap94(i).hh0,nDatap94(i).I,hc); 
+    myfit.dataExcl = datExcld;
+    [nDatap94(i).fit5rslt, nDatap94(i).gof5] = myfit.compute_fit({'I',5e5;...
+        'R',0.5;'beta',1;'gamma',1e-3;'sigma',1e-2;'x0',hc});
+    if mod(i,10)==7% plot data every 10 fields
+        myfit.plot_fit(nDatap94(i).fit7rslt);
+        title(strcat("ENS pattern cut along [hh0] at ",label));
+%         xlim([hc-.8 hc+.6]);
+    end
+    disp(strcat("Fit ICpV1 5 parameters at ",label)); disp(nDatap94(i).fit5rslt);
 end
 %% Extract columns from data structure
 field = cell2mat( arrayfun(@(c) c.field, nDatap94(istart:-1:iend).', 'Uniform', 0) );
