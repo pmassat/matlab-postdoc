@@ -2,39 +2,52 @@ classdef fitICpV < handle
     properties 
         X; Y;% X and Y data
         dataExcl;% logical that determines which data points to exclude from fit
-        I = 2e5;% default value for the first fit parameter, if constrained (see function fitEqStr)
-% Defining these fit parameters as object properties allows to call
-% them both for fitting and plotting. The user must be careful however not
-% to change them between fitting and plotting, otherwise the plotted fit
-% will not correspond to the calculated one
-        R = 0;
-        alpha = 140;
-        beta = 0;
-        gamma = 1e-3;
-        sigma = 6.6e-3;
-        k = 0.05;
-        x0;% last fit parameter; 
+%         I = 2e5;% default value for the first fit parameter, if constrained (see function fitEqStr)
+% % Defining these fit parameters as object properties allows to call
+% % them both for fitting and plotting. The user must be careful however not
+% % to change them between fitting and plotting, otherwise the plotted fit
+% % will not correspond to the calculated one
+%         R = 0;
+%         alpha = 140;
+%         beta = 0;
+%         gamma = 1e-3;
+%         sigma = 6.6e-3;
+%         k = 0.05;
+%         x0;% last fit parameter; 
 % Note that x0 is also the estimated peak position and is therefore also
 % used to determine the default range of excluded data points (see constructor)
+        allParams;
         freeParams; % cell array of cell arrays, each sub-cell array containing
 % the names of the free parameters for each fit. By default, it is assumed
 % that there is only one fit, i.e. one peak, with 2 free parameters:
 % intensity and position
     end
     methods
-        function obj = fitICpV(X, Y, xPeak)
-%  Create a fit.
-%  Data for 'ICpV' (Ikeda-Carpenter-pseudo-Voigt) fit:
+%% Class constructor
+        function obj = fitICpV(X, Y, xPeaks)
+% Create a fit.
+% Data for 'ICpV' (Ikeda-Carpenter-pseudo-Voigt) fit:
 %      X Input (numeric array), e.g. hh0, cut of data along hh0 direction
 %      Y Input (numeric array), e.g. I, neutrons intensity received by detector, in arb. units
 %      xPeak (integer): position of peak, in reciprocal space units 
-            obj.X = X;
-            obj.Y = Y;
-            obj.x0 = xPeak;
-            obj.dataExcl = obj.X<obj.x0-.15 | obj.X>obj.x0+0.2; 
-            obj.freeParams = {{'I1',obj.I;'x01',obj.x0}};
+            if ~isa(X,'double') || ~isa(Y,'double') || ~isa(xPeaks,'double')
+               error('Input parameters must all be double.')                
+            end
+            obj.X = X; obj.Y = Y;
+            obj.dataExcl = obj.X<min(xPeaks)-.15 | obj.X>max(xPeaks)+0.2; 
+            nPeaks = length(xPeaks);
+            fixedKeySet = cell(1,nPeaks); fixedValueSet = cell(1,nPeaks); 
+            obj.allParams = cell(1,nPeaks); obj.freeParams = cell(1,nPeaks);
+            for i0=1:length(xPeaks)
+                fixedKeySet{i0} = {'I','R','alpha','beta','gamma','sigma','k','x0'};
+                fixedValueSet{i0} = [2e5, 0, 140, 0, 1e-3, 6.6e-3, 0.05, xPeaks(i0)];
+                obj.allParams{i0} = containers.Map(fixedKeySet{i0},fixedValueSet{i0});
+                obj.freeParams{i0} = {};%containers.Map('KeyType','char','ValueType','double');
+            end
         end
-        function [fitresult, gof] = compute_fit(obj,varargin)
+        
+%% Compute fit method
+        function [fitresult, gof] = compute_fit(obj)
 % Input: in addition to data defined in object (see constructor)
 %       Additional arguments input by the user in varargin should be
 %       cell arrays, each containing the names and initial values (StartPoint, see fit execution code)
@@ -49,94 +62,107 @@ classdef fitICpV < handle
 % Output:
 %       fitresult : a fit object representing the fit.
 %       gof : structure with goodness-of fit info.
-            if nargin>1
-                obj.freeParams = varargin;
-                obj.freeParams = varargin;
-            end
-            nPeaks = length(obj.freeParams);
-            eqParamName = {'I';'R';'alpha';'beta';'gamma';'sigma';'k';'x0'};
+%             if nargin>1
+%                 obj.freeParams = varargin;
+%                 obj.freeParams = varargin;
+%             end
+            nPeaks = length(obj.freeParams);% user should input free parameters manually before calling this method
+%             eqParamName = {'I';'R';'alpha';'beta';'gamma';'sigma';'k';'x0'};
             % Generic names of free parameters for the Ikeda-Carpenter-pseudo-Voigt fit
 % They are listed in the same order as specified in the definition of voigtIkedaCarpenter_ord
             totalNumFreeParams = 0;% count the total number of free parameters
             for j1=1:nPeaks% j1 is the peak number
+                if size(obj.freeParams{j1},1)==0
+                    error("User should manually input at least one (preferably two) "+...
+                        "free parameter(s) per peak in the 'freeParams' "+...
+                        "property of the class prior to calling this method.")
+                end
                 if size(obj.freeParams{j1},1)==1
                     warning("fit is unlikely to converge with only one "+...
                         "free parameter for any given peak; "+...
-                        "it is advised to input at least two free parameters for each peak, "+...
-                        "or none *IF there is ONLY ONE peak*, in which case "+...
-                        "peak intensity 'I1' and position 'x01' "+...
-                        "will be used.")
+                        "it is advised to input at least two free parameters for each peak")%, "+...
+%                         "or none *IF there is ONLY ONE peak*, in which case "+...
+%                         "peak intensity 'I1' and position 'x01' "+...
+%                         "will be used.")
                 end
                 totalNumFreeParams = totalNumFreeParams + size(obj.freeParams{j1},1);
                 % the number of free parameters input by the user for
                 % peak #j1 equals the number of rows in 'obj.freeParams{j1}'
                 if size(obj.freeParams{j1},2)~=2
-                    error(strcat("Error: The array of free parameters for each peak ",...
-                        "should be formatted as a N x 2 cell array, ",...
-                        "each row containing the name and initial value ",...
-                        "of a parameter, ",...
-                        "e.g. {'gamma',1e-3;'alpha',200;",...
-                        "'x0',-8.1},{'gamma',1e-3;'x0',-7.9}"));
+                    error(strcat("The 'freeParams' property should be a cell array containing one ",...
+                        "cell array with N rows and 2 columns for each peak to fit, ",...
+                        "the first column containing the names of the free parameters ",...
+                        "and the second column containing the corresponding initial values, ",...
+                        "e.g. {{'gamma',1e-3;'alpha',200;",...
+                        "'x0',-8.1},{'gamma',1e-3;'x0',-7.9}}"));
                     break
                 end
-                for k1=1:size(obj.freeParams{j1},1)
-                    if ~any(strcmp(obj.freeParams{j1}{k1,1},eqParamName),'all')
-                        error(['Error: input parameter names must be one of the following: [' +...
-                            char(join(string(eqParamName),', ')) +...
-                            '] entered as character vector.'])
+                ksj = keys(obj.allParams{j1});
+                for k0=1:size(obj.allParams{j1},1)                
+                    flag = 0;
+                    if find(contains(obj.freeParams{j1}(:,1),ksj{k0}))
+                        flag = 1;
+                        break;
                     end
+                end
+                if ~flag
+                    error(['Error: input parameter names must be one of the following: [' +...
+                        char(join(string(ksj),', ')) +...
+                        '] entered as character vector.'])
+                end
+                for k1=1:size(obj.freeParams{j1},1)
                     if ~ischar(obj.freeParams{j1}{k1,1})
                        error('Input parameter names must be char, not %s.',...
                            class(obj.freeParams{j1}{k1,1}))
                     end
-                    obj.freeParams{j1}{k1,1} = strcat(obj.freeParams{j1}{k1,1},int2str(j1));
-                    % rename each free parameter to include peak number,
-                    % but keep its type as character vector
+%                     obj.freeParams{j1}{k1,1} = strcat(obj.freeParams{j1}{k1,1},int2str(j1));
+%  No need to if manual user input                   % rename each free parameter to include peak number,
+%                     % but keep its type as character vector
                 end
             end
             
             %% Create full fit equation string... 
 % ... depending on the number of peaks and the number of free fit parameters for each peak
-            function fitstr = fitEqStr(obj,paramName,paramArray)
+            function fitstr = fitEqStr(referenceMap,paramArray)
 % Construct string defining the fit equation for a single peak, depending on how many
 % free parameters the object contains, as defined in obj.freeParams
-                function inFName = inFuncName(obj,varName,prmArray)
+                function inFName = inFuncName(refMap,prmNum,prmArray)
 % This function determines if string varName is contained in cell array nameArray,
 % which should be a N x 2 array containing parameter names as strings in the first column, 
 % and the associated numerical value in the second column, even though this
 % second column is not used here
+                    ks = keys(refMap);
+                    varName = ks{prmNum};
                     if find(contains(prmArray(:,1),varName))
 % if string varName is contained in the first column of cell array nameArray
                         idx = contains(prmArray(:,1),varName);
                         % index of string varName in the first column of nameArray
                         inFName = prmArray{idx};
                         % use it as is in the fit equation string
-                    else; inFName = string(obj.(varName));
+                    else; inFName = string(refMap(ks{prmNum}));
                     % otherwise use the associated default numerical value to constrain the fit
                     end
                 end
-                infname = inFuncName(obj,paramName{1},paramArray);
+%                 Ks = keys(obj.allParams{pkIndx});
+%                 prmVal = obj.allParams{pkIndx}(Ks{1})
+                infname = inFuncName(referenceMap,1,paramArray);
                 fitstr = strcat(infname,"*voigtIkedaCarpenter_ord(x,[");
                 % beginning of string defining the fit equation
-                for j2=2:length(paramName)-1
+                for j2=2:length(referenceMap)-1
 % loop through each possible additional free parameter, in the order of eqParamName
-                    infname = inFuncName(obj,paramName{j2},paramArray);
+                    infname = inFuncName(referenceMap,j2,paramArray);
                     fitstr = strcat(fitstr,infname,",");
 % depending whether a parameter should be free or constrained in the fit,
 % add its name or its value, respectively (see function 'inFuncName' above)
                 end
-                infname = inFuncName(obj,paramName{end},paramArray);
+                infname = inFuncName(referenceMap,length(referenceMap),paramArray);
                 fitstr = strcat(fitstr,string(infname),"])");
                 % end of string defining the fit equation
             end
             
-%             fullFitStr = fitEqStr(obj,eqParamName,obj.freeParams{1});% equation string for first peak
-%             if nPeaks>1
             fitEqn = cell(1:nPeaks);
             for i1=1:nPeaks
-                fitEqn{i1} = fitEqStr(obj,eqParamName,obj.freeParams{i1});
-%                     fullFitStr = fullFitStr + " + " + ...% sum equation strings for all peaks
-%                         fitEqStr(obj,eqParamName,obj.freeParams{i1});
+                fitEqn{i1} = fitEqStr(obj.allParams{i1},obj.freeParams{i1});
             end
             fullFitStr = join(string(fitEqn),'+');% sum equation strings for all peaks
             
