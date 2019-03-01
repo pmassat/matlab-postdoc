@@ -94,19 +94,6 @@ fprintf(fileID,'%s\n',strcat(S(:,1)," = ",S(:,2)));
 fprintf(fileID,'\nFixed values of all parameters (disregard free parameters):\n');
 fprintf(fileID,'%s\n',strcat(K," = ",string(V)));
 fclose(fileID);
-%% Extract 7-fit parameters from data structure and create table containing fit parameters 
-[gamma,relErrGm,alpha,relErrAm,sigma,relErrSm] = ENS_peak_fit_extract_params(nDatap94(rng),'fit7rslt');
-% [gamma7,relErrGm7,alpha7,relErrAm7,sigma7,relErrSm7] = ENS_peak_fit_extract_params(nDatap94(rng),'fit7rslt',1);
-% Add third argument (e.g. value 1) to check equality of positive and negative error bars for all three parameters
-% Note: the case where they are not equal has NOT been tested, so it may
-% raise an error when that happens (although it is unlikely)
-rsquare = extract_structure_field(nDatap94(rng),'gof7','rsquare');
-fitPrms = {'gamma','relErrG','alpha','relErrA','sigma','relErrS','rsquare'};
-vars = cell(1, length(fitPrms));
-for iv=1:length(vars); vars{iv} = [fitPrms{iv} int2str(Nprms)]; end
-% Check that both the values and errors make sense
-nDatap94(Nprms).tbl = table(field(iend:istart),gamma,relErrGm,alpha,relErrAm,sigma,relErrSm,rsquare,...
-    'VariableNames',[{'Field_Oe'},vars]);
 %% Compute average value of parameter to be fixed in next iterations
 % calculate mean of alpha over j data points at highest fields,
 % where the data is single-peaked and sample behavior does not change (too much)
@@ -121,97 +108,6 @@ for j=1:Navg
     stdam7(j) = std(alpha(1:j)); stdsm7(j) = std(sigma(1:j));
 end
 
-%% Perform fit with 5 free parameters: I, alpha, gamma, sigma, x0
-for i=istart%:-1:iend
-    label = strcat("T=",num2str(round(nDatap94(i).temp,2)),"K & H=",num2str(nDatap94(i).field),"T");
-    myfit = fitICpV(nDatap94(i).hh0,nDatap94(i).I,hc); 
-    myfit.dataExcl = datExcld;
-    [nDatap94(i).fit5rslt, nDatap94(i).gof5] = myfit.compute_fit({'I',5e5;...
-        'R',0.5;'beta',1;'gamma',1e-3;'sigma',1e-2;'x0',hc});
-    if mod(i,10)==7% plot data every 10 fields
-        myfit.plot_fit(nDatap94(i).fit7rslt);
-        title(strcat("ENS pattern cut along [hh0] at ",label));
-%         xlim([hc-.8 hc+.6]);
-    end
-    disp(strcat("Fit ICpV1 5 parameters at ",label)); disp(nDatap94(i).fit5rslt);
-end
-%% Extract columns from data structure
-field = cell2mat( arrayfun(@(c) c.field, nDatap94(rng).', 'Uniform', 0) );
-%% Extract 5-fit parameters from data structure
-[gamma5,relErrGm5,alpha5,relErrAm5,sigma5,relErrSm5] = ENS_peak_fit_extract_params(nDatap94(rng),'fit5rslt');
-% [gamma5,relErrGm5,alpha5,relErrAm5,sigma5,relErrSm5] = ENS_peak_fit_extract_params(nDatap94(rng),'fit5rslt',1);
-% Add third argument (e.g. value 1) to check equality of positive and negative error bars for all three parameters
-% Note: the case where they are not equal has not been tested, so it may
-% raise an error when that happens (although it is unlikely)
-rsquare5 = extract_structure_field(nDatap94(rng),'gof5','rsquare');
-%% Create table containing fit parameters and corresponding relative standard errors
-% Check that both the values and errors make sense
-tbl5 = table(field,gamma5,relErrGm5,alpha5,relErrAm5,sigma5,relErrSm5,rsquare5,'VariableNames',...
-    {'Field_Oe','gamma5','relErrG','alpha5','relErrA','sigma5','relErrS','rsquare5'})
-%% Compute average value of parameter to be fixed in next iterations
-% calculate mean of alpha5 over j data points at highest fields,
-% where the data is single-peaked and sample behavior does not change (too much)
-% alpha5 only depends on the behavior of the neutron beam and should thus
-% not change under applied magnetic field
-am5 = ones(20,1); stdam5 = ones(20,1);
-sm5 = ones(20,1); stdsm5 = ones(20,1);% same with sigma5, 
-% which only depends on the instrument resolution
-for j=1:20
-    am5(j) = mean(alpha5(1:j)); sm5(j) = mean(sigma5(1:j));
-    stdam5(j) = std(alpha5(1:j)); stdsm5(j) = std(sigma5(1:j));
-end 
-
-%% Recompute fit with fixed sigma parameter, i.e. 4 free parameters
-for i=rng
-    [nDatap94(i).fit4rslt, nDatap94(i).gof4] = ENS_peak_fit_ICpV_function_4params(...
-        nDatap94(i).hh0,nDatap94(i).I,hc,datExcld);
-    label = strcat("T=",num2str(round(nDatap94(i).temp,2)),"K & H=",...
-        num2str(nDatap94(i).field),"T");
-    if mod(i,10)==7% plot data every 5 fields
-        ENS_peak_fit_plot(nDatap94(i).hh0,nDatap94(i).I,hc,nDatap94(i).fit4rslt,datExcld)
-        title(strcat("ENS pattern cut along [hh0] at ",label))
-        xlim([hc-.75 hc+.6]);
-    end
-    disp(strcat("Fit ICpV1 4 parameters at ",label));
-    disp(nDatap94(i).fit4rslt)
-end
-%% Extract 4-fit parameters from data structure
-[gamma4,relErrGn4,alpha4,relErrAn4] = ENS_peak_fit_extract_params(nDatap94(rng),'fit4rslt');
-% Add third argument (e.g. value 1) to check equality of positive and negative error bars for all three parameters
-rsquare4 = extract_structure_field(nDatap94(rng),'gof4','rsquare');
-%% Create table containing fit parameters and corresponding relative standard errors
-% Check that both the values and errors make sense
-tbl4 = table(field,gamma4,relErrGn4,alpha4,relErrAn4,rsquare4,'VariableNames',...
-    {'Field_Oe','gamma4','relErrG','alpha4','relErrA','rsquare4'})
-%% Recompute average value of parameter to be fixed in next iterations
-am4 = ones(20,1); stdam4 = ones(20,1);
-for j=1:20
-    am4(j) = mean(alpha4(1:j));
-    stdam4(j) = std(alpha4(1:j));
-end
-
-%% Recompute fit with fixed alpha parameter, i.e. 3 free parameters
-for i=istart%:-1:iend
-    [nDatap94(i).fit3rslt, nDatap94(i).gof3] = ENS_peak_fit_ICpV_function_3params(...
-        nDatap94(i).hh0,nDatap94(i).I,hc,datExcld);
-    label = strcat("T=",num2str(round(nDatap94(i).temp,2)),"K, H=",...
-        num2str(nDatap94(i).field),"T, R=0, beta=0 & 3 params fit");
-    if mod(i,10)==7% plot data every 10 fields
-        ENS_peak_fit_plot(nDatap94(i).hh0,nDatap94(i).I,hc,nDatap94(i).fit3rslt,datExcld)
-        title(strcat("ENS [hh0] cut at ",label))
-        xlim([hc-.7 hc+.6]);
-    end
-    disp(strcat("Fit ICpV1 3 parameters at ",label));
-    disp(nDatap94(i).fit3rslt)
-end
-%% Extract 3-fit parameters from data structure
-[gamma3,relErrGn3] = ENS_peak_fit_extract_params(nDatap94(rng),'fit3rslt');
-% Add third argument (e.g. value 1) to check equality of positive and negative error bars for all three parameters
-rsquare3 = extract_structure_field(nDatap94(rng),'gof3','rsquare');
-%% Create table containing fit parameters and corresponding relative standard errors
-% Check that both the values and errors make sense
-tbl3 = table(field,gamma3,relErrGn3,rsquare3,'VariableNames',...
-    {'Field_Oe','gamma3','relErrG','rsquare3'})
 %% Identify peak maximum and width
 xM = ones(istart,1);
 fwhm = ones(istart,1);
