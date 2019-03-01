@@ -30,13 +30,14 @@ datExcld = nDatap94(istart).hh0<hc-.7 | nDatap94(istart).hh0>hc+0.55 |...
 
 %% Perform fit
 rng = istart%:-1:iend;
-I1 = 3e5; R1 = 0.; a1 = 200; b1 = 0.1; g1 = 1e-3; s1 = 6.6e-3;% free parameters initial values
+I1 = 3e5; R1 = 0.1; a1 = 200; b1 = 0.1; g1 = 1e-3; s1 = 6.6e-3;% free parameters initial values
 for i=rng
     myfit = fitICpV(nDatap94(i).hh0,nDatap94(i).I,hc); 
     myfit.dataExcl = datExcld;
-    myfit.allParams{1}('alpha') = 140; myfit.allParams{1}('sigma') = 6.6e-3;
+    ap1 = myfit.allParams{1}; ap1('alpha') = 140; ap1('sigma') = 6.6e-3; ap1('R')=0;
 %     freePrms1 = {'I',3e5;'R',0.1;'alpha',200;'beta',0.1;'gamma',1e-3;'sigma',6.6e-3;'x0',hc};%7 free parameters
-    freePrms1 = {'I',I1;'R',R1;'beta',b1;'gamma',g1;'x0',hc};% 5 free parameters
+%     freePrms1 = {'I',I1;'R',R1;'beta',b1;'gamma',g1;'x0',hc};% 5 free parameters
+    freePrms1 = {'I',I1;'gamma',g1;'x0',hc};% 3 free parameters
 % Note: the order in which free parameters are defined matters because of
 % how the array of initial fitting parameters 'initParams' is defined
     myfit.freeParams = {freePrms1};
@@ -55,7 +56,11 @@ end
 %%
 np = Nprms;
 fitStrnp = ['fit' int2str(np) 'rslt']; gofStrnp = ['gof' int2str(np)];
-nDatap94(np).tbl = table(field(rng)','VariableNames',{'Field_Oe'});
+for i = 1:numel(tbl)
+  if isempty(tbl(i).(fitStrnp)); Ntbl = i; break; end
+  %if a field of tbl.(fitStrnp) is empty, use it to store the following table
+end
+tbl(Ntbl).(fitStrnp) = table(field(rng)','VariableNames',{'Field_Oe'});
 cfn = coeffnames(nDatap94(istart).(fitStrnp));
 for nc=1:np
     prm = extract_structure_field(nDatap94(rng),fitStrnp,cfn{nc});
@@ -64,7 +69,7 @@ for nc=1:np
     prmErrm = prm-cftm;prmErrp = prm-cftp;% negative and positive
     relErrm = abs(prmErrm./prm);relErrp = abs(prmErrp./prm);% negative and positive    
     nDatap94(np).tbl.(cfn{nc}) = prm;
-    nDatap94(np).tbl.([cfn{nc} 'StdErr']) = relErrm;
+    nDatap94(np).tbl.([cfn{nc} '_RelErr']) = relErrm;
 end
 rsquarenp = extract_structure_field(nDatap94(rng),gofStrnp,'rsquare');
 nDatap94(np).tbl.Rsquare = rsquarenp;

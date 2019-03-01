@@ -1,26 +1,11 @@
-classdef fitICpV < handle
+classdef fitICpV < handle% handle allows to modify object properties in the class' methods
     properties 
         X; Y;% X and Y data
         dataExcl;% logical that determines which data points to exclude from fit
-%         I = 2e5;% default value for the first fit parameter, if constrained (see function fitEqStr)
-% % Defining these fit parameters as object properties allows to call
-% % them both for fitting and plotting. The user must be careful however not
-% % to change them between fitting and plotting, otherwise the plotted fit
-% % will not correspond to the calculated one
-%         R = 0;
-%         alpha = 140;
-%         beta = 0;
-%         gamma = 1e-3;
-%         sigma = 6.6e-3;
-%         k = 0.05;
-%         x0;% last fit parameter; 
-% Note that x0 is also the estimated peak position and is therefore also
-% used to determine the default range of excluded data points (see constructor)
-        allParams;
-        freeParams; % cell array of cell arrays, each sub-cell array containing
-% the names of the free parameters for each fit. By default, it is assumed
-% that there is only one fit, i.e. one peak, with 2 free parameters:
-% intensity and position
+        allParams;% cell array of cell arrays, each sub-cell array containing
+% the names and fixed values (if parameters are not free) of all parameters for each peak.
+        freeParams;% cell array of cell arrays, each sub-cell array containing
+% the names and initial value of the free parameters for each fit.
     end
     methods
 %% Class constructor
@@ -43,6 +28,10 @@ classdef fitICpV < handle
 % Important note: Matlab sorts the keys without asking! They are sorted
 % alphabetically, with capital letters grouped together before lowercase ones
                 fixedValueSet{i0} = [2e5, 0, 140, 0, 1e-3, 0.05, 6.6e-3, xPeaks(i0)];
+% Defining fit parameters in object properties allows to call
+% them both for fitting and plotting. The user must be careful however not
+% to change them between fitting and plotting, otherwise the plotted fit
+% will not correspond to the calculated one
                 obj.allParams{i0} = containers.Map(fixedKeySet{i0},fixedValueSet{i0});
                 obj.freeParams{i0} = {};%containers.Map('KeyType','char','ValueType','double');
             end
