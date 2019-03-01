@@ -1,10 +1,10 @@
 function val = voigtIkedaCarpenter_ord(t,params)
-a = params(2);
-b = params(3);
-R = params(1);
+R = params(1);% the order of the parameters is the order in which 
+a = params(2);% Matlab reads them: capital letters first, then
+b = params(3);% alphabetical order
 gamma = params(4);
-sigma = params(5);
-k = params(6);
+k = params(5);
+sigma = params(6);
 t0 = params(7);
 xi = t - t0;
 %VoigtIkedaCarpenter Calculates the convolution of a pseudo-Voigt

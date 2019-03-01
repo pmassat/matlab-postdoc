@@ -39,8 +39,10 @@ classdef fitICpV < handle
             fixedKeySet = cell(1,nPeaks); fixedValueSet = cell(1,nPeaks); 
             obj.allParams = cell(1,nPeaks); obj.freeParams = cell(1,nPeaks);
             for i0=1:length(xPeaks)
-                fixedKeySet{i0} = {'I','R','alpha','beta','gamma','sigma','k','x0'};
-                fixedValueSet{i0} = [2e5, 0, 140, 0, 1e-3, 6.6e-3, 0.05, xPeaks(i0)];
+                fixedKeySet{i0} = {'I','R','alpha','beta','gamma','k','sigma','x0'};
+% Important note: Matlab sorts the keys without asking! They are sorted
+% alphabetically, with capital letters grouped together before lowercase ones
+                fixedValueSet{i0} = [2e5, 0, 140, 0, 1e-3, 0.05, 6.6e-3, xPeaks(i0)];
                 obj.allParams{i0} = containers.Map(fixedKeySet{i0},fixedValueSet{i0});
                 obj.freeParams{i0} = {};%containers.Map('KeyType','char','ValueType','double');
             end
@@ -85,7 +87,7 @@ classdef fitICpV < handle
 %                         "peak intensity 'I1' and position 'x01' "+...
 %                         "will be used.")
                 end
-                totalNumFreeParams = totalNumFreeParams + size(obj.freeParams{j1},1);
+                totalNumFreeParams = totalNumFreeParams + size(obj.freeParams{j1},1);% change to vertcat(obj.freeParams{:})
                 % the number of free parameters input by the user for
                 % peak #j1 equals the number of rows in 'obj.freeParams{j1}'
                 if size(obj.freeParams{j1},2)~=2
@@ -213,27 +215,36 @@ classdef fitICpV < handle
 %      plot of fit
             [xData, yData] = prepareCurveData(obj.X,obj.Y);
             excludedPoints = excludedata( xData, yData, 'Indices', obj.dataExcl );
-            eqParamName = {'I';'R';'alpha';'beta';'gamma';'sigma';'k';'x0'};
+%             eqParamName = {'I';'R';'alpha';'beta';'gamma';'sigma';'k';'x0'};
             nPks = length(obj.freeParams);
-            fitPrms = ones(1,length(eqParamName));
-            funCell = cell(1,nPks);
+            fitPrms = ones(1,length(obj.allParams{1}));
+            % no need to re-initialize the array at each iteration since
+            % all sub-maps of obj.Params have the same length
+            ks2 = keys(obj.allParams{1});% same
+            funCell = cell(1,nPks);% initialize cell array containing both 
+% free and fixed parameters of the fit function to plot
             for ii=1:nPks
-                for jj=1:length(eqParamName)
-                    if find(contains(obj.freeParams{ii}(:,1),eqParamName{jj}))
-                        idx = contains(obj.freeParams{ii}(:,1),eqParamName{jj});
+                for jj=1:length(ks2)
+                    if find(contains(obj.freeParams{ii}(:,1),ks2{jj}))
+% if the namestring of a parameter is contained in the array of free parameters
+                        idx = contains(obj.freeParams{ii}(:,1),ks2{jj});
                         % index of parameter namestring in the first column of obj.freeParams{ii}
                         fitPrms(jj) = fitresult.(obj.freeParams{ii}{idx});
-                    else; fitPrms(jj) = obj.(eqParamName{jj});
+% use the parameter value resulting from the fit 
+                    else; fitPrms(jj) = obj.allParams{ii}(ks2{jj});
+% otherwise use the fixed value stored in the allParams property
                     end
                 end
                 funCell{ii} = @(x) fitPrms(1).*...
                     voigtIkedaCarpenter_ord(x,[fitPrms(2),fitPrms(3),...
                     fitPrms(4),fitPrms(5),fitPrms(6),fitPrms(7),fitPrms(8)]);
+% define the function using the above extracted parameter values
             end
-            minIndex = find(~obj.dataExcl,1,'first');
-            maxIndex = find(~obj.dataExcl,1,'last');
+            minIndex = find(~obj.dataExcl,1,'first');% index of non-excluded datapoint with lowest x value 
+            maxIndex = find(~obj.dataExcl,1,'last');% index of non-excluded datapoint with highest x value 
             Xfit = linspace(obj.X(minIndex),obj.X(maxIndex),1000);
-            Yfit = fitresult(Xfit);
+            Yfit = fitresult(Xfit);% compute fit over a controlled number of points
+% this allows to have fit plot with better resolution than the calculated one
             
             % Plot fit with data.
             figure

@@ -9,57 +9,101 @@ for i=1:length(fieldinfo0p94K.FileName)
     nDatap94(i).field = fieldinfo0p94K.H_T(i);
     nDatap94(i).temp = fieldinfo0p94K.T_K(i);
 end
+H = extractfield(nDatap94,'field');
 %% Data formatting for curve fitting tool analysis
 i=67;
 hh67 = nDatap94(i).hh0;
 I67 = nDatap94(i).I;
 dI = nDatap94(i).dI;
+%%
+istart = length(H);
+iend = 37;
 %% Fit single Ikeda-Carpenter-pseudo-Voigt peak at high field
 % Analysis parameters
 hc = -8;% value of h in reciprocal space
 % ufb = 0.99; % upper fit boundary = highest value of h-hc for which to include datapoints for the fit
-H = extractfield(nDatap94,'field');
-istart = length(H);
-iend = 37;
-field = cell2mat( arrayfun(@(c) c.field, nDatap94(1:istart).', 'Uniform', 0) );
+field = H;%cell2mat( arrayfun(@(c) c.field, nDatap94(1:istart).', 'Uniform', 0) );
 datExcld = nDatap94(istart).hh0<hc-.7 | nDatap94(istart).hh0>hc+0.55 |...
     (nDatap94(istart).hh0>hc-.35 & nDatap94(istart).hh0<hc-0.15)...
      | (nDatap94(istart).hh0>hc+0.15 & nDatap94(istart).hh0<hc+0.2);% Exclude 
 % data points that correspond to other peaks as well as those that are too far away
 
-%% Perform fit with all 7 free parameters
-for i=istart%:-1:iend
-    label = strcat("T=",num2str(round(nDatap94(i).temp,2)),"K & H=",num2str(nDatap94(i).field),"T & 7 params fit");
-    myfit = fitICpV(nDatap94(i).hh0,nDatap94(i).I,hc); myfit.dataExcl = datExcld;
-    [nDatap94(i).fit7rslt, nDatap94(i).gof7] = myfit.compute_fit({'I',5e5;...
-        'R',0.5;'alpha',200;'beta',1;'gamma',1e-3;'sigma',1e-2;'x0',hc});
+%% Perform fit
+rng = istart%:-1:iend;
+I1 = 3e5; R1 = 0.; a1 = 200; b1 = 0.1; g1 = 1e-3; s1 = 6.6e-3;% free parameters initial values
+for i=rng
+    myfit = fitICpV(nDatap94(i).hh0,nDatap94(i).I,hc); 
+    myfit.dataExcl = datExcld;
+    myfit.allParams{1}('alpha') = 140; myfit.allParams{1}('sigma') = 6.6e-3;
+%     freePrms1 = {'I',3e5;'R',0.1;'alpha',200;'beta',0.1;'gamma',1e-3;'sigma',6.6e-3;'x0',hc};%7 free parameters
+    freePrms1 = {'I',I1;'R',R1;'beta',b1;'gamma',g1;'x0',hc};% 5 free parameters
+% Note: the order in which free parameters are defined matters because of
+% how the array of initial fitting parameters 'initParams' is defined
+    myfit.freeParams = {freePrms1};
+    Nprms = length(vertcat(myfit.freeParams{:}));% total number of free parameters
+    label = strcat("T=",num2str(round(nDatap94(i).temp,2)),"K & H=",...
+        num2str(nDatap94(i).field),"T & ",num2str(Nprms)," params fit");
+    fitStr = ['fit' int2str(Nprms) 'rslt']; gofStr = ['gof' int2str(Nprms)];
+    [nDatap94(i).(fitStr), nDatap94(i).(gofStr)] = myfit.compute_fit();
     if mod(i,10)==7% plot data every 10 fields
-        myfit.plot_fit(nDatap94(i).fit7rslt);
-        title(strcat("ENS pattern cut along [hh0] at ",label));% xlim([hc-.8 hc+.6]);
+        myfit.plot_fit(nDatap94(i).(fitStr));
+        title(strcat("ENS pattern cut along [hh0] at ",label));
+%         xlim([hc-.8 hc+.6]);
     end
-    disp(strcat("ICpV1: ",label)); disp(nDatap94(i).fit7rslt);
+    disp(label); disp(nDatap94(i).(fitStr)); disp(nDatap94(i).(gofStr));
 end
+%%
+np = Nprms;
+fitStrnp = ['fit' int2str(np) 'rslt']; gofStrnp = ['gof' int2str(np)];
+nDatap94(np).tbl = table(field(rng)','VariableNames',{'Field_Oe'});
+cfn = coeffnames(nDatap94(istart).(fitStrnp));
+for nc=1:np
+    prm = extract_structure_field(nDatap94(rng),fitStrnp,cfn{nc});
+    cft = cell2mat(arrayfun(@(c) confint(c.(fitStrnp)),nDatap94(rng).','Uniform',0));
+    cftm = cft(1:2:end,nc); cftp = cft(2:2:end,nc);
+    prmErrm = prm-cftm;prmErrp = prm-cftp;% negative and positive
+    relErrm = abs(prmErrm./prm);relErrp = abs(prmErrp./prm);% negative and positive    
+    nDatap94(np).tbl.(cfn{nc}) = prm;
+    nDatap94(np).tbl.([cfn{nc} 'StdErr']) = relErrm;
+end
+rsquarenp = extract_structure_field(nDatap94(rng),gofStrnp,'rsquare');
+nDatap94(np).tbl.Rsquare = rsquarenp;
+
+%% Write table to file
+fileChar = [fitStr '.txt'];
+fileID = fopen(fileChar,'a');
+% fprintf(fileID,'\nValues of free parameters after fit:\n');
+% fprintf(fileID,'%s\n',nDatap94(np).tbl);
+writetable(nDatap94(Nprms).tbl,fileChar);
+fprintf(fileID,'\nInitial values of free parameters:\n');
+S = string(myfit.freeParams{1});
+fprintf(fileID,'%s\n',strcat(S(:,1)," = ",S(:,2)));
+fclose(fileID);
 %% Extract 7-fit parameters from data structure and create table containing fit parameters 
-[gamma7,relErrGm7,alpha7,relErrAm7,sigma7,relErrSm7] = ENS_peak_fit_extract_params(nDatap94(istart:-1:iend),'fit7rslt');
-% [gamma7,relErrGm7,alpha7,relErrAm7,sigma7,relErrSm7] = ENS_peak_fit_extract_params(nDatap94(istart:-1:iend),'fit7rslt',1);
+[gamma,relErrGm,alpha,relErrAm,sigma,relErrSm] = ENS_peak_fit_extract_params(nDatap94(rng),'fit7rslt');
+% [gamma7,relErrGm7,alpha7,relErrAm7,sigma7,relErrSm7] = ENS_peak_fit_extract_params(nDatap94(rng),'fit7rslt',1);
 % Add third argument (e.g. value 1) to check equality of positive and negative error bars for all three parameters
-% Note: the case where they are not equal has not been tested, so it may
+% Note: the case where they are not equal has NOT been tested, so it may
 % raise an error when that happens (although it is unlikely)
-rsquare7 = extract_structure_field(nDatap94(istart:-1:iend),'gof7','rsquare');
+rsquare = extract_structure_field(nDatap94(rng),'gof7','rsquare');
+fitPrms = {'gamma','relErrG','alpha','relErrA','sigma','relErrS','rsquare'};
+vars = cell(1, length(fitPrms));
+for iv=1:length(vars); vars{iv} = [fitPrms{iv} int2str(Nprms)]; end
 % Check that both the values and errors make sense
-tbl7 = table(field,gamma7,relErrGm7,alpha7,relErrAm7,sigma7,relErrSm7,rsquare7,'VariableNames',...
-    {'Field_Oe','gamma7','relErrG','alpha7','relErrA','sigma7','relErrS','rsquare7'})
+nDatap94(Nprms).tbl = table(field(iend:istart),gamma,relErrGm,alpha,relErrAm,sigma,relErrSm,rsquare,...
+    'VariableNames',[{'Field_Oe'},vars]);
 %% Compute average value of parameter to be fixed in next iterations
-% calculate mean of alpha5 over j data points at highest fields,
+% calculate mean of alpha over j data points at highest fields,
 % where the data is single-peaked and sample behavior does not change (too much)
 % alpha5 only depends on the behavior of the neutron beam and should thus
 % not change under applied magnetic field
-am7 = ones(20,1); stdam7 = ones(20,1);
-sm7 = ones(20,1); stdsm7 = ones(20,1);;% same with sigma5, 
+Navg = 20;
+am7 = ones(Navg,1); stdam7 = ones(Navg,1);
+sm7 = ones(Navg,1); stdsm7 = ones(Navg,1);% same with sigma, 
 % which only depends on the instrument resolution
-for j=1:20
-    am7(j) = mean(alpha7(1:j)); sm7(j) = mean(sigma7(1:j));
-    stdam7(j) = std(alpha7(1:j)); stdsm7(j) = std(sigma7(1:j));
+for j=1:Navg
+    am7(j) = mean(alpha(1:j)); sm7(j) = mean(sigma(1:j));
+    stdam7(j) = std(alpha(1:j)); stdsm7(j) = std(sigma(1:j));
 end
 
 %% Perform fit with 5 free parameters: I, alpha, gamma, sigma, x0
@@ -77,14 +121,14 @@ for i=istart%:-1:iend
     disp(strcat("Fit ICpV1 5 parameters at ",label)); disp(nDatap94(i).fit5rslt);
 end
 %% Extract columns from data structure
-field = cell2mat( arrayfun(@(c) c.field, nDatap94(istart:-1:iend).', 'Uniform', 0) );
+field = cell2mat( arrayfun(@(c) c.field, nDatap94(rng).', 'Uniform', 0) );
 %% Extract 5-fit parameters from data structure
-[gamma5,relErrGm5,alpha5,relErrAm5,sigma5,relErrSm5] = ENS_peak_fit_extract_params(nDatap94(istart:-1:iend),'fit5rslt');
-% [gamma5,relErrGm5,alpha5,relErrAm5,sigma5,relErrSm5] = ENS_peak_fit_extract_params(nDatap94(istart:-1:iend),'fit5rslt',1);
+[gamma5,relErrGm5,alpha5,relErrAm5,sigma5,relErrSm5] = ENS_peak_fit_extract_params(nDatap94(rng),'fit5rslt');
+% [gamma5,relErrGm5,alpha5,relErrAm5,sigma5,relErrSm5] = ENS_peak_fit_extract_params(nDatap94(rng),'fit5rslt',1);
 % Add third argument (e.g. value 1) to check equality of positive and negative error bars for all three parameters
 % Note: the case where they are not equal has not been tested, so it may
 % raise an error when that happens (although it is unlikely)
-rsquare5 = extract_structure_field(nDatap94(istart:-1:iend),'gof5','rsquare');
+rsquare5 = extract_structure_field(nDatap94(rng),'gof5','rsquare');
 %% Create table containing fit parameters and corresponding relative standard errors
 % Check that both the values and errors make sense
 tbl5 = table(field,gamma5,relErrGm5,alpha5,relErrAm5,sigma5,relErrSm5,rsquare5,'VariableNames',...
@@ -95,7 +139,7 @@ tbl5 = table(field,gamma5,relErrGm5,alpha5,relErrAm5,sigma5,relErrSm5,rsquare5,'
 % alpha5 only depends on the behavior of the neutron beam and should thus
 % not change under applied magnetic field
 am5 = ones(20,1); stdam5 = ones(20,1);
-sm5 = ones(20,1); stdsm5 = ones(20,1);;% same with sigma5, 
+sm5 = ones(20,1); stdsm5 = ones(20,1);% same with sigma5, 
 % which only depends on the instrument resolution
 for j=1:20
     am5(j) = mean(alpha5(1:j)); sm5(j) = mean(sigma5(1:j));
@@ -103,7 +147,7 @@ for j=1:20
 end 
 
 %% Recompute fit with fixed sigma parameter, i.e. 4 free parameters
-for i=istart:-1:iend
+for i=rng
     [nDatap94(i).fit4rslt, nDatap94(i).gof4] = ENS_peak_fit_ICpV_function_4params(...
         nDatap94(i).hh0,nDatap94(i).I,hc,datExcld);
     label = strcat("T=",num2str(round(nDatap94(i).temp,2)),"K & H=",...
@@ -117,9 +161,9 @@ for i=istart:-1:iend
     disp(nDatap94(i).fit4rslt)
 end
 %% Extract 4-fit parameters from data structure
-[gamma4,relErrGn4,alpha4,relErrAn4] = ENS_peak_fit_extract_params(nDatap94(istart:-1:iend),'fit4rslt');
+[gamma4,relErrGn4,alpha4,relErrAn4] = ENS_peak_fit_extract_params(nDatap94(rng),'fit4rslt');
 % Add third argument (e.g. value 1) to check equality of positive and negative error bars for all three parameters
-rsquare4 = extract_structure_field(nDatap94(istart:-1:iend),'gof4','rsquare');
+rsquare4 = extract_structure_field(nDatap94(rng),'gof4','rsquare');
 %% Create table containing fit parameters and corresponding relative standard errors
 % Check that both the values and errors make sense
 tbl4 = table(field,gamma4,relErrGn4,alpha4,relErrAn4,rsquare4,'VariableNames',...
@@ -146,9 +190,9 @@ for i=istart%:-1:iend
     disp(nDatap94(i).fit3rslt)
 end
 %% Extract 3-fit parameters from data structure
-[gamma3,relErrGn3] = ENS_peak_fit_extract_params(nDatap94(istart:-1:iend),'fit3rslt');
+[gamma3,relErrGn3] = ENS_peak_fit_extract_params(nDatap94(rng),'fit3rslt');
 % Add third argument (e.g. value 1) to check equality of positive and negative error bars for all three parameters
-rsquare3 = extract_structure_field(nDatap94(istart:-1:iend),'gof3','rsquare');
+rsquare3 = extract_structure_field(nDatap94(rng),'gof3','rsquare');
 %% Create table containing fit parameters and corresponding relative standard errors
 % Check that both the values and errors make sense
 tbl3 = table(field,gamma3,relErrGn3,rsquare3,'VariableNames',...
@@ -156,11 +200,11 @@ tbl3 = table(field,gamma3,relErrGn3,rsquare3,'VariableNames',...
 %% Identify peak maximum and width
 xM = ones(istart,1);
 fwhm = ones(istart,1);
-for i=istart:-1:iend
-    I = nDatap94(i).fit3rslt.I;
+for i=rng
+    I1 = nDatap94(i).fit3rslt.I;
     gamma = nDatap94(i).fit3rslt.gamma;
     x0 = nDatap94(i).fit3rslt.x0;
-    fnfit = @(x)-I*voigtIkedaCarpenter_ord(x,[0,140,0,gamma,6.6e-3,0.05,x0]);%fnfit = -1*[fit function] so that the maximum becomes a minimum
+    fnfit = @(x)-I1*voigtIkedaCarpenter_ord(x,[0,140,0,gamma,6.6e-3,0.05,x0]);%fnfit = -1*[fit function] so that the maximum becomes a minimum
     xM(i) = fminbnd(fnfit,hc-.2,hc+.2);% Identify position of the maximum on interval [hc-0.2 hc+0.2]
     M = -fnfit(xM(i));% compute value of the maximum
     fd = @(x)abs(fnfit(x)+M/2);
