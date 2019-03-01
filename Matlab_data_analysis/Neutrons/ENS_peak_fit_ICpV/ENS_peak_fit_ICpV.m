@@ -28,27 +28,27 @@ datExcld = nDatap94(istart).hh0<hc-.7 | nDatap94(istart).hh0>hc+0.55 |...
      | (nDatap94(istart).hh0>hc+0.15 & nDatap94(istart).hh0<hc+0.2);% Exclude 
 % data points that correspond to other peaks as well as those that are too far away
 
-%% Perform fit
-rng = istart%:-1:iend;
+%% Perform and plot fit
+rng = istart:-1:iend;
 I1 = 3e5; R1 = 0.1; a1 = 200; b1 = 0.1; g1 = 1e-3; s1 = 6.6e-3;% free parameters initial values
+% freePrms1 = {'I',I1;'R',R1;'alpha',a1;'beta',b1;'gamma',g1;'sigma',s1;'x0',hc};%7 free parameters
+% freePrms1 = {'I',I1;'R',R1;'beta',b1;'gamma',g1;'x0',hc};% 5 free parameters
+freePrms1 = {'I',I1;'gamma',g1;'x0',hc};% 3 free parameters
+% Note: the order in which free parameters are defined matters because of
+% how the array of initial fitting parameters 'initParams' is defined
 for i=rng
     myfit = fitICpV(nDatap94(i).hh0,nDatap94(i).I,hc); 
     myfit.dataExcl = datExcld;
-    ap1 = myfit.allParams{1}; ap1('alpha') = 140; ap1('sigma') = 6.6e-3; ap1('R')=0;
-%     freePrms1 = {'I',3e5;'R',0.1;'alpha',200;'beta',0.1;'gamma',1e-3;'sigma',6.6e-3;'x0',hc};%7 free parameters
-%     freePrms1 = {'I',I1;'R',R1;'beta',b1;'gamma',g1;'x0',hc};% 5 free parameters
-    freePrms1 = {'I',I1;'gamma',g1;'x0',hc};% 3 free parameters
-% Note: the order in which free parameters are defined matters because of
-% how the array of initial fitting parameters 'initParams' is defined
+    ap1 = myfit.allParams{1}; ap1('alpha') = 140; ap1('sigma') = 6.6e-3;% 'ap1' is shorter than 'myfit.allParams{1}'
+    ap1('R')=0.0; ap1('beta')=0; ap1('I') = I1; ap1('gamma') = g1;
     myfit.freeParams = {freePrms1};
     Nprms = length(vertcat(myfit.freeParams{:}));% total number of free parameters
-    label = strcat("T=",num2str(round(nDatap94(i).temp,2)),"K & H=",...
-        num2str(nDatap94(i).field),"T & ",num2str(Nprms)," params fit");
+    fmt = "ENS pattern along [hh0] T=%.2fK H=%.3fT R=%.2f %i params fit";
+    label = sprintf(fmt,nDatap94(i).temp,nDatap94(i).field,ap1('R'),Nprms);
     fitStr = ['fit' int2str(Nprms) 'rslt']; gofStr = ['gof' int2str(Nprms)];
     [nDatap94(i).(fitStr), nDatap94(i).(gofStr)] = myfit.compute_fit();
-    if mod(i,10)==7% plot data every 10 fields
-        myfit.plot_fit(nDatap94(i).(fitStr));
-        title(strcat("ENS pattern cut along [hh0] at ",label));
+    if mod(i,67)==0% select data to plot
+        myfit.plot_fit(nDatap94(i).(fitStr)); title(label);
 %         xlim([hc-.8 hc+.6]);
     end
     disp(label); disp(nDatap94(i).(fitStr)); disp(nDatap94(i).(gofStr));
@@ -56,33 +56,43 @@ end
 %%
 np = Nprms;
 fitStrnp = ['fit' int2str(np) 'rslt']; gofStrnp = ['gof' int2str(np)];
+if ~isfield(tbl,(fitStrnp)); tbl(1).(fitStrnp) = []; end% if structure tbl does not contain any field called (fitStrnp), create that field
+flag = 0;% to check whether it is necessary to add a new row to the field or not
 for i = 1:numel(tbl)
-  if isempty(tbl(i).(fitStrnp)); Ntbl = i; break; end
-  %if a field of tbl.(fitStrnp) is empty, use it to store the following table
+  if isempty(tbl(i).(fitStrnp)); Ntbl = i; flag = 1; break; end%
+  %if a row of tbl.(fitStrnp) is empty, use it to store the following table
 end
-tbl(Ntbl).(fitStrnp) = table(field(rng)','VariableNames',{'Field_Oe'});
-cfn = coeffnames(nDatap94(istart).(fitStrnp));
-for nc=1:np
-    prm = extract_structure_field(nDatap94(rng),fitStrnp,cfn{nc});
-    cft = cell2mat(arrayfun(@(c) confint(c.(fitStrnp)),nDatap94(rng).','Uniform',0));
-    cftm = cft(1:2:end,nc); cftp = cft(2:2:end,nc);
-    prmErrm = prm-cftm;prmErrp = prm-cftp;% negative and positive
-    relErrm = abs(prmErrm./prm);relErrp = abs(prmErrp./prm);% negative and positive    
-    nDatap94(np).tbl.(cfn{nc}) = prm;
-    nDatap94(np).tbl.([cfn{nc} '_RelErr']) = relErrm;
+if ~flag; Ntbl = numel(tbl)+1; end% if all the rows of tbl.(fitStrnp) are non-empty, store table in a new row
+tbl(Ntbl).(fitStrnp) = table(field(rng)','VariableNames',{'Field_Oe'});% first column of the table contains magnetic field values
+cfn = coeffnames(nDatap94(istart).(fitStrnp));% extract fit coefficient names, i.e. free parameters 
+for nc=1:np% for each free parameter
+    prm = extract_structure_field(nDatap94(rng),fitStrnp,cfn{nc});% get its value
+    cft = cell2mat(arrayfun(@(c) confint(c.(fitStrnp)),nDatap94(rng).','Uniform',0));% get the 95% confidence intervals
+    cftm = cft(1:2:end,nc); cftp = cft(2:2:end,nc);% get the lower and upper bounds of that interval, respectively
+    prmErrm = prm-cftm;prmErrp = prm-cftp;% calculate corresponding negative and positive absolute errors
+    relErrm = abs(prmErrm./prm);relErrp = abs(prmErrp./prm);% and relative errors
+    tbl(Ntbl).(fitStrnp).(cfn{nc}) = prm;% store fit parameter value in a new column
+    tbl(Ntbl).(fitStrnp).([cfn{nc} '_RelErr']) = relErrm;% and relative error in another new column
 end
-rsquarenp = extract_structure_field(nDatap94(rng),gofStrnp,'rsquare');
-nDatap94(np).tbl.Rsquare = rsquarenp;
+if ~any(strcmp('R',tbl(1).(fitStrnp).Properties.VariableNames))% if there is no field called 'R' in table tbl.(fitStrnp)
+    tbl(Ntbl).(fitStrnp).R = ap1('R')*ones(length(rng),1);% store value of parameter R in another column (this is unnecessary if R is a free parameter)
+end
+rsquarenp = extract_structure_field(nDatap94(rng),gofStrnp,'rsquare');% extract r^2 value from goodness of fit
+tbl(Ntbl).(fitStrnp).Rsquare = rsquarenp;% store r^2 value in a new column
+flag = 0;% reset flag for next run
 
 %% Write table to file
-fileChar = [fitStr '.txt'];
+fileChar = [fitStr '_R=' sprintf('%2.e',ap1('R')) '.txt'];
 fileID = fopen(fileChar,'a');
 % fprintf(fileID,'\nValues of free parameters after fit:\n');
 % fprintf(fileID,'%s\n',nDatap94(np).tbl);
-writetable(nDatap94(Nprms).tbl,fileChar);
+writetable(tbl(Ntbl).(fitStrnp),fileChar);
 fprintf(fileID,'\nInitial values of free parameters:\n');
 S = string(myfit.freeParams{1});
+K = keys(myfit.allParams{1}); V = values(myfit.allParams{1});
 fprintf(fileID,'%s\n',strcat(S(:,1)," = ",S(:,2)));
+fprintf(fileID,'\nFixed values of all parameters (disregard free parameters):\n');
+fprintf(fileID,'%s\n',strcat(K," = ",string(V)));
 fclose(fileID);
 %% Extract 7-fit parameters from data structure and create table containing fit parameters 
 [gamma,relErrGm,alpha,relErrAm,sigma,relErrSm] = ENS_peak_fit_extract_params(nDatap94(rng),'fit7rslt');

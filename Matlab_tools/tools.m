@@ -31,3 +31,8 @@ for i = 1: numel(inputStruct)
   end
 end
 
+%% Check if a variable exists in a column
+% https://www.mathworks.com/matlabcentral/answers/313776-how-to-check-whether-a-column-exist-in-a-table
+if any(strcmp('Variable',(tableName).Properties.VariableNames));% if there is a field called 'Variable' in table(tableName)
+    % do whatever
+end
