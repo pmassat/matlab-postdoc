@@ -11,29 +11,32 @@ for i=1:length(fieldinfo0p94K.FileName)
 end
 H = extractfield(nDatap94,'field');
 %% Data formatting for curve fitting tool analysis
-i=67;
-hh67 = nDatap94(i).hh0;
-I67 = nDatap94(i).I;
+i=1;
+hh1 = nDatap94(i).hh0;
+I1dat = nDatap94(i).I;
 dI = nDatap94(i).dI;
 %%
 istart = length(H);
 iend = 37;
 %% Fit single Ikeda-Carpenter-pseudo-Voigt peak at high field
 % Analysis parameters
-hc = -8;% value of h in reciprocal space
+hc = [-8.03 -7.99];% value of h in reciprocal space
 % ufb = 0.99; % upper fit boundary = highest value of h-hc for which to include datapoints for the fit
 field = H;%cell2mat( arrayfun(@(c) c.field, nDatap94(1:istart).', 'Uniform', 0) );
-datExcld = nDatap94(istart).hh0<hc-.7 | nDatap94(istart).hh0>hc+0.55 |...
-    (nDatap94(istart).hh0>hc-.35 & nDatap94(istart).hh0<hc-0.15)...
-     | (nDatap94(istart).hh0>hc+0.15 & nDatap94(istart).hh0<hc+0.2);% Exclude 
+datExcld = nDatap94(istart).hh0<min(hc)-.7 | nDatap94(istart).hh0>max(hc)+0.55 |...
+    (nDatap94(istart).hh0>min(hc)-.35 & nDatap94(istart).hh0<min(hc)-0.15)...
+     | (nDatap94(istart).hh0>max(hc)+0.15 & nDatap94(istart).hh0<max(hc)+0.2);% Exclude 
 % data points that correspond to other peaks as well as those that are too far away
 
 %% Perform and plot fit
-rng = istart:-1:iend;
-I1 = 3e5; R1 = 0.1; a1 = 200; b1 = 0.1; g1 = 1e-3; s1 = 6.6e-3;% free parameters initial values
+rng = 1%istart%:-1:iend;
+I1 = 1e5; R1 = 0.1; a1 = 200; b1 = 0.1; g1 = 1e-3; s1 = 6.6e-3;% free parameters initial values
+I2 = 2e5; R2 = 0.1; a2 = 200; b2 = 0.1; g2 = 1e-3; s2 = 6.6e-3;% free parameters initial values
 % freePrms1 = {'I',I1;'R',R1;'alpha',a1;'beta',b1;'gamma',g1;'sigma',s1;'x0',hc};%7 free parameters
 % freePrms1 = {'I',I1;'R',R1;'beta',b1;'gamma',g1;'x0',hc};% 5 free parameters
-freePrms1 = {'I',I1;'gamma',g1;'x0',hc};% 3 free parameters
+freePrms1 = {'I1',I1;'x01',hc(1)};% 3 free parameters
+% freePrms2 = {'I2',I2;'gamma2',g2;'x02',hc(2)};% 3 free parameters
+freePrms2 = {'I2',I2;'x02',hc(2)};% 3 free parameters
 % Note: the order in which free parameters are defined matters because of
 % how the array of initial fitting parameters 'initParams' is defined
 for i=rng
@@ -41,13 +44,13 @@ for i=rng
     myfit.dataExcl = datExcld;
     ap1 = myfit.allParams{1}; ap1('alpha') = 140; ap1('sigma') = 6.6e-3;% 'ap1' is shorter than 'myfit.allParams{1}'
     ap1('R')=0.0; ap1('beta')=0; ap1('I') = I1; ap1('gamma') = g1;
-    myfit.freeParams = {freePrms1};
+    myfit.freeParams = {freePrms1,freePrms2};
     Nprms = length(vertcat(myfit.freeParams{:}));% total number of free parameters
-    fmt = "ENS pattern along [hh0] T=%.2fK H=%.3fT R=%.2f %i params fit";
+    fmt = 'ENS pattern along [hh0] T=%.2fK H=%.3fT R=%.2f %i params fit';
     label = sprintf(fmt,nDatap94(i).temp,nDatap94(i).field,ap1('R'),Nprms);
     fitStr = ['fit' int2str(Nprms) 'rslt']; gofStr = ['gof' int2str(Nprms)];
     [nDatap94(i).(fitStr), nDatap94(i).(gofStr)] = myfit.compute_fit();
-    if mod(i,67)==0% select data to plot
+    if mod(i,1)==0% select data to plot
         myfit.plot_fit(nDatap94(i).(fitStr)); title(label);
 %         xlim([hc-.8 hc+.6]);
     end
