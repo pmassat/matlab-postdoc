@@ -16,41 +16,44 @@ hh1 = nDatap94(i).hh0;
 I1dat = nDatap94(i).I;
 dI = nDatap94(i).dI;
 %%
-istart = length(H);
-iend = 37;
+istart = 31;%length(H);
+iend = 45;
 %% Fit single Ikeda-Carpenter-pseudo-Voigt peak at high field
 % Analysis parameters
-hc = [-8.03 -7.99];% value of h in reciprocal space
+hc = -8.0;% center of unsplit peak in reciprocal space
 % ufb = 0.99; % upper fit boundary = highest value of h-hc for which to include datapoints for the fit
 field = H;%cell2mat( arrayfun(@(c) c.field, nDatap94(1:istart).', 'Uniform', 0) );
 datExcld = nDatap94(istart).hh0<min(hc)-.7 | nDatap94(istart).hh0>max(hc)+0.55 |...
     (nDatap94(istart).hh0>min(hc)-.35 & nDatap94(istart).hh0<min(hc)-0.15)...
-     | (nDatap94(istart).hh0>max(hc)+0.15 & nDatap94(istart).hh0<max(hc)+0.2);% Exclude 
+     | (nDatap94(istart).hh0>max(hc)+0.14 & nDatap94(istart).hh0<max(hc)+0.2);% Exclude 
 % data points that correspond to other peaks as well as those that are too far away
 
 %% Perform and plot fit
-rng = 1%istart%:-1:iend;
+xc = [-8.03 -7.99];% position of peaks in reciprocal space
+lx = length(xc);
+rng = istart:1:iend;
 I1 = 1e5; R1 = 0.1; a1 = 200; b1 = 0.1; g1 = 1e-3; s1 = 6.6e-3;% free parameters initial values
 I2 = 2e5; R2 = 0.1; a2 = 200; b2 = 0.1; g2 = 1e-3; s2 = 6.6e-3;% free parameters initial values
 % freePrms1 = {'I',I1;'R',R1;'alpha',a1;'beta',b1;'gamma',g1;'sigma',s1;'x0',hc};%7 free parameters
-% freePrms1 = {'I',I1;'R',R1;'beta',b1;'gamma',g1;'x0',hc};% 5 free parameters
-freePrms1 = {'I1',I1;'x01',hc(1)};% 3 free parameters
-% freePrms2 = {'I2',I2;'gamma2',g2;'x02',hc(2)};% 3 free parameters
-freePrms2 = {'I2',I2;'x02',hc(2)};% 3 free parameters
+% freePrms1 = {'I1',I1;'R1',R1;'beta1',b1;'gamma1',g1;'x01',hc(1)};% 5 free parameters
+% freePrms2 = {'I2',I2;'R2',R2;'beta2',b2;'gamma2',g2;'x02',hc(2)};% 5 free parameters
+freePrms1 = {'I1',I1;'x01',xc(1)};% 3 free parameters
+freePrms2 = {'I2',I2;'gamma2',g2;'x02',xc(2)};% 3 free parameters
 % Note: the order in which free parameters are defined matters because of
 % how the array of initial fitting parameters 'initParams' is defined
 for i=rng
-    myfit = fitICpV(nDatap94(i).hh0,nDatap94(i).I,hc); 
+    myfit = fitICpV(nDatap94(i).hh0,nDatap94(i).I,xc); 
     myfit.dataExcl = datExcld;
     ap1 = myfit.allParams{1}; ap1('alpha') = 140; ap1('sigma') = 6.6e-3;% 'ap1' is shorter than 'myfit.allParams{1}'
-    ap1('R')=0.0; ap1('beta')=0; ap1('I') = I1; ap1('gamma') = g1;
+    ap1('R')=0.0; ap1('beta')=0; ap1('I') = I1; ap1('gamma') = 0;
     myfit.freeParams = {freePrms1,freePrms2};
     Nprms = length(vertcat(myfit.freeParams{:}));% total number of free parameters
-    fmt = 'ENS pattern along [hh0] T=%.2fK H=%.3fT R=%.2f %i params fit';
-    label = sprintf(fmt,nDatap94(i).temp,nDatap94(i).field,ap1('R'),Nprms);
-    fitStr = ['fit' int2str(Nprms) 'rslt']; gofStr = ['gof' int2str(Nprms)];
+    fmt = 'ENS pattern along [hh0] T=%.2fK H=%.3fT %i params fit';
+    label = sprintf(fmt,nDatap94(i).temp,nDatap94(i).field,Nprms);
+    fitStr = ['fit'  int2str(lx) 'ICpV' int2str(Nprms) 'rslt']; 
+    gofStr = ['gof'  int2str(lx) 'ICpV' int2str(Nprms)];
     [nDatap94(i).(fitStr), nDatap94(i).(gofStr)] = myfit.compute_fit();
-    if mod(i,1)==0% select data to plot
+    if mod(i,5)==1% select data to plot
         myfit.plot_fit(nDatap94(i).(fitStr)); title(label);
 %         xlim([hc-.8 hc+.6]);
     end
@@ -58,8 +61,9 @@ for i=rng
 end
 %%
 np = Nprms;
-fitStrnp = ['fit' int2str(np) 'rslt']; gofStrnp = ['gof' int2str(np)];
-if ~isfield(tbl,(fitStrnp)); tbl(1).(fitStrnp) = []; end% if structure tbl does not contain any field called (fitStrnp), create that field
+fitStrnp = fitStr; gofStrnp = gofStr;
+if ~exist('tbl','var') || ~isfield(tbl,(fitStrnp)); tbl(1).(fitStrnp) = []; end
+% if structure tbl does not contain any field called (fitStrnp), create that field
 flag = 0;% to check whether it is necessary to add a new row to the field or not
 for i = 1:numel(tbl)
   if isempty(tbl(i).(fitStrnp)); Ntbl = i; flag = 1; break; end%
@@ -85,17 +89,20 @@ tbl(Ntbl).(fitStrnp).Rsquare = rsquarenp;% store r^2 value in a new column
 flag = 0;% reset flag for next run
 
 %% Write table to file
-fileChar = [fitStr '_R=' sprintf('%2.e',ap1('R')) '.txt'];
+fileChar = [fitStr '.txt'];% '_R=' sprintf('%2.e',ap1('R'))
 fileID = fopen(fileChar,'a');
 % fprintf(fileID,'\nValues of free parameters after fit:\n');
 % fprintf(fileID,'%s\n',nDatap94(np).tbl);
 writetable(tbl(Ntbl).(fitStrnp),fileChar);
 fprintf(fileID,'\nInitial values of free parameters:\n');
-S = string(myfit.freeParams{1});
-K = keys(myfit.allParams{1}); V = values(myfit.allParams{1});
+S = string(vertcat(myfit.freeParams{:}));
 fprintf(fileID,'%s\n',strcat(S(:,1)," = ",S(:,2)));
-fprintf(fileID,'\nFixed values of all parameters (disregard free parameters):\n');
-fprintf(fileID,'%s\n',strcat(K," = ",string(V)));
+fprintf(fileID,'\nFixed values of all parameters (disregard free parameters):');
+for il=1:lx
+    fprintf(fileID,['\nPeak #' int2str(il) '\n']);
+    K = keys(myfit.allParams{il}); V = values(myfit.allParams{il});
+    fprintf(fileID,'%s\n',strcat(K," = ",string(V)));
+end
 fclose(fileID);
 %% Compute average value of parameter to be fixed in next iterations
 % calculate mean of alpha over j data points at highest fields,

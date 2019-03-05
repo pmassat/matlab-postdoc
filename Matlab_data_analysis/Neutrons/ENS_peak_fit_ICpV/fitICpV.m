@@ -156,7 +156,7 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
                 fitEqn{i1} = fitEqStr(obj.allParams{i1},obj.freeParams{i1});
             end
             fullFitStr = join(string(fitEqn),'+');% sum equation strings for all peaks
-            disp(fullFitStr);
+%             disp(fullFitStr);% display the fit equation for debugging
             
 %% Create arrays containing lower bounds and initial values of fit parameters
             lowBounds = zeros(1,totalNumFreeParams);%
