@@ -33,7 +33,7 @@ datExcld = nData1<min(hc)-.7 | nData1>max(hc)+0.55 |...
 %% Perform and plot fit
 xc = [-8.03 -7.99];% position of peaks in reciprocal space
 lx = length(xc);
-rng = 46:54%istart:1:iend;
+rng = istart:1:iend;
 I1 = 1e5; R1 = 0.1; a1 = 200; b1 = 0.1; g1 = 1e-3; s1 = 6.6e-3;% free parameters initial values
 I2 = 2e5; R2 = 0.1; a2 = 200; b2 = 0.1; g2 = 1e-3; s2 = 6.6e-3;% free parameters initial values
 % freePrms1 = {'I',I1;'R',R1;'alpha',a1;'beta',b1;'gamma',g1;'sigma',s1;'x0',hc};%7 free parameters
@@ -56,16 +56,11 @@ for i=rng
     fitStr = ['fit'  int2str(lx) 'ICpV' int2str(Nprms) 'rslt']; 
     gofStr = ['gof'  int2str(lx) 'ICpV' int2str(Nprms)];
     [nDatap94(i).(fitStr), nDatap94(i).(gofStr)] = myfit.compute_fit();
-    if mod(i,1)==0% select data to plot
+    if mod(i,10)==1% select data to plot
         myfit.plot_fit(nDatap94(i).(fitStr)); title(label);
 %         xlim([hc-.8 hc+.6]);
     end
     disp(label); disp(nDatap94(i).(fitStr)); disp(nDatap94(i).(gofStr));
-end
-%%
-for i=46%:54
-    label = sprintf(fmt,nDatap94(i).temp,nDatap94(i).field,Nprms);
-    myfit.plot_fit(nDatap94(i).(fitStr)); title(label);
 end
 %%
 np = Nprms;
@@ -133,10 +128,10 @@ for i=rng
     I1 = nDatap94(i).fitStr.I1;
 %     gamma = nDatap94(i).fitStr.gamma;
     x0 = nDatap94(i).fitStr.x01;
-    fnfit = @(x)-I1*voigtIkedaCarpenter_ord(x,[0,140,0,gamma,6.6e-3,0.05,x0]);%fnfit = -1*[fit function] so that the maximum becomes a minimum
-    xM(i) = fminbnd(fnfit,hc-.2,hc+.2);% Identify position of the maximum on interval [hc-0.2 hc+0.2]
-    M = -fnfit(xM(i));% compute value of the maximum
-    fd = @(x)abs(fnfit(x)+M/2);
+    ftot = @(x)-I1*voigtIkedaCarpenter_ord(x,[0,140,0,gamma,6.6e-3,0.05,x0]);%fnfit = -1*[fit function] so that the maximum becomes a minimum
+    xM(i) = fminbnd(ftot,hc-.2,hc+.2);% Identify position of the maximum on interval [hc-0.2 hc+0.2]
+    M = -ftot(xM(i));% compute value of the maximum
+    fd = @(x)abs(ftot(x)+M/2);
     xhm1 = fminbnd(fd,xM(i)-0.2,xM(i));% identify x value for which function equals M/2 on interval [xM-0.2 xM]
     xhm2 = fminbnd(fd,xM(i),xM(i)+0.2);% same on interval [xM xM+0.2]
     fwhm(i) = xhm2 - xhm1;% FWHM of big peak
@@ -160,21 +155,70 @@ end
 %% Compute 2 peak fit with 3 free parameters for each peak 
 % and extract splitting between peaks
 xM1 = ones(length(rng),1); xM2 = ones(length(rng),1); splitting = zeros(length(rng),1);
+xMerr1 = ones(length(rng),1); xMerr2 = ones(length(rng),1); xgap = ones(length(rng),1);
+X = linspace(hc-.1,hc+.1,501); d1X = diff(X); d2X = diff(d1X);
 for i=rng
     label = sprintf(fmt,nDatap94(i).temp,nDatap94(i).field,Nprms);
-        I1 = nDatap94(i).(fitStr).I1; I2 = nDatap94(i).(fitStr).I2;
+    I1 = nDatap94(i).(fitStr).I1; I2 = nDatap94(i).(fitStr).I2;
 %         gamma1 = nDatap94(i).fitStr.gamma1; gamma2 = nDatap94(i).fitStr.gamma2;
-        x01 = nDatap94(i).(fitStr).x01; x02 = nDatap94(i).(fitStr).x02;
-        fnfit1 = @(x)-(I1*voigtIkedaCarpenter_ord(x,[0,140,0,0,6.6e-3,0.05,x01]));
-        fnfit2 = @(x)-(I2*voigtIkedaCarpenter_ord(x,[0,140,0,0,6.6e-3,0.05,x02]));
-    %fnfit = -1*[fit function] so that the maximum becomes a minimum
-        xM1(i) = fminbnd(fnfit1,xc(1)-.1,xc(1)+.1);% Identify position of the maximum on interval [hc-0.2 hc+0.2]
-        xM2(i) = fminbnd(fnfit2,xc(2)-.1,xc(2)+.1);% Identify position of the maximum on interval [hc-0.2 hc+0.2]
-        M1 = -fnfit2(xM1(i));
-        M2 = -fnfit2(xM2(i));% compute value of the maximum, to check graphically if the result is correct
-        splitting(i) = -(xM2(i) - xM1(i))/hc;
+    x01 = nDatap94(i).(fitStr).x01; x02 = nDatap94(i).(fitStr).x02;
+    f1 = @(x)-(I1*voigtIkedaCarpenter_ord(x,[0,140,0,0,0.05,6.6e-3,x01]));
+    f2 = @(x)-(I2*voigtIkedaCarpenter_ord(x,[0,140,0,0,0.05,6.6e-3,x02]));
+%fnfit = -1*[fit function] so that the maximum becomes a minimum
+    xM1(i) = fminbnd(f1,xc(1)-.1,xc(1)+.1);% Identify position of the maximum on interval [hc-0.2 hc+0.2]
+    xM2(i) = fminbnd(f2,xc(2)-.1,xc(2)+.1);% Identify position of the maximum on interval [hc-0.2 hc+0.2]
+    splitting(i) = -(xM2(i) - xM1(i))/hc;
+    
+    % estimation of error bars
+    ftot = @(x) -f1(x)-f2(x);%full fitting function
+    M1 = ftot(xM1(i));%
+    M2 = ftot(xM2(i));%
+    [xgap(i),fgap] = fminbnd(ftot,xM1(i),xM2(i));%position of gap between peaks, if any
+    if fgap<ftot(xM1(i))% if there is actually a gap between both peaks, 
+%   the value of ftot at its position should be lower than at xM1
+        fd1 = @(x)abs(ftot(x)-0.95*M1);% fd is 0 when ftot = 0.95*fgap, positive elsewhere
+        fd2 = @(x)abs(ftot(x)-0.95*M2);% fd is 0 when ftot = 0.95*fgap, positive elsewhere
+        xMerr1(i) = fminbnd(fd1,xM1(i),xgap(i))-xM1(i);% lower value for which fd goes to 0
+%         xMerr2(i) = xM2(i)-fminbnd(fd2,xgap(i),xM2(i));% higher value ---
+% Why does the above expression yield a smaller value than this one: ??
+        xMerr2(i) = xM2(i)-(fminbnd(fd2,xM2(i)-.1,xM2(i))+fminbnd(fd2,xM2(i),xM2(i)+.1))/2;% error bar on second peak
+    else
+        f = ftot(X);% calculate values of fit function on interval X
+        d1f = diff(f)./d1X;% first derivative of f
+        d2f = diff(d1f)./(d1X(2:end)-d2X/2);% second derivative of f
+        pks = findpeaks(d2f);% find peaks in second derivative of f
+% if ftot consists of only one peak, its second derivative will have exactly two peaks
+        if length(pks)>2% if its second derivative has more than 2 peaks, 
+% it means that ftot has an inflexion point, i.e. a shoulder, which is related to the
+% existence of a second peak in the data; in this case, use wider error bars
+            fd1 = @(x)abs(ftot(x)-0.9*M1);% fd is 0 when ftot = 0.95*fgap, positive elsewhere
+            fd2 = @(x)abs(ftot(x)-0.9*M2);% fd is 0 when ftot = 0.95*fgap, positive elsewhere
+            xMerr1(i) = (fminbnd(fd1,xM1(i)-.1,xM1(i))+fminbnd(fd1,xM1(i),xM1(i)+.1))/2-xM1(i);
+% error bar on first peak equals (x1(fd1=0)+x2(fd1=0))/2-xM1(i), where x1 and x2 are the
+% lower and upper x values where fd1=0, respectively
+            xMerr2(i) = xM2(i)-(fminbnd(fd2,xM2(i)-.1,xM2(i))+fminbnd(fd2,xM2(i),xM2(i)+.1))/2;% error bar on second peak
+        else% if there is no clear second peak in the data
+            break
+        end
+    end
 end
-
+%5
+%%
+for i=51
+    f = -(f1(X)+f2(X));
+    d1f = diff(f)./d1X;
+    d2f = diff(d1f)./(d1X(2:end)-d2X/2);
+    d3f = diff(d2f)./d1X(2:end-1);
+    if mod(i,1)==0% select data to plot
+        figure
+%         plot(X,f1);
+%         plot(X(2:end)-dX/2,d1f);
+        plot(X(2:end-1),d2f); hold on
+%         plot(X(3:end-1)-d1X(2:end-1)/2,d3f);
+        title(label)
+%         xlim([hc-.8 hc+.6]);
+    end
+end
 %%
 figure
 plot(field,splitting,'.')
