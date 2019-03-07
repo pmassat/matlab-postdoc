@@ -23,12 +23,14 @@ iend = length(H);
 hc = -8.0;% center of unsplit peak in reciprocal space
 % ufb = 0.99; % upper fit boundary = highest value of h-hc for which to include datapoints for the fit
 field = H;%cell2mat( arrayfun(@(c) c.field, nDatap94(1:istart).', 'Uniform', 0) );
-nData1 = nDatap94(istart).hh0;
+nData1 = nDatap94(istart).hh0(nDatap94(istart).dI>0);
 datExcld = nData1<min(hc)-.7 | nData1>max(hc)+0.55 |...
     (nData1>min(hc)-.35 & nData1<min(hc)-0.15) |...
-    (nData1>max(hc)+0.14 & nData1<max(hc)+0.2);% Exclude  |...
+    (nData1>max(hc)+0.14 & nData1<max(hc)+0.2);%
 %     (nData1>max(hc)+0.045 & nData1<max(hc)+0.065);% Exclude 
 % data points that correspond to other peaks as well as those that are too far away
+% datExcld should be defined on the x interval where obj.dY>0, otherwise
+% the number of excluded points will be higher than the number of data points
 
 %% Perform and plot fit
 xc = [-8.03 -7.99];% position of peaks in reciprocal space
@@ -44,8 +46,8 @@ freePrms2 = {'I2',I2;'x02',xc(2)};% 3 free parameters
 % Note: the order in which free parameters are defined matters because of
 % how the array of initial fitting parameters 'initParams' is defined
 fmt = 'ENS pattern along [hh0] T=%.2fK H=%.3fT %i params fit';% string format for plot title
-for i=rng
-    myfit = fitICpV(nDatap94(i).hh0,nDatap94(i).I,xc); 
+for i=1%rng
+    myfit = fitICpV(nDatap94(i).hh0,nDatap94(i).I,nDatap94(i).dI,xc); 
     myfit.dataExcl = datExcld;
     ap1 = myfit.allParams{1}; ap1('alpha') = 140; ap1('sigma') = 6.6e-3;% 'ap1' is shorter than 'myfit.allParams{1}'
     ap1('R')=0.0; ap1('beta')=0; ap1('I') = I1; ap1('gamma') = 0;
@@ -155,7 +157,7 @@ end
 %% Compute 2 peak fit with 3 free parameters for each peak 
 % and extract splitting between peaks
 xM1 = ones(length(rng),1); xM2 = ones(length(rng),1); splitting = zeros(length(rng),1);
-xMerr1 = ones(length(rng),1); xMerr2 = ones(length(rng),1); xgap = ones(length(rng),1);
+% spltRE = ones(length(rng),1);% xM2re = ones(length(rng),1); xgap = ones(length(rng),1);
 X = linspace(hc-.1,hc+.1,501); d1X = diff(X); d2X = diff(d1X);
 for i=rng
     label = sprintf(fmt,nDatap94(i).temp,nDatap94(i).field,Nprms);
@@ -169,40 +171,41 @@ for i=rng
     xM2(i) = fminbnd(f2,xc(2)-.1,xc(2)+.1);% Identify position of the maximum on interval [hc-0.2 hc+0.2]
     splitting(i) = -(xM2(i) - xM1(i))/hc;
     
-    % estimation of error bars
-    ftot = @(x) -f1(x)-f2(x);%full fitting function
-    M1 = ftot(xM1(i));%
-    M2 = ftot(xM2(i));%
-    [xgap(i),fgap] = fminbnd(ftot,xM1(i),xM2(i));%position of gap between peaks, if any
-    if fgap<ftot(xM1(i))% if there is actually a gap between both peaks, 
-%   the value of ftot at its position should be lower than at xM1
-        fd1 = @(x)abs(ftot(x)-0.95*M1);% fd is 0 when ftot = 0.95*fgap, positive elsewhere
-        fd2 = @(x)abs(ftot(x)-0.95*M2);% fd is 0 when ftot = 0.95*fgap, positive elsewhere
-        xMerr1(i) = fminbnd(fd1,xM1(i),xgap(i))-xM1(i);% lower value for which fd goes to 0
-%         xMerr2(i) = xM2(i)-fminbnd(fd2,xgap(i),xM2(i));% higher value ---
-% Why does the above expression yield a smaller value than this one: ??
-        xMerr2(i) = xM2(i)-(fminbnd(fd2,xM2(i)-.1,xM2(i))+fminbnd(fd2,xM2(i),xM2(i)+.1))/2;% error bar on second peak
-    else
-        f = ftot(X);% calculate values of fit function on interval X
-        d1f = diff(f)./d1X;% first derivative of f
-        d2f = diff(d1f)./(d1X(2:end)-d2X/2);% second derivative of f
-        pks = findpeaks(d2f);% find peaks in second derivative of f
-% if ftot consists of only one peak, its second derivative will have exactly two peaks
-        if length(pks)>2% if its second derivative has more than 2 peaks, 
-% it means that ftot has an inflexion point, i.e. a shoulder, which is related to the
-% existence of a second peak in the data; in this case, use wider error bars
-            fd1 = @(x)abs(ftot(x)-0.9*M1);% fd is 0 when ftot = 0.95*fgap, positive elsewhere
-            fd2 = @(x)abs(ftot(x)-0.9*M2);% fd is 0 when ftot = 0.95*fgap, positive elsewhere
-            xMerr1(i) = (fminbnd(fd1,xM1(i)-.1,xM1(i))+fminbnd(fd1,xM1(i),xM1(i)+.1))/2-xM1(i);
-% error bar on first peak equals (x1(fd1=0)+x2(fd1=0))/2-xM1(i), where x1 and x2 are the
-% lower and upper x values where fd1=0, respectively
-            xMerr2(i) = xM2(i)-(fminbnd(fd2,xM2(i)-.1,xM2(i))+fminbnd(fd2,xM2(i),xM2(i)+.1))/2;% error bar on second peak
-        else% if there is no clear second peak in the data
-            break
-        end
-    end
+%     ftot = @(x) -f1(x)-f2(x);%full fitting function
+%     M1 = ftot(xM1(i));%
+%     M2 = ftot(xM2(i));%
+%     [xgap(i),fgap] = fminbnd(ftot,xM1(i),xM2(i));%position of gap between peaks, if any
+%     if fgap<ftot(xM1(i))% if there is actually a gap between both peaks, 
+% %   the value of ftot at its position should be lower than at xM1
+%         fd1 = @(x)abs(ftot(x)-0.95*M1);% fd is 0 when ftot = 0.95*fgap, positive elsewhere
+%         fd2 = @(x)abs(ftot(x)-0.95*M2);% fd is 0 when ftot = 0.95*fgap, positive elsewhere
+%         xM1re(i) = fminbnd(fd1,xM1(i),xgap(i))-xM1(i);% lower value for which fd goes to 0
+% %         xMerr2(i) = xM2(i)-fminbnd(fd2,xgap(i),xM2(i));% higher value ---
+% % Why does the above expression yield a smaller value than this one: ??
+%         xM2re(i) = xM2(i)-(fminbnd(fd2,xM2(i)-.1,xM2(i))+fminbnd(fd2,xM2(i),xM2(i)+.1))/2;% error bar on second peak
+%     else
+%         f = ftot(X);% calculate values of fit function on interval X
+%         d1f = diff(f)./d1X;% first derivative of f
+%         d2f = diff(d1f)./(d1X(2:end)-d2X/2);% second derivative of f
+%         pks = findpeaks(d2f);% find peaks in second derivative of f
+% % if ftot consists of only one peak, its second derivative will have exactly two peaks
+%         if length(pks)>2% if its second derivative has more than 2 peaks, 
+% % it means that ftot has an inflexion point, i.e. a shoulder, which is related to the
+% % existence of a second peak in the data; in this case, use wider error bars
+%             fd1 = @(x)abs(ftot(x)-0.9*M1);% fd is 0 when ftot = 0.95*fgap, positive elsewhere
+%             fd2 = @(x)abs(ftot(x)-0.9*M2);% fd is 0 when ftot = 0.95*fgap, positive elsewhere
+%             xM1re(i) = (fminbnd(fd1,xM1(i)-.1,xM1(i))+fminbnd(fd1,xM1(i),xM1(i)+.1))/2-xM1(i);
+% % error bar on first peak equals (x1(fd1=0)+x2(fd1=0))/2-xM1(i), where x1 and x2 are the
+% % lower and upper x values where fd1=0, respectively
+%             xM2re(i) = xM2(i)-(fminbnd(fd2,xM2(i)-.1,xM2(i))+fminbnd(fd2,xM2(i),xM2(i)+.1))/2;% error bar on second peak
+%         else% if there is no clear second peak in the data
+%             break
+%         end
+%     end
 end
-%5
+% estimation of error bars
+spltRE = tbl.(fitStr).x01_RelErr + tbl.(fitStr).x02_RelErr;
+
 %%
 for i=51
     f = -(f1(X)+f2(X));
@@ -221,7 +224,8 @@ for i=51
 end
 %%
 figure
-plot(field,splitting,'.')
+% plot(field,splitting,'.')
+errorbar(field,splitting,spltRE(rng),'.','MarkerSize',12)
 
 
 

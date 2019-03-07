@@ -23,5 +23,20 @@
 %     end
 % end
 % 
- strcat("this is a"+newline+"sample text ",...
-     "used for a test")
+
+% generate data
+x = 0:.1:10;
+y = x.*x + randn(size(x));
+w = linspace(0.1, 10.1,length(x));
+x = x(:);
+y = y(:);
+w = w(:);
+%plot data
+figure
+errorbar(x,y,1./w,'.');
+%fit
+ft = fittype('poly2');
+cf = fit(x,y,ft,'Weight',w);
+% Plot fit
+hold on
+plot(cf,'fit',0.95);

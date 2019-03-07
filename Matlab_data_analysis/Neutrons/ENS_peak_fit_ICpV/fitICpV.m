@@ -1,6 +1,6 @@
 classdef fitICpV < handle% handle allows to modify object properties in the class' methods
     properties 
-        X; Y;% X and Y data
+        X; Y; dY% X and Y data, with error bars on Y
         dataExcl;% logical that determines which data points to exclude from fit
         allParams;% cell array of cell arrays, each sub-cell array containing
 % the names and fixed values (if parameters are not free) of all parameters for each peak.
@@ -9,7 +9,7 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
     end
     methods
 %% Class constructor
-        function obj = fitICpV(X, Y, xPeaks)
+        function obj = fitICpV(X, Y, dY, xPeaks)
 % Create a fit.
 % Data for 'ICpV' (Ikeda-Carpenter-pseudo-Voigt) fit:
 %      X Input (numeric array), e.g. hh0, cut of data along hh0 direction
@@ -18,7 +18,7 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
             if ~isa(X,'double') || ~isa(Y,'double') || ~isa(xPeaks,'double')
                error('Input parameters must all be double.')                
             end
-            obj.X = X; obj.Y = Y;
+            obj.X = X(dY>0); obj.Y = Y(dY>0); obj.dY = dY(dY>0);
             obj.dataExcl = obj.X<min(xPeaks)-.15 | obj.X>max(xPeaks)+0.2; 
             nPeaks = length(xPeaks);
             fixedKeySet = cell(1,nPeaks); fixedValueSet = cell(1,nPeaks); 
@@ -187,18 +187,22 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
 %             disp(lowBounds); sprintf('%d\n',initParams)%display for debugging
 
 %% Perform fit
-            [xData, yData] = prepareCurveData(obj.X,obj.Y);
+%             [xData, yData] = prepareCurveData(obj.X,obj.Y);length(xData)
+            [xData, yData, wData] = prepareCurveData(obj.X,obj.Y,1./obj.dY);
             % Set up fittype and options.
             ft = fittype( fullFitStr,'independent', 'x', 'dependent', 'y' );
             excludedPoints = excludedata( xData, yData, 'Indices', obj.dataExcl );
+% obj.dataExcl should be defined on the x interval where obj.dY>0, otherwise
+% the number of excluded points will be higher than the number of data points
             opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
             opts.Display = 'Off';
             opts.Lower = lowBounds;% use the above defined arrays for lower bounds
             opts.StartPoint = initParams;% and starting parameter values
 % the choice of initial parameters is critical to the convergence of the fit
             opts.Exclude = excludedPoints;
+            opts.Weights = wData;
             % Fit model to data.
-            [fitresult, gof] = fit( xData, yData, ft, opts );
+            [fitresult, gof] = fit( xData, yData, ft, opts);
         end
         
         
@@ -253,7 +257,7 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
                         [obj.X(minIndex) obj.X(maxIndex)],'LineWidth',2);
                 end
             end
-            pdat = plot(xData,yData,'xb','MarkerSize',9);
+            pdat = errorbar(xData,yData,obj.dY,'xb','MarkerSize',12,'LineWidth',2);
             pexcl = plot(obj.X(excludedPoints),obj.Y(excludedPoints),'xk',...
                 'MarkerSize',9);
             pfit = plot(Xfit,Yfit,'r-');
