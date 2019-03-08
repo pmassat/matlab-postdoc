@@ -184,11 +184,11 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
                         lowBounds(cntr) = -Inf;% x0 can be negative 
                 end
             end
-%             disp(lowBounds); sprintf('%d\n',initParams)%display for debugging
+%             disp(lowBounds);% sprintf('%d\n',initParams)%display for debugging
 
 %% Perform fit
-%             [xData, yData] = prepareCurveData(obj.X,obj.Y);length(xData)
-            [xData, yData, wData] = prepareCurveData(obj.X,obj.Y,1./obj.dY);
+            [xData, yData] = prepareCurveData(obj.X,obj.Y);
+%             [xData, yData, wData] = prepareCurveData(obj.X,obj.Y,abs(1./obj.dY));%length(xData)
             % Set up fittype and options.
             ft = fittype( fullFitStr,'independent', 'x', 'dependent', 'y' );
             excludedPoints = excludedata( xData, yData, 'Indices', obj.dataExcl );
@@ -200,7 +200,10 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
             opts.StartPoint = initParams;% and starting parameter values
 % the choice of initial parameters is critical to the convergence of the fit
             opts.Exclude = excludedPoints;
-            opts.Weights = wData;
+%             opts.Weights = wData;% there does not seem to be any good way
+% of weighing the data points: 1/dY reduces significantly the importance of
+% data points of the peaks, whereas Y/dY reduces the impact of data points
+% with low intensity on the sides of the peak. However, both types of data points are important
             % Fit model to data.
             [fitresult, gof] = fit( xData, yData, ft, opts);
         end

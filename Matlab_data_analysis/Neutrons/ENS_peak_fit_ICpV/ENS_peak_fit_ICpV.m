@@ -10,34 +10,50 @@ for i=1:length(fieldinfo0p94K.FileName)
     nDatap94(i).temp = fieldinfo0p94K.T_K(i);
 end
 H = extractfield(nDatap94,'field');
+hc = -8.0;% center of unsplit peak in reciprocal space
 %% Data formatting for curve fitting tool analysis
 i=1;
 hh1 = nDatap94(i).hh0;
 I1dat = nDatap94(i).I;
 dI = nDatap94(i).dI;
+%% Color plot of intensity in H-(hh0) 2D-map
+% Prepare plot
+[X,Y] = meshgrid(hh1,H);
+Ifull = cell2mat( arrayfun(@(c) c.I', nDatap94(1:length(nDatap94)).', 'Uniform', 0) );% intensity data combined in one big matrix
+%%
+% Perform plot 
+xmargin = 0.1;
+Xsel = X>hc-xmargin & X<hc+xmargin;
+figure
+surf(X(:,Xsel(1,:)),Y(:,Xsel(1,:)),Ifull(:,Xsel(1,:)),'EdgeColor','None')
+xlim([hc-xmargin hc+xmargin]); ylim([0 max(H)]); colormap jet;
+cb = colorbar; cbl = cb.Label; cbl.Rotation = 0;% horizontal colorbar label
+% cbl.Position = [-1 8e6 0]; cbl.Interpreter = 'latex';
+xlabel("(h h 0)"); ylabel("H (T)");
+sfmt = '$T=%.2f$ K';% string format for surf plot title
+txtrow = 60; txtcol = 3;
+xs = X(txtrow,Xsel(1,:)); ys = Y(txtrow,Xsel(1,:)); is = Ifull(txtrow,Xsel(1,:));
+% text(xs(txtcol),ys(txtcol),is(txtcol),[sprintf(sfmt,nDatap94(i).temp)],'HorizontalAlignment','left','FontSize',16);
+ann = annotation('textbox',[0.17 0.82 0.2 0.1],'interpreter','latex','String',{sprintf(sfmt,nDatap94(1).temp)},...
+    'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...
+    'LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
+ann.FitBoxToText='on';% fit annotation box to text
+caxis('auto');% auto rescale of color scale
+
 %%
 istart = 1;
-iend = length(H);
+iend = 11;%length(H);
 %% Fit single Ikeda-Carpenter-pseudo-Voigt peak at high field
 % Analysis parameters
-hc = -8.0;% center of unsplit peak in reciprocal space
 % ufb = 0.99; % upper fit boundary = highest value of h-hc for which to include datapoints for the fit
 field = H;%cell2mat( arrayfun(@(c) c.field, nDatap94(1:istart).', 'Uniform', 0) );
-nData1 = nDatap94(istart).hh0(nDatap94(istart).dI>0);
-datExcld = nData1<min(hc)-.7 | nData1>max(hc)+0.55 |...
-    (nData1>min(hc)-.35 & nData1<min(hc)-0.15) |...
-    (nData1>max(hc)+0.14 & nData1<max(hc)+0.2);%
-%     (nData1>max(hc)+0.045 & nData1<max(hc)+0.065);% Exclude 
-% data points that correspond to other peaks as well as those that are too far away
-% datExcld should be defined on the x interval where obj.dY>0, otherwise
-% the number of excluded points will be higher than the number of data points
 
 %% Perform and plot fit
 xc = [-8.03 -7.99];% position of peaks in reciprocal space
 lx = length(xc);
 rng = istart:1:iend;
-I1 = 1e5; R1 = 0.1; a1 = 200; b1 = 0.1; g1 = 1e-3; s1 = 6.6e-3;% free parameters initial values
-I2 = 2e5; R2 = 0.1; a2 = 200; b2 = 0.1; g2 = 1e-3; s2 = 6.6e-3;% free parameters initial values
+I1 = 8e4; R1 = 0.1; a1 = 200; b1 = 0.1; g1 = 1e-3; s1 = 6.6e-3;% free parameters initial values
+I2 = 1.8e5; R2 = 0.1; a2 = 200; b2 = 0.1; g2 = 1e-3; s2 = 6.6e-3;% free parameters initial values
 % freePrms1 = {'I',I1;'R',R1;'alpha',a1;'beta',b1;'gamma',g1;'sigma',s1;'x0',hc};%7 free parameters
 % freePrms1 = {'I1',I1;'R1',R1;'beta1',b1;'gamma1',g1;'x01',hc(1)};% 5 free parameters
 % freePrms2 = {'I2',I2;'R2',R2;'beta2',b2;'gamma2',g2;'x02',hc(2)};% 5 free parameters
@@ -46,7 +62,15 @@ freePrms2 = {'I2',I2;'x02',xc(2)};% 3 free parameters
 % Note: the order in which free parameters are defined matters because of
 % how the array of initial fitting parameters 'initParams' is defined
 fmt = 'ENS pattern along [hh0] T=%.2fK H=%.3fT %i params fit';% string format for plot title
-for i=1%rng
+for i=11%rng
+    nData1 = nDatap94(i).hh0(nDatap94(i).dI>0);
+    datExcld = nData1<min(hc)-.7 | nData1>max(hc)+0.55 |...
+        (nData1>min(hc)-.35 & nData1<min(hc)-0.15) |...
+        (nData1>max(hc)+0.14 & nData1<max(hc)+0.2);%
+%     (nData1>max(hc)+0.045 & nData1<max(hc)+0.065);% Exclude 
+% data points that correspond to other peaks as well as those that are too far away
+% datExcld should be defined on the x interval where obj.dY>0, otherwise
+% the number of excluded points will be higher than the number of data points
     myfit = fitICpV(nDatap94(i).hh0,nDatap94(i).I,nDatap94(i).dI,xc); 
     myfit.dataExcl = datExcld;
     ap1 = myfit.allParams{1}; ap1('alpha') = 140; ap1('sigma') = 6.6e-3;% 'ap1' is shorter than 'myfit.allParams{1}'
@@ -158,7 +182,7 @@ end
 % and extract splitting between peaks
 xM1 = ones(length(rng),1); xM2 = ones(length(rng),1); splitting = zeros(length(rng),1);
 % spltRE = ones(length(rng),1);% xM2re = ones(length(rng),1); xgap = ones(length(rng),1);
-X = linspace(hc-.1,hc+.1,501); d1X = diff(X); d2X = diff(d1X);
+% X = linspace(hc-.1,hc+.1,501); d1X = diff(X); d2X = diff(d1X);
 for i=rng
     label = sprintf(fmt,nDatap94(i).temp,nDatap94(i).field,Nprms);
     I1 = nDatap94(i).(fitStr).I1; I2 = nDatap94(i).(fitStr).I2;
