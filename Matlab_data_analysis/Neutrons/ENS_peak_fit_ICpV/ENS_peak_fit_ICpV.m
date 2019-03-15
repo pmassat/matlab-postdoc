@@ -9,8 +9,20 @@ for i=1:length(fieldinfo0p94K.FileName)
     nDatap94(i).field = fieldinfo0p94K.H_T(i);
     nDatap94(i).temp = fieldinfo0p94K.T_K(i);
 end
-H = extractfield(nDatap94,'field');
+
+%% Center of peak to be studied in the following
 hc = -8.0;% center of unsplit peak in reciprocal space
+
+%% Treatment of magnetic field
+H = extractfield(nDatap94,'field');
+Hc_0 = 0.51;% value in Tesla units of the critical field at zero temperature
+% in the absence of demagnetizing factor
+% see data taken on needles of TmVO4-LS5200 in July 2017
+demag_correction = 0.969*Hc_0/0.78;%0.78T is the value of critical field 
+% that comes from the fit of the splitting extracted from the data at 0.94K
+% and 0.969 is the value of Hc/Hc0 at the effective temperature of the measurement
+% see results of the below code when using demag_correction = 1
+field = H*demag_correction;%cell2mat( arrayfun(@(c) c.field, nDatap94(1:istart).', 'Uniform', 0) );
 %% Data formatting for curve fitting tool analysis
 i=1;
 hh1 = nDatap94(i).hh0;
@@ -18,38 +30,43 @@ I1dat = nDatap94(i).I;
 dI = nDatap94(i).dI;
 %% Color plot of intensity in H-(hh0) 2D-map
 % Prepare plot
-[X,Y] = meshgrid(hh1,H);
+[X,Y] = meshgrid(hh1,field);
 Ifull = cell2mat( arrayfun(@(c) c.I', nDatap94(1:length(nDatap94)).', 'Uniform', 0) );% intensity data combined in one big matrix
-%%
-% Perform plot 
+%% Plot 
 xmargin = 0.1;
 Xsel = X>hc-xmargin & X<hc+xmargin;
 figure
 surf(X(:,Xsel(1,:)),Y(:,Xsel(1,:)),Ifull(:,Xsel(1,:)),'EdgeColor','None')
-xlim([hc-xmargin hc+xmargin]); ylim([0 max(H)]); colormap jet;
-cb = colorbar; cbl = cb.Label; cbl.Rotation = 0;% horizontal colorbar label
+xlim([hc-xmargin hc+xmargin]); ylim([0 max(field)]); colormap jet;
+cb = colorbar; cbl = cb.Label; cbl.String = 'I (a.u.)';
+cbl.Position = [-.75 8.25e6 0]; cbl.Rotation = 0;% horizontal colorbar label
 % cbl.Position = [-1 8e6 0]; cbl.Interpreter = 'latex';
 xlabel("(h h 0)"); ylabel("H (T)");
-sfmt = '$T=%.2f$ K';% string format for surf plot title
+if Teff && dTeff% if the effective temperature has been calculated (see below)
+    sfmt = '$T=%.2f (%.0f)$K';
+    Tstr = sprintf(sfmt,Teff,dTeff*100);% use it
+else
+    sfmt = '$T=%.2f$K';%
+    Tstr = sprintf(sfmt,nDatap94(1).temp);% otherwise use the value recorded in the data
+end
 txtrow = 60; txtcol = 3;
 xs = X(txtrow,Xsel(1,:)); ys = Y(txtrow,Xsel(1,:)); is = Ifull(txtrow,Xsel(1,:));
 % text(xs(txtcol),ys(txtcol),is(txtcol),[sprintf(sfmt,nDatap94(i).temp)],'HorizontalAlignment','left','FontSize',16);
-ann = annotation('textbox',[0.17 0.82 0.2 0.1],'interpreter','latex','String',{sprintf(sfmt,nDatap94(1).temp)},...
+ann = annotation('textbox',[0.15 0.82 0.2 0.1],'interpreter','latex',...
+    'String',{Tstr},...
     'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...
     'LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
 ann.FitBoxToText='on';% fit annotation box to text
 caxis('auto');% auto rescale of color scale
+view(0,90);
 
-%%
-istart = 1;
-iend = 11;%length(H);
-%% Fit single Ikeda-Carpenter-pseudo-Voigt peak at high field
-% Analysis parameters
+%% Analysis parameters
 % ufb = 0.99; % upper fit boundary = highest value of h-hc for which to include datapoints for the fit
-field = H;%cell2mat( arrayfun(@(c) c.field, nDatap94(1:istart).', 'Uniform', 0) );
+istart = 1;
+iend = length(H);
 
-%% Perform and plot fit
-xc = [-8.03 -7.99];% position of peaks in reciprocal space
+%% Perform and plot fit using convolution of Ikeda-Carpenter function with pseudo-Voigt
+xc = [hc(1)-.03 hc(1)+.01];% position of peaks in reciprocal space
 lx = length(xc);
 rng = istart:1:iend;
 I1 = 8e4; R1 = 0.1; a1 = 200; b1 = 0.1; g1 = 1e-3; s1 = 6.6e-3;% free parameters initial values
@@ -62,7 +79,7 @@ freePrms2 = {'I2',I2;'x02',xc(2)};% 3 free parameters
 % Note: the order in which free parameters are defined matters because of
 % how the array of initial fitting parameters 'initParams' is defined
 fmt = 'ENS pattern along [hh0] T=%.2fK H=%.3fT %i params fit';% string format for plot title
-for i=11%rng
+for i=rng
     nData1 = nDatap94(i).hh0(nDatap94(i).dI>0);
     datExcld = nData1<min(hc)-.7 | nData1>max(hc)+0.55 |...
         (nData1>min(hc)-.35 & nData1<min(hc)-0.15) |...
@@ -78,11 +95,11 @@ for i=11%rng
     ap2 = myfit.allParams{2}; ap2('gamma') = 0;
     myfit.freeParams = {freePrms1,freePrms2};
     Nprms = length(vertcat(myfit.freeParams{:}));% total number of free parameters
-    label = sprintf(fmt,nDatap94(i).temp,nDatap94(i).field,Nprms);
+    label = sprintf(fmt,nDatap94(i).temp,field(i),Nprms);
     fitStr = ['fit'  int2str(lx) 'ICpV' int2str(Nprms) 'rslt']; 
     gofStr = ['gof'  int2str(lx) 'ICpV' int2str(Nprms)];
     [nDatap94(i).(fitStr), nDatap94(i).(gofStr)] = myfit.compute_fit();
-    if mod(i,10)==1% select data to plot
+    if mod(i,20)==1% select data to plot
         myfit.plot_fit(nDatap94(i).(fitStr)); title(label);
 %         xlim([hc-.8 hc+.6]);
     end
@@ -162,9 +179,8 @@ for i=rng
     xhm2 = fminbnd(fd,xM(i),xM(i)+0.2);% same on interval [xM xM+0.2]
     fwhm(i) = xhm2 - xhm1;% FWHM of big peak
 end
-%%
 
-%% 
+%%
 % 2019-02-16
 % 
 % Next: 
@@ -177,14 +193,14 @@ end
 % # For fields <~ H*, fit using a sum of 2 ICpV
 % # Extract physical parameters from fits: position of maximum (numerically) 
 % and width (relation between alpha5, gamma5 and sigma5)
-%% 2 peak fit
+
 %% Compute 2 peak fit with 3 free parameters for each peak 
 % and extract splitting between peaks
 xM1 = ones(length(rng),1); xM2 = ones(length(rng),1); splitting = zeros(length(rng),1);
 % spltRE = ones(length(rng),1);% xM2re = ones(length(rng),1); xgap = ones(length(rng),1);
 % X = linspace(hc-.1,hc+.1,501); d1X = diff(X); d2X = diff(d1X);
 for i=rng
-    label = sprintf(fmt,nDatap94(i).temp,nDatap94(i).field,Nprms);
+    label = sprintf(fmt,nDatap94(i).temp,field(i),Nprms);
     I1 = nDatap94(i).(fitStr).I1; I2 = nDatap94(i).(fitStr).I2;
 %         gamma1 = nDatap94(i).fitStr.gamma1; gamma2 = nDatap94(i).fitStr.gamma2;
     x01 = nDatap94(i).(fitStr).x01; x02 = nDatap94(i).(fitStr).x02;
@@ -228,9 +244,15 @@ for i=rng
 %     end
 end
 % estimation of error bars
-spltRE = tbl.(fitStr).x01_RelErr + tbl.(fitStr).x02_RelErr;
+if length(tbl)==1
+    spltRE = tbl.(fitStr).x01_RelErr + tbl.(fitStr).x02_RelErr;
+else
+    j = length(tbl);
+    spltRE = tbl(j).(fitStr).x01_RelErr + tbl(j).(fitStr).x02_RelErr;
+end
+wghts = min(spltRE)./spltRE;
 
-%%
+%% Disregard
 for i=51
     f = -(f1(X)+f2(X));
     d1f = diff(f)./d1X;
@@ -246,10 +268,90 @@ for i=51
 %         xlim([hc-.8 hc+.6]);
     end
 end
-%%
+%% Plot splitting
 figure
 % plot(field,splitting,'.')
 errorbar(field,splitting,spltRE(rng),'.','MarkerSize',12)
+
+%% Fit splitting
+[xData, yData, weights] = prepareCurveData( field, splitting, wghts );
+
+% Set up fittype and options.
+ft = fittype( 'delta0*sqrt(1-(H/Hc)^2)', 'independent', 'H', 'dependent', 'y' );
+excludedPoints = excludedata( xData, yData, 'Indices', 47:67 );
+opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
+opts.Display = 'Off';
+opts.StartPoint = [Hc_0 0.006];
+opts.Weights = weights;
+opts.Exclude = excludedPoints;
+
+% Fit model to data.
+[fitresult, gof] = fit( xData, yData, ft, opts );
+
+%% Plot fit with data.
+Xfit = linspace(0,max(field),1000);
+Yfit = fitresult(Xfit);% compute fit over a controlled number of points
+figure;
+hold on
+% h = plot( fitresult, xData, yData, excludedPoints );% add errorbars
+pdat = errorbar(xData,yData,spltRE,'xb','MarkerSize',12,'LineWidth',2);
+pexcl = plot(xData(excludedPoints),yData(excludedPoints),'xm',...
+    'MarkerSize',9);
+pfit = plot(Xfit,Yfit,'r-');
+legend([pdat,pexcl,pfit],'splitting vs. field','Excluded','MF fit');
+% legend( h, 'splitting vs. field', 'Excluded', 'MF fit', 'Location', 'Best' );
+% Label axes
+xlabel('H (T)'); ylabel('(a-b)/a0'); grid on
+ann2 = annotation('textbox',[0.15 0.25 0.2 0.1],'interpreter','latex',...
+    'String',{Tstr 'Peak at (8 8 0)'},...
+    'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...
+    'LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
+ann2.FitBoxToText='on';% fit annotation box to text
+
+
+%% Print fit parameter values with error bars
+cval = coeffvalues(fitresult);% extract fit parameter values
+cft=confint(fitresult);% extract confidence intervals from fit
+sprintf("Hc = %.3f +- %.3f K",cval(1),cval(1)-cft(1,1))% print out value of critical temperature, with error bars
+sprintf("splitting(H=0) = %.2d +- %.0d ",cval(2),cval(2)-cft(1,2))% print out value of splitting at zero field, with error bars
+
+%% Calculate effective temperature
+Tc0 = 2.2;% critical temperature at zero field (better to use the actual value of Tc from Cp data?)
+max_splitting = 5.84e-3;% maximum value of splitting, from Segmuller et al. 1974
+x = cval(2)/max_splitting;% reduced splitting calculated from fit
+dx = (cval(2)-cft(1,2))/max_splitting;% error bar on reduced splitting calculated from fit
+Teff = Tc0*x/atanh(x);% effective temperature calculated from data
+% 2.2*x/atanh(x) is simply the result of inverting the self-consistent
+% equation of pseudospin vs temperature
+dTeff = Tc0*dx*abs(atanh(x)-x/(1-x^2))/(atanh(x)^2);% effective temperature calculated from data
+% calculated by differentiating the expression of Teff wrt x
+sprintf("Effective temperature:\nTeff = %.2d +- %.0d ",Teff,dTeff)% print out value of splitting at zero field, with error bars
+
+%% Estimate critical field at the effective temperature in the absence of demagnetizing factor
+t = Teff / Tc0;% reduced temperature
+fnh = @(h) h - t*atanh(h);% when this function goes to zero,
+% the value of h is the reduced critical field
+fplot(fnh,[0 1])
+%%
+h_c = fzero(fnh,[1e-3 1-1e-3]);
+H_c = h_c*Hc_0;% value of the critical field at the effective temperature of
+% the neutrons data, in the absence of demagnetizing factor
+sprintf("Value of the critical field at T=Teff:\nH_c(Teff) = %.3f T",H_c)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
