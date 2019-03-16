@@ -10,13 +10,13 @@ DATA=ImportTmVO4Cp([fileImp '.dat']);% Use this data to plot Cp vs H, T superimp
 H=[DATA.FieldOersted];
 T=[DATA.SampleTempKelvin];
 Cp=[DATA.SampHCJmoleK];
-CpmErr=[DATA.SampHCErrJmoleK];
+CpErr=[DATA.SampHCErrJmoleK];
 
 whichPoints = isfinite(H) & isfinite(T) & isfinite(Cp);
 H=H(whichPoints);
 T=T(whichPoints);
 Cp=Cp(whichPoints);
-CpmErr=CpmErr(whichPoints);
+CpErr=CpErr(whichPoints);
 
 fields = unique(round(H,-1));%[10,linspace(1000,4000,4),4500,4750,5000];
 hmax=max(fields);
@@ -55,7 +55,7 @@ for i = 1:length(fields)
     separatedCpData(i).H = H(wp);
     separatedCpData(i).T = T(wp);
     separatedCpData(i).Cp = Cp(wp);
-    separatedCpData(i).CpErr = CpmErr(wp);
+    separatedCpData(i).CpErr = CpErr(wp);
     
     [separatedCpData(i).T,wo] = sort(separatedCpData(i).T);
     separatedCpData(i).H = separatedCpData(i).H(wo);
