@@ -3,7 +3,7 @@ function y = Cp_TFIM(t,h)
 y = zeros(size(t));
 
 if h==0; tc = 1;
-elseif h<1; tc = h/atanh(h);
+elseif abs(h)<1; tc = h/atanh(h);
 else; tc = 0;
 end
 
@@ -15,7 +15,7 @@ for i=1:length(t)
         y(i) = r^2.*sech(r)^2 ./ (1 - 1./t(i).*sech(r)^2);% mean-field heat capacity in the ordered phase
     else
         r = h./t(i);
-        y(i) = r^2.*sech(r)^2;% mean-field heat capacity in the ordered phase        
+        y(i) = r^2.*sech(r)^2;% mean-field heat capacity in the disordered phase
     end
 end
 end
