@@ -1,5 +1,11 @@
 %% Transverse field Ising model: heat capacity in the mean-field approximation %%
 
+%% Order parameter vs temperature at zero field
+figure;
+fplot(@(x)order_parameter(x),[0 1-1e-3]);
+title('Mean-field Ising order parameter');
+xlabel('T/T$_c$');ylabel('$\left<S^{z}\right>$');
+
 %% Heat capacity in zero field
 rev_Sz = [logspace(-15,-2),0.01:0.01:0.99];
 Sz = 0.5.*(1-rev_Sz);% pseudospin values, with log scale close to Sz,max=0.5
