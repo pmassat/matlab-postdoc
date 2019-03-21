@@ -47,9 +47,18 @@ nData = nestedSortStruct(nData,'field');%
 %     nData(i).temp = fieldinfo0p94K.T_K(i);
 % end
 
+%% Magnetic field data
+field = extractfield(nData,'field');
+Hc_0 = 0.51;% value in Tesla units of the critical field at zero temperature
+% in the absence of demagnetizing factor
+% see data taken on needles of TmVO4-LS5200 in July 2017
+
 %% Basic data treatment
-nData(round(field,2)==0.86)=[];% Delete fields where the data does not make sense
-nData(1).I = nData(1).I*0.73/1.15;% rescale data at zero field, as it has a higher intensity than the rest
+nData(round(field,2)==0.86)=[];% Delete fields where the data does not make
+% sense: H=0.86T and H=0.865T (which rounds to 0.86)
+nData(round(field,2)==0).I = nData(round(field,2)==0).I*0.73/1.15;
+% rescale data at zero field, as it has a higher intensity than the rest
+field = extractfield(nData,'field');
 
 %% Center of peak to be studied in the following
 hcenter = -8.0;% center of unsplit peak in reciprocal space
@@ -57,11 +66,7 @@ hcenter = -8.0;% center of unsplit peak in reciprocal space
 %% Analysis parameters
 % ufb = 0.99; % upper fit boundary = highest value of h-hc for which to include datapoints for the fit
 istart = 1;
-iend = length(H);
-H = extractfield(nData,'field');
-Hc_0 = 0.51;% value in Tesla units of the critical field at zero temperature
-% in the absence of demagnetizing factor
-% see data taken on needles of TmVO4-LS5200 in July 2017
+iend = length(field);
 
 %% Perform and plot fit using convolution of Ikeda-Carpenter function with pseudo-Voigt
 xc = [hcenter(1)-.03 hcenter(1)+.01];% position of peaks in reciprocal space
@@ -228,7 +233,8 @@ Teff = Tc0*x/atanh(x);% effective temperature calculated from data
 % equation of pseudospin vs temperature
 dTeff = Tc0*dx*abs(atanh(x)-x/(1-x^2))/(atanh(x)^2);% effective temperature calculated from data
 % calculated by differentiating the expression of Teff wrt x
-sTeff = sprintf('$T_{eff}$ = %.2f(%.0f)K',Teff,dTeff*1e2)% Effective temperature with error bars
+sTeff = sprintf('T = %.2f(%.0f)K',Teff,dTeff*1e2);% Effective temperature with error bars
+sTdr = sprintf('$T_{DR}$=%.1fK',nData(1).temp);
 
 %% Plot fit with data.
 Xfit = linspace(0,max(field),1000);
@@ -241,7 +247,7 @@ legend([pdat,pexcl,pfit],'splitting vs. field','Excluded','MF fit');
 xlabel('H (T)'); ylabel('(a-b)/a0'); grid on
 ylim([0 6e-3]);
 ann2 = annotation('textbox',[0.15 0.3 0.2 0.1],'interpreter','latex',...
-    'String',{'Peak at (8 8 0)' [Tstr '; ' sTeff] strSplit strHc},...
+    'String',{'Peak at (8 8 0)' [sTdr '; ' sTeff] strSplit strHc},...
     'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...
     'LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
 ann2.FitBoxToText='on';% fit annotation box to text
@@ -258,46 +264,47 @@ fplot(fnh,[0 1])
 h_c = fzero(fnh,[1e-3 1-1e-3]);
 H_c = h_c*Hc_0;% value of the critical field at the effective temperature of
 % the neutrons data, in the absence of demagnetizing factor
-sprintf("Value of the critical field at T=Teff:\nH_c(Teff) = %.3f T",H_c)
+sprintf("Critical field at T/Tc0=%.2f: Hc(T)/Hc0 = %.2f",t,h_c)
+
+%% Create dataset for 2D color plot
+nData2 = nData;% create an independent copy of nData
+for i=length(nData2):-1:1
+    if size(nData2(i).I)~=2200% if none of the dimensions of nData2(i).I is 2200
+        nData2(i)=[];
+    end
+end
 
 %% Treatment of magnetic field to correct for demag
-demag_correction = H_c/cval(1);%0.78T is the value of critical field 
+demag_correction = H_c/cval(1);% cval(1) is the value of critical field 
 % that comes from the fit of the splitting extracted from the data at 0.94K
 % and 0.969 is the value of Hc/Hc0 at the effective temperature of the measurement
 % see results of the below code when using demag_correction = 1
-field = H*demag_correction;%cell2mat( arrayfun(@(c) c.field, nData(1:istart).', 'Uniform', 0) );
+field2 = extractfield(nData2,'field')*demag_correction;
 
 %% Data formatting for curve fitting tool analysis
 i=1;
-hh1 = nData(i).hh0;
-I1dat = nData(i).I;
-dI = nData(i).dI;
+hh1 = nData2(i).hh0;
+I1dat = nData2(i).I;
+dI = nData2(i).dI;
 
 %% Color plot of intensity in H-(hh0) 2D-map
 % Prepare plot
-[X,Y] = meshgrid(hh1,field);
-Ifull = cell2mat( arrayfun(@(c) c.I', nData(1:length(nData)).', 'Uniform', 0) );% intensity data combined in one big matrix
+[X,Y] = meshgrid(hh1,field2);
+Ifull = cell2mat( arrayfun(@(c) c.I', nData2(1:length(nData2)).', 'Uniform', 0) );% intensity data combined in one big matrix
 
 %% Plot 
 xmargin = 0.1;
 Xsel = X>hcenter-xmargin & X<hcenter+xmargin;
 figure
-surf(X(:,Xsel(1,:)),Y(:,Xsel(1,:)),Ifull(:,Xsel(1,:)),'EdgeColor','None')
-xlim([hcenter-xmargin hcenter+xmargin]); ylim([0 max(field)]); colormap jet;
+sp = surf(X(:,Xsel(1,:)),Y(:,Xsel(1,:)),Ifull(:,Xsel(1,:)),'EdgeColor','None');
+xlim([hcenter-xmargin hcenter+xmargin]); ylim([0 max(field2)]); colormap jet;
 cb = colorbar; cbl = cb.Label; cbl.String = 'I (a.u.)';
-cbl.Position = [-.75 8.25e6 0]; cbl.Rotation = 0;% horizontal colorbar label
-% cbl.Position = [-1 8e6 0]; cbl.Interpreter = 'latex';
+cbl.Interpreter = 'latex'; cb.TickLabelInterpreter = 'latex';
+cbl.Position = [-.75 8.15e6 0]; cbl.Rotation = 0;% horizontal colorbar label
 xlabel("(h h 0)"); ylabel("H (T)");
-if exist('Teff') && exist('dTeff')% if the effective temperature has been calculated (see below)
-    sfmt = '$T=%.2f (%.0f)$K';
-    Tstr = sprintf(sfmt,Teff,dTeff*100);% use it
-else
-    sfmt = '$T_{DR}=%.1f$K';%
-    Tstr = sprintf(sfmt,nData(1).temp);% otherwise use the value recorded in the data
-end
+if exist('sTeff','var'); Tstr = sTeff; elseif exist('sTdr','var'); Tstr = sTdr; end
 txtrow = 60; txtcol = 3;
 xs = X(txtrow,Xsel(1,:)); ys = Y(txtrow,Xsel(1,:)); is = Ifull(txtrow,Xsel(1,:));
-% text(xs(txtcol),ys(txtcol),is(txtcol),[sprintf(sfmt,nData(i).temp)],'HorizontalAlignment','left','FontSize',16);
 ann = annotation('textbox',[0.15 0.82 0.2 0.1],'interpreter','latex',...
     'String',{Tstr},...
     'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...

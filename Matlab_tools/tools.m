@@ -36,3 +36,20 @@ end
 if any(strcmp('Variable',(tableName).Properties.VariableNames));% if there is a field called 'Variable' in table(tableName)
     % do whatever
 end
+
+%% Surface plot and colorbar handling
+see 'ENS_peak_fit_ICpV.m'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
