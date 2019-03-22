@@ -73,16 +73,16 @@ xc = [hcenter(1)-.03 hcenter(1)+.01];% position of peaks in reciprocal space
 lx = length(xc);
 rng = istart:1:iend;
 I1 = 8e4; R1 = 0.1; a1 = 200; b1 = 0.1; g1 = 1e-3; s1 = 6.6e-3;% free parameters initial values
-I2 = 1.8e5; R2 = 0.1; a2 = 200; b2 = 0.1; g2 = 1e-3; s2 = 6.6e-3;% free parameters initial values
+I2 = I1/0.46; R2 = 0.1; a2 = 200; b2 = 0.1; g2 = 1e-3; s2 = 6.6e-3;% free parameters initial values
 % freePrms1 = {'I',I1;'R',R1;'alpha',a1;'beta',b1;'gamma',g1;'sigma',s1;'x0',hc};%7 free parameters
 % freePrms1 = {'I1',I1;'R1',R1;'beta1',b1;'gamma1',g1;'x01',hc(1)};% 5 free parameters
 % freePrms2 = {'I2',I2;'R2',R2;'beta2',b2;'gamma2',g2;'x02',hc(2)};% 5 free parameters
 freePrms1 = {'I1',I1;'x01',xc(1)};% 3 free parameters
-freePrms2 = {'I2',I2;'x02',xc(2)};% 3 free parameters
+freePrms2 = {'1/0.46*I1',I2;'x02',xc(2)};% 3 free parameters
 % Note: the order in which free parameters are defined matters because of
 % how the array of initial fitting parameters 'initParams' is defined
 fmt = 'ENS pattern along [hh0] T=%.2fK H=%.3fT %i params fit';% string format for plot title
-for i=rng
+for i=1%rng
     nData1 = nData(i).hh0(nData(i).dI>0);
     datExcld = nData1<min(hcenter)-.7 | nData1>max(hcenter)+0.55 |...
         (nData1>min(hcenter)-.35 & nData1<min(hcenter)-0.15) |...
@@ -138,6 +138,17 @@ end
 rsquarenp = extract_structure_field(nData(rng),gofStrnp,'rsquare');% extract r^2 value from goodness of fit
 Stbl(Ntbl).(fitStrnp).Rsquare = rsquarenp;% store r^2 value in a new column
 flag = 0;% reset flag for next run
+
+%% Plot ratio of peak intensities as a function of field
+figure; hold on;
+If1 = Stbl.fit2ICpV4.I1; If1Err = Stbl.fit2ICpV4.I1_RelErr.*If1;
+If2 = Stbl.fit2ICpV4.I2; If2Err = Stbl.fit2ICpV4.I2_RelErr.*If2;
+Iratio = If1./If2;
+IrErr = abs(If1Err.*If2-If2Err.*If1)./If2.^2;
+errorbar(Stbl.fit2ICpV4.Field_Oe,Iratio,IrErr,'.','MarkerSize',12);
+% errorbar(Stbl.fit2ICpV4.Field_Oe,If1,Stbl.fit2ICpV4.I1_RelErr,'.','MarkerSize',12);
+% errorbar(Stbl.fit2ICpV4.Field_Oe,If2,Stbl.fit2ICpV4.I2_RelErr,'.','MarkerSize',12);
+ylim([0 2*Iratio(1)]);
 
 %% Write table to file
 fileChar = [sprintf('%1.eK',nData(1).temp) fitStr '.txt'];% '_R=' sprintf('%2.e',ap1('R'))

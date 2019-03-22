@@ -1,7 +1,6 @@
-function y = funtest(S,z)
-%     if isfield(S,z)
-%         S(1).(z)
-%     end
+function y = funtest(varargin)
+    if nargin>0
+    end
 end
 
 % function y = funtest(x,param)

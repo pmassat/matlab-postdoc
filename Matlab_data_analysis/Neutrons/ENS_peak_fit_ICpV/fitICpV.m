@@ -159,32 +159,42 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
 %             disp(fullFitStr);% display the fit equation for debugging
             
 %% Create arrays containing lower bounds and initial values of fit parameters
-            lowBounds = zeros(1,totalNumFreeParams);%
-            initParams = ones(1,totalNumFreeParams);%
+            fp = vertcat(obj.freeParams{:});
+            for ifp=length(fp):-1:1
+                lfp = length(fp);% length may change when deleting a cell
+                for jfp=lfp:-1:1
+                    if isequal(fp{jfp,1},fp{ifp,1}); continue;
+                    elseif contains(fp{jfp,1},fp{ifp,1}); fp(jfp,:)=[];
+                    end
+                end
+            end
+            lowBounds = zeros(size(fp(:,1)));%
+            initParams = ones(size(fp(:,1)));%
             % initialize arrays containing all the lower bounds and initial
             % values of free fit parameters, so that their length is sum(Ni)
             cntr = 0;% counter that increments at each iteration of the following loop
             ksj = keys(obj.allParams{1});
             for jj = 1:length(obj.allParams{1})-1
-                for j3=1:nPeaks
-                    if any(contains(obj.freeParams{j3}(:,1),ksj{jj}))
-                        cntr = cntr+1;
-                        lgc = contains(obj.freeParams{j3}(:,1),ksj{jj});
-                        valArr = obj.freeParams{j3}(:,2);
-                        initParams(cntr) = valArr{lgc};% there is only one given parameter per peak so this should yield only a single value
-                    end
+%                 ifp = 0;
+%                 for j3=1:nPeaks
+%                     lj3 = length(obj.freeParams{j3});
+                if any(contains(fp(:,1),ksj{jj}))
+                    lgc = contains(fp(:,1),ksj{jj});
+                    valArr = fp(:,2);
+                    initParams(cntr+1:cntr+sum(lgc)) = [valArr{lgc}];
+                    cntr = cntr+sum(lgc);
                 end
+%                 end
             end
-            for j3=1:nPeaks
-                if find(contains(obj.freeParams{j3}(:,1),'x0'))
-                        cntr = cntr+1;
-                        lgc = contains(obj.freeParams{j3}(:,1),'x0');
-                        valArr = obj.freeParams{j3}(:,2);
-                        initParams(cntr) = valArr{lgc};% there is only one given parameter per peak so this should yield only a single value
-                        lowBounds(cntr) = -Inf;% x0 can be negative 
-                end
+%             for j3=1:nPeaks
+            if any(contains(fp(:,1),'x0'))
+                lgc = contains(fp(:,1),'x0');
+                valArr = fp(:,2);
+                lowBounds(cntr+1:cntr+sum(lgc)) = -Inf;% x0 can be negative 
+                initParams(cntr+1:cntr+sum(lgc)) = [valArr{lgc}];
             end
-%             disp(lowBounds);% sprintf('%d\n',initParams)%display for debugging
+%             end
+            disp(lowBounds);% sprintf('%d\n',initParams)%display for debugging
 
 %% Perform fit
             [xData, yData] = prepareCurveData(obj.X,obj.Y);
