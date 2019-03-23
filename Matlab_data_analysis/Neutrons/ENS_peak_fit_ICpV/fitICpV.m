@@ -6,6 +6,7 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
 % the names and fixed values (if parameters are not free) of all parameters for each peak.
         freeParams;% cell array of cell arrays, each sub-cell array containing
 % the names and initial value of the free parameters for each fit.
+        indepFreeParams;% cell array of independent free parameters; it is computed from the full set of free parameters
     end
     methods
 %% Class constructor
@@ -37,6 +38,22 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
             end
         end
         
+        function indepFreePrms(obj)
+% Compute array of independent free parameters by removing dependent
+% free parameters from the array of free paraemters
+            obj.indepFreeParams = vertcat(obj.freeParams{:});
+            ifp = obj.indepFreeParams;% shorter variable name, easier to handle
+            for kfp=length(ifp):-1:1
+                lfp = length(ifp);% length may change when deleting a cell
+                for jfp=lfp:-1:1
+                    if isequal(ifp{jfp,1},ifp{kfp,1}); continue;
+                    elseif contains(ifp{jfp,1},ifp{kfp,1}); ifp(jfp,:)=[];
+                    end
+                end
+            end
+            obj.indepFreeParams = ifp;% update array of independent free parameters
+        end
+
 %% Compute fit method
         function [fitresult, gof] = compute_fit(obj)
 % Input: in addition to data defined in object (see constructor)
@@ -58,7 +75,6 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
 %                 obj.freeParams = varargin;
 %             end
             nPeaks = length(obj.freeParams);% user should input free parameters manually before calling this method
-%             eqParamName = {'I';'R';'alpha';'beta';'gamma';'sigma';'k';'x0'};
             % Generic names of free parameters for the Ikeda-Carpenter-pseudo-Voigt fit
 % They are listed in the same order as specified in the definition of voigtIkedaCarpenter_ord
             totalNumFreeParams = 0;% count the total number of free parameters
@@ -140,7 +156,8 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
                 fitstr = strcat(infname,"*voigtIkedaCarpenter_ord(x,[");
                 % beginning of string defining the fit equation
                 for j2=2:length(referenceMap)-1
-% loop through each possible additional free parameter, in the order of eqParamName
+% loop through each possible additional free parameter, in the order of
+% keys of referenceMap
                     infname = inFuncName(referenceMap,j2,paramArray);
                     fitstr = strcat(fitstr,infname,",");
 % depending whether a parameter should be free or constrained in the fit,
@@ -159,17 +176,9 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
 %             disp(fullFitStr);% display the fit equation for debugging
             
 %% Create arrays containing lower bounds and initial values of fit parameters
-            fp = vertcat(obj.freeParams{:});
-            for ifp=length(fp):-1:1
-                lfp = length(fp);% length may change when deleting a cell
-                for jfp=lfp:-1:1
-                    if isequal(fp{jfp,1},fp{ifp,1}); continue;
-                    elseif contains(fp{jfp,1},fp{ifp,1}); fp(jfp,:)=[];
-                    end
-                end
-            end
-            lowBounds = zeros(size(fp(:,1)));%
-            initParams = ones(size(fp(:,1)));%
+            ifp = obj.indepFreeParams;% shorter variable name, easier to handle
+            lowBounds = zeros(size(ifp(:,1)));%
+            initParams = ones(size(ifp(:,1)));%
             % initialize arrays containing all the lower bounds and initial
             % values of free fit parameters, so that their length is sum(Ni)
             cntr = 0;% counter that increments at each iteration of the following loop
@@ -178,23 +187,23 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
 %                 ifp = 0;
 %                 for j3=1:nPeaks
 %                     lj3 = length(obj.freeParams{j3});
-                if any(contains(fp(:,1),ksj{jj}))
-                    lgc = contains(fp(:,1),ksj{jj});
-                    valArr = fp(:,2);
+                if any(contains(ifp(:,1),ksj{jj}))
+                    lgc = contains(ifp(:,1),ksj{jj});
+                    valArr = ifp(:,2);
                     initParams(cntr+1:cntr+sum(lgc)) = [valArr{lgc}];
                     cntr = cntr+sum(lgc);
                 end
 %                 end
             end
 %             for j3=1:nPeaks
-            if any(contains(fp(:,1),'x0'))
-                lgc = contains(fp(:,1),'x0');
-                valArr = fp(:,2);
+            if any(contains(ifp(:,1),'x0'))
+                lgc = contains(ifp(:,1),'x0');
+                valArr = ifp(:,2);
                 lowBounds(cntr+1:cntr+sum(lgc)) = -Inf;% x0 can be negative 
                 initParams(cntr+1:cntr+sum(lgc)) = [valArr{lgc}];
             end
 %             end
-            disp(lowBounds);% sprintf('%d\n',initParams)%display for debugging
+%             disp(lowBounds);% sprintf('%d\n',initParams)%display for debugging
 
 %% Perform fit
             [xData, yData] = prepareCurveData(obj.X,obj.Y);
@@ -229,21 +238,44 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
 %      plot of fit
             [xData, yData] = prepareCurveData(obj.X,obj.Y);
             excludedPoints = excludedata( xData, yData, 'Indices', obj.dataExcl );
-%             eqParamName = {'I';'R';'alpha';'beta';'gamma';'sigma';'k';'x0'};
+
+% Extract fit parameter values in order to plot fit curves for each peak individually
             nPks = length(obj.freeParams);
             fitPrms = ones(1,length(obj.allParams{1}));
             % no need to re-initialize the array at each iteration since
             % all sub-maps of obj.Params have the same length
             ks2 = keys(obj.allParams{1});% same
             funCell = cell(1,nPks);% initialize cell array containing both 
-% free and fixed parameters of the fit function to plot
+            % free and fixed parameters of the fit function to plot
             for ii=1:nPks
                 for jj=1:length(ks2)
                     if find(contains(obj.freeParams{ii}(:,1),ks2{jj}))
 % if the namestring of a parameter is contained in the array of free parameters
-                        idx = contains(obj.freeParams{ii}(:,1),ks2{jj});
+                        idxfp = contains(obj.freeParams{ii}(:,1),ks2{jj});
                         % index of parameter namestring in the first column of obj.freeParams{ii}
-                        fitPrms(jj) = fitresult.(obj.freeParams{ii}{idx});
+                        if any(contains(obj.indepFreeParams(:,1),obj.freeParams{ii}{idxfp}))
+                            fitPrms(jj) = fitresult.(obj.freeParams{ii}{idxfp});
+% if the current free parameter is an independent one, extract its value
+% from the fit
+                        else
+% otherwise there are some additional characters in the free parameter
+% name character array, which need be separated from the mere parameter name in
+% order to get its fit value
+                            idxifp = cell2mat(arrayfun(@(c) contains(...
+                                obj.freeParams{ii}{idxfp},c),obj.indepFreeParams(:,1),'Uniform',0));
+                            % cycle through array of independent free parameters to find the one that
+                            % is contained in the current dependent parameter and store its array index
+                            [sdiff,smatch] = strsplit(obj.freeParams{ii}{idxfp},obj.indepFreeParams{idxifp});
+                            if ~isempty(sdiff{1})
+                                fitPrms(jj) = str2num([sdiff{1} num2str(fitresult.(smatch{1}))]);
+                            % Note: str2double does not work here as it 
+                            % does not handle mathematical operations,
+                            % whereas str2num does
+                            elseif ~isempty(sdiff{2})
+                                fitPrms(jj) = str2num([num2str(fitresult.(smatch{1})) sdiff{2}]);
+                            else; fitPrms(jj) = fitresult.(smatch{1});
+                            end
+                        end
 % use the parameter value resulting from the fit 
                     else; fitPrms(jj) = obj.allParams{ii}(ks2{jj});
 % otherwise use the fixed value stored in the allParams property
@@ -260,9 +292,8 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
             Yfit = fitresult(Xfit);% compute fit over a controlled number of points
 % this allows to have fit plot with better resolution than the calculated one
             
-            % Plot fit with data.
-            figure
-            hold on;
+% Plot fit with data.
+            figure; hold on;
             if nPks>1% if there is more than one peak
                 psub = cell(1,nPks);%
                 for kk=1:nPks% plot fit curve for each peak
@@ -270,10 +301,10 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
                         [obj.X(minIndex) obj.X(maxIndex)],'LineWidth',2);
                 end
             end
-            pdat = errorbar(xData,yData,obj.dY,'xb','MarkerSize',12,'LineWidth',2);
+            pfit = plot(Xfit,Yfit,'r-');
+            pdat = errorbar(xData,yData,obj.dY,'.b','MarkerSize',18,'LineWidth',2);
             pexcl = plot(obj.X(excludedPoints),obj.Y(excludedPoints),'xk',...
                 'MarkerSize',9);
-            pfit = plot(Xfit,Yfit,'r-');
             legend([pdat,pexcl,pfit],'I vs. hh0','Excluded','fit ICpV');
             % Label axes
             xlabel("hh0"); ylabel("I (a.u.)");

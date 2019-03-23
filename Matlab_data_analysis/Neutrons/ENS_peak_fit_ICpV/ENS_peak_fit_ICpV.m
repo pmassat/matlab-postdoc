@@ -77,12 +77,12 @@ I2 = I1/0.46; R2 = 0.1; a2 = 200; b2 = 0.1; g2 = 1e-3; s2 = 6.6e-3;% free parame
 % freePrms1 = {'I',I1;'R',R1;'alpha',a1;'beta',b1;'gamma',g1;'sigma',s1;'x0',hc};%7 free parameters
 % freePrms1 = {'I1',I1;'R1',R1;'beta1',b1;'gamma1',g1;'x01',hc(1)};% 5 free parameters
 % freePrms2 = {'I2',I2;'R2',R2;'beta2',b2;'gamma2',g2;'x02',hc(2)};% 5 free parameters
-freePrms1 = {'I1',I1;'x01',xc(1)};% 3 free parameters
-freePrms2 = {'1/0.46*I1',I2;'x02',xc(2)};% 3 free parameters
+freePrms1 = {'I2*0.46',I1;'x01',xc(1)};% free parameters
+freePrms2 = {'I2',I2;'x02',xc(2)};% free parameters
 % Note: the order in which free parameters are defined matters because of
 % how the array of initial fitting parameters 'initParams' is defined
-fmt = 'ENS pattern along [hh0] T=%.2fK H=%.3fT %i params fit';% string format for plot title
-for i=1%rng
+fmt = 'ENS at T=%.2fK H=%.3fT %i params fit';% string format for plot title
+for i=rng
     nData1 = nData(i).hh0(nData(i).dI>0);
     datExcld = nData1<min(hcenter)-.7 | nData1>max(hcenter)+0.55 |...
         (nData1>min(hcenter)-.35 & nData1<min(hcenter)-0.15) |...
@@ -97,7 +97,8 @@ for i=1%rng
     ap1('R')=0.0; ap1('beta')=0; ap1('I') = I1; ap1('gamma') = 0;
     ap2 = myfit.allParams{2}; ap2('gamma') = 0;
     myfit.freeParams = {freePrms1,freePrms2};
-    Nprms = length(vertcat(myfit.freeParams{:}));% total number of free parameters
+    myfit.indepFreePrms();% compute array of *independent* free parameters
+    Nprms = length(myfit.indepFreeParams);% total number of independent free parameters
     label = sprintf(fmt,nData(i).temp,field(i),Nprms);
     fitStr = ['fit'  int2str(lx) 'ICpV' int2str(Nprms)]; 
     gofStr = ['gof'  int2str(lx) 'ICpV' int2str(Nprms)];
@@ -141,14 +142,22 @@ flag = 0;% reset flag for next run
 
 %% Plot ratio of peak intensities as a function of field
 figure; hold on;
-If1 = Stbl.fit2ICpV4.I1; If1Err = Stbl.fit2ICpV4.I1_RelErr.*If1;
-If2 = Stbl.fit2ICpV4.I2; If2Err = Stbl.fit2ICpV4.I2_RelErr.*If2;
+If1 = Stbl(end).fit2ICpV4.I1; If1Err = Stbl(end).fit2ICpV4.I1_RelErr.*If1;
+If2 = Stbl(end).fit2ICpV4.I2; If2Err = Stbl(end).fit2ICpV4.I2_RelErr.*If2;
 Iratio = If1./If2;
 IrErr = abs(If1Err.*If2-If2Err.*If1)./If2.^2;
-errorbar(Stbl.fit2ICpV4.Field_Oe,Iratio,IrErr,'.','MarkerSize',12);
+errorbar(Stbl(end).fit2ICpV4.Field_Oe,Iratio,IrErr,'.','MarkerSize',12);
 % errorbar(Stbl.fit2ICpV4.Field_Oe,If1,Stbl.fit2ICpV4.I1_RelErr,'.','MarkerSize',12);
 % errorbar(Stbl.fit2ICpV4.Field_Oe,If2,Stbl.fit2ICpV4.I2_RelErr,'.','MarkerSize',12);
 ylim([0 2*Iratio(1)]);
+title('TmVO$_4$ neutrons elastic 880 peak intensity ratio vs field at 0.6K');
+xlabel('Magnetic field (Oe)'); ylabel('I$_1$/I$_2$');
+nmaxavg = 10;
+annir = annotation('textbox',[0.15 0.8 0.2 0.1],'interpreter','latex',...
+    'String',sprintf('Average of I$_1$/I$_2$ below %.2fT: %.2f',Stbl(end).fit2ICpV4.Field_Oe(nmaxavg),mean(Iratio(1:nmaxavg))),...
+    'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...
+    'LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
+annir.FitBoxToText='on';% fit annotation box to text
 
 %% Write table to file
 fileChar = [sprintf('%1.eK',nData(1).temp) fitStr '.txt'];% '_R=' sprintf('%2.e',ap1('R'))
@@ -187,10 +196,11 @@ fclose(fileID);
 xM1 = ones(length(rng),1); xM2 = ones(length(rng),1); splitting = zeros(length(rng),1);
 for i=rng
     label = sprintf(fmt,nData(i).temp,field(i),Nprms);
-    I1 = nData(i).(fitStr).I1; I2 = nData(i).(fitStr).I2;
+%     I1 = nData(i).(fitStr).I1; 
+    I2 = nData(i).(fitStr).I2;
 %         gamma1 = nData(i).fitStr.gamma1; gamma2 = nData(i).fitStr.gamma2;
     x01 = nData(i).(fitStr).x01; x02 = nData(i).(fitStr).x02;
-    f1 = @(x)-(I1*voigtIkedaCarpenter_ord(x,[0,140,0,0,0.05,6.6e-3,x01]));
+    f1 = @(x)-(I2*0.46*voigtIkedaCarpenter_ord(x,[0,140,0,0,0.05,6.6e-3,x01]));
     f2 = @(x)-(I2*voigtIkedaCarpenter_ord(x,[0,140,0,0,0.05,6.6e-3,x02]));
 %fnfit = -1*[fit function] so that the maximum becomes a minimum
     xM1(i) = fminbnd(f1,xc(1)-.1,xc(1)+.1);% Identify position of the maximum on interval [hc-0.2 hc+0.2]
@@ -199,12 +209,9 @@ for i=rng
 end
 
 % Estimation of error bars using error bars on peak position from fit
-if length(Stbl)==1
-    spltRE = Stbl.(fitStr).x01_RelErr + Stbl.(fitStr).x02_RelErr;
-else
-    j = length(Stbl);
-    spltRE = Stbl(j).(fitStr).x01_RelErr + Stbl(j).(fitStr).x02_RelErr;
-end
+warning("Check the row number of the table in structure Stbl before running this section!")
+j = 1;% check the row number of the table in structure Stbl before running!
+spltRE = Stbl(j).(fitStr).x01_RelErr + Stbl(j).(fitStr).x02_RelErr;
 wghts = min(spltRE)./spltRE;
 
 %% Plot splitting
@@ -218,7 +225,7 @@ ylim([0 6e-3])
 
 % Set up fittype and options.
 ft = fittype( 'delta0*sqrt(1-(H/Hc)^2)', 'independent', 'H', 'dependent', 'y' );
-excludedPoints = excludedata( xData, yData, 'Domain', [0 0.77] );
+excludedPoints = excludedata( xData, yData, 'Domain', [0 0.74] );
 opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
 opts.Display = 'Off';
 opts.StartPoint = [0.8 6e-3];
@@ -255,7 +262,8 @@ pfit = plot(Xfit,Yfit,'r-');
 pdat = errorbar(xData,yData,spltRE,'.b','MarkerSize',12,'LineWidth',2);
 pexcl = plot(xData(excludedPoints),yData(excludedPoints),'xm','MarkerSize',12);
 legend([pdat,pexcl,pfit],'splitting vs. field','Excluded','MF fit');
-xlabel('H (T)'); ylabel('(a-b)/a0'); grid on
+title('TmVO$_4$ neutrons elastic 880 peak splitting vs field');
+xlabel('H (T)'); ylabel('(a-b)/a$_0$'); grid on
 ylim([0 6e-3]);
 ann2 = annotation('textbox',[0.15 0.3 0.2 0.1],'interpreter','latex',...
     'String',{'Peak at (8 8 0)' [sTdr '; ' sTeff] strSplit strHc},...
