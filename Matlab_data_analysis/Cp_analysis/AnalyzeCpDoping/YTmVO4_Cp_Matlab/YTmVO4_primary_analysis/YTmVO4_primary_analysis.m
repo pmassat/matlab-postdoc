@@ -51,8 +51,8 @@ end
 %% Plot parameters for heat capacity
 %%
 xlblTemp = 'Temperature (K)';
-ylblCp = 'C_p (J\cdotmol^{-1}\cdotK^{-1})';
-ttlCpY ='Heat capacity of Tm_{1-x}Y_xVO4';
+ylblCp = 'C$_p$ (J$\cdot$mol$^{-1}\cdot$K$^{-1}$)';
+ttlCpY = 'Heat capacity of Tm$_{1-x}$Y$_x$VO$_4$';
 %% Compute molar heat capacity
 %%
 M = [283.87326% Molar mass of each sample, in g/mol

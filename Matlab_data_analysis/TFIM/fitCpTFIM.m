@@ -1,4 +1,4 @@
-function [fitresult, gof] = fitCpTFIM(T,Cp,wghts,Tc0,h)
+function [fitresult, gof] = fitCpTFIM(T,Cp,wghts,Tc0,h,maxtfit)
 %CREATEFIT(T1,CP1,WGHTS1)
 %  Create a fit.
 %
@@ -29,7 +29,7 @@ tc = tc * Tc0;% tc is the transition temperature of the data to be fitted,
 
 % Set up fittype and options.
 ft = fittype( sprintf('a*Cp_TFIM(t/%d,%d)',Tc0,h), 'independent', 't', 'dependent', 'y' );
-excludedPoints = excludedata( xData, yData, 'Domain', [0 0.87*tc] );
+excludedPoints = excludedata( xData, yData, 'Domain', [0 maxtfit*tc] );
 opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
 opts.Display = 'Off';
 opts.Lower = 0;
@@ -46,8 +46,8 @@ Yfit = fitresult(Xfit);% compute fit over a controlled number of points
 figure;
 hold on
 pfit = plot(Xfit,Yfit,'r-');
-pdat = errorbar(xData,yData,1./wghts,'xb','MarkerSize',12,'LineWidth',2);
-pexcl = plot(xData(excludedPoints),yData(excludedPoints),'xg',...
+pdat = errorbar(xData,yData,1./wghts,'.b','MarkerSize',18,'LineWidth',2);
+pexcl = plot(xData(excludedPoints),yData(excludedPoints),'xk',...
     'MarkerSize',12);
 legend([pdat,pexcl,pfit],'Cp vs T','Excluded','MF fit');
 % Label axes

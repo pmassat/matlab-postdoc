@@ -18,7 +18,7 @@ end
 
 %% Import second data set at 0.6K
 % fieldinfo = import manually data from "field_info.txt"
-if exist('nData'); lnd = length(nData); else lnd = 0; end
+if exist('nData','var'); lnd = length(nData); else; lnd = 0; end
 for j=1:length(fieldinfo.FileName)
     tbl2 = ImportNeutronsLineCut(strcat(fieldinfo.FileName(j,:),".txt"));
     i = j+lnd;
