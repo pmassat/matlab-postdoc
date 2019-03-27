@@ -19,8 +19,8 @@ Data30 = ImportCpDR('DRHC_30YTmVO4-LS5335-DR-HC180526.dat');
 %%
 split = {Data; Data10; Data15; Data18; Data20; Data22; Data24; Data30};
 L = length(split);
+
 %% Rename variables
-%%
 isTableCol = @(t, thisCol) ismember(thisCol, t.Properties.VariableNames);
 % function to test if a column exists in a table
 for i=1:L% for doped samples measured in DR
@@ -35,26 +35,31 @@ for i=1:L% for doped samples measured in DR
     elseif isTableCol(split{i},'SampHCmJmoleK')% for samples measured in shared PPMS
         split{i}.Properties.VariableNames{'SampHCmJmoleK'} = 'Cp';
     elseif isTableCol(split{i},'SampHCJmoleK')% for samples measured in Fisher He4 PPMS
-        split{i}.Properties.VariableNames{'SampHCmJmoleK'} = 'Cp';
+        split{i}.Properties.VariableNames{'SampHCJmoleK'} = 'Cp';
+    end
+    if isTableCol(split{i},'SampHCErrJmoleK')% for samples measured in DR
+        split{i}.Properties.VariableNames{'SampHCErrJmoleK'} = 'CpErr';
+    elseif isTableCol(split{i},'SampHCErrJK')% for samples measured in DR
+        split{i}.Properties.VariableNames{'SampHCErrJK'} = 'CpErr';        
     end
 end
+
 %% Remove NaN rows
-%%
 for i=1:L
     split{i}(any(isnan(split{i}.T), 2), :) = [];% Remove rows where T is NaN
 end
+
 %% Keep only data under zero magnetic field
-%%
 for i=1:L%for all datasets
     split{i} = split{i}(round(split{i}.H,-1)==0,:);% keep only data at zero field
 end
+
 %% Plot parameters for heat capacity
-%%
 xlblTemp = 'Temperature (K)';
 ylblCp = 'C$_p$ (J$\cdot$mol$^{-1}\cdot$K$^{-1}$)';
 ttlCpY = 'Heat capacity of Tm$_{1-x}$Y$_x$VO$_4$';
+
 %% Compute molar heat capacity
-%%
 M = [283.87326% Molar mass of each sample, in g/mol
 275.3902538
 271.869006
@@ -83,13 +88,14 @@ dpg = 1e-2*[0% Y content for each dataset
 % starting from a heat capacity in mJ/mol/K as is measured in the shared PPMS
 for i=1:L
     split{i}.Cpmol = split{i}.Cp *1e-6*M(i)/(m(i)*(1-dpg(i)));% molar heat capacity, in J/mol/K
+    split{i}.CpmolErr = split{i}.CpErr *1e-6*M(i)/(m(i)*(1-dpg(i)));% molar heat capacity, in J/mol/K
     % starting from a heat capacity measured in microJoules per Kelvin, as is measured in the DR
     % Cpmol is calculated per mole of Tm3+ ions, hence the (1-dpg) factor in the denominator
 end
+
 %% Plot the dataset for YTmVO4
-%%
 plotCpDoping(split,dpg,1,L,ttlCpY)
-%% 
+%
 % 
 % 
 % 
@@ -97,70 +103,81 @@ plotCpDoping(split,dpg,1,L,ttlCpY)
 % 
 % 
 % 
-%% Average data
 %% Sort each dataset by increasing value of temperature
-%%
+srtd = repmat(split,1);
 for i=1:L
     srtd{i} = sortrows(split{i},{'T'});
 %     [split{i}.T,wo] = sort(split{i}.T);
 %     split{i}.Cp = split{i}.Cp(wo);
 end
 srtd = srtd';
+
 %% Test the temperature scattering between data points supposedL taken at the "same" temperature
 % 4mK is the empirical maximal dispersion of data points taken consecutiveL 
 % at a given temperature. In order to check this, one can run the following code 
 % on the temperature variable T:
 
-nrep = 3;% number of repetitions of the measurement at each temperature
-% We want to compute the temperature separation between two data points
-% that are NOT repetitions of the same measurement
-Tsep = 4e-3;% value of temperature separation to be tested, in Kelvin
-% Data points taken within an interval of Tsep are considered to be measured at the same temperature setpoint
-for i = 1
-    for k = 1:length(srtd{i}.T)-nrep
-        if abs(srtd{i}.T(k+nrep)-srtd{i}.T(k))<Tsep
-% if the values of temperature for two data points
-% measured at two different temperature setpoints are separated by less than Tsep
-            srtd{i}.T(k);% display the value of temperature for the first data point
-        end
-    end
-end
+% nrep = 3;% number of repetitions of the measurement at each temperature
+% % We want to compute the temperature separation between two data points
+% % that are NOT repetitions of the same measurement
+% Tsep = 4e-3;% value of temperature separation to be tested, in Kelvin
+% % Data points taken within an interval of Tsep are considered to be measured at the same temperature setpoint
+% for i = 1
+%     for k = 1:length(srtd{i}.T)-nrep
+%         if abs(srtd{i}.T(k+nrep)-srtd{i}.T(k))<Tsep
+% % if the values of temperature for two data points
+% % measured at two different temperature setpoints are separated by less than Tsep
+%             srtd{i}.T(k);% display the value of temperature for the first data point
+%         end
+%     end
+% end
 %% 
 % If this piece of code outputs one or more values AND IF these values obviousL 
 % correspond to measurements that were supposed to be measured at different temperature 
 % setpoints, THEN reduce Tsep in order to reach a value for which the code does 
 % not output anything.
 %% Compute average of data points taken
-%%
 for i = 1:L
-    Tm = [];Cpm = [];stdCpm = [];% initialize temporary tables;
-    k = 1;% initiliaze loop index k
-    while k<length(srtd{i}.T)% loop over k
-        ind = [k];% initialize temporary table of indices
-        j = k+1;% initialize subloop index 
-        while abs(srtd{i}.T(j)-srtd{i}.T(k))<Tsep
-            % loop over datapoints within a temperature interval of Tsep
-            % i.e. datapoints measured at the same temperature setpoint
-            ind = [ind, j];% store index of current datapoint
-            j = j+1;% increase subloop index
-            if j>= length(srtd{i}.T)% safety condition
-                break
-            end
-        end
-        if length(ind)>1% do not include isolated data points
-            Tm = [Tm,mean(srtd{i}.T(ind))];% average of temperature for data points
-            % taken at the same temperature setpoint
-            Cpm = [Cpm,mean(srtd{i}.Cpmol(ind))];% average of heat capacity
-            stdCpm = [stdCpm,std(srtd{i}.Cpmol(ind))];% standard deviation of heat capacity
-        end
-        k = j+1;% once all datapoints measured at the same temperature setpoints are averaged,
-        % increase the main loop index in order to jump to the next data point measured
-        % at a different temperature setpoint
-    end
-    avgData(i).T = Tm;% store the full averaged temperature table
-    avgData(i).Cp = Cpm;% store the full averaged heat capacity table
-    avgData(i).stdCp = stdCpm;% store the full table of standard deviation of heat capacity
+%     Tm = [];Cpm = [];stdCpm = [];% initialize temporary tables;
+%     k = 1;% initiliaze loop index k
+%     while k<length(srtd{i}.T)% loop over k
+%         ind = [k];% initialize temporary table of indices
+%         j = k+1;% initialize subloop index 
+%         while abs(srtd{i}.T(j)-srtd{i}.T(k))<Tsep
+%             % loop over datapoints within a temperature interval of Tsep
+%             % i.e. datapoints measured at the same temperature setpoint
+%             ind = [ind, j];% store index of current datapoint
+%             j = j+1;% increase subloop index
+%             if j>= length(srtd{i}.T)% safety condition
+%                 break
+%             end
+%         end
+%         if length(ind)>1% do not include isolated data points
+%             Tm = [Tm,mean(srtd{i}.T(ind))];% average of temperature for data points
+%             % taken at the same temperature setpoint
+%             Cpm = [Cpm,mean(srtd{i}.Cpmol(ind))];% average of heat capacity
+%             stdCpm = [stdCpm,std(srtd{i}.Cpmol(ind))];% standard deviation of heat capacity
+%         end
+%         k = j+1;% once all datapoints measured at the same temperature setpoints are averaged,
+%         % increase the main loop index in order to jump to the next data point measured
+%         % at a different temperature setpoint
+%     end
+%     avgData(i).T = Tm;% store the full averaged temperature table
+%     avgData(i).Cp = Cpm;% store the full averaged heat capacity table
+%     avgData(i).stdCp = stdCpm;% store the full table of standard deviation of heat capacity
+    avgData(i) = averageCp(6e-3,srtd{i}.T,srtd{i}.Cpmol,srtd{i}.CpmolErr);
 end
+
+%% Plot averaged data
+figure
+for i=1:L
+    errorbar(avgData(i).T,avgData(i).Cp,avgData(i).CpFullErr,'.','MarkerSize',18,'DisplayName',['x = ',num2str(dpg(i))])
+    hold on
+end
+xlabel(xlblTemp); ylabel(ylblCp);
+title(ttlCpY);
+legend('show');
+
 %% Display name of structure containing average data
 %%
 disp("Structure containing averaged data is called avgData")
