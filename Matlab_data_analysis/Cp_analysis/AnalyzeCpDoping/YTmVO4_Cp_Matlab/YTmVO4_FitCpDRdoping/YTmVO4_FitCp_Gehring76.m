@@ -7,9 +7,7 @@
 YTmVO4_primary_analysis;% add measurement error bars!
 % run script that imports and computes the average of Cp data of all
 % desired compositions
-%% Plot averaged data
 %% Plot averaged Cp data for YTmVO4 x<xc
-%%
 Lord = L-3;% index of the last dataset with Cp jump
 plotAvgCp(avgData,dpg,1,Lord)
 title(ttlCpY)
@@ -87,33 +85,39 @@ end
 %% Compute the pseudospin as a function of temperature
 % See Gehring1976a equation 4
 
-syms s t% symbolic math used to derive the expression of pseudospin sz 
+syms s t u% symbolic math used to derive the expression of pseudospin sz 
 %%
 i=2;
     %% compute
-%     sigma = @(x,T) 1/sqrt(pi)*integral(@(u)exp(-u^2)*tanh((delta0(i)*u+lambda*x)./T),-inf,inf,'ArrayValued',true)-x
-%     sigma = @(x,T) 1/sqrt(pi)*vpaintegral(exp(-u^2)*tanh((delta0(i)*u+lambda*x)./T),u,[-inf,inf])-x
-    sigma = @(t,s) s-1/sqrt(pi)*int(exp(-u^2)*tanh(1/t*(s+delta0(i)*u/Tc(1))),u,[-inf,inf]);
+% %     sigma = @(x,T) 1/sqrt(pi)*integral(@(u)exp(-u^2)*tanh((delta0(i)*u+lambda*x)./T),-inf,inf,'ArrayValued',true)-x
+% %     sigma = @(x,T) 1/sqrt(pi)*vpaintegral(exp(-u^2)*tanh((delta0(i)*u+lambda*x)./T),u,[-inf,inf])-x
+    sigma = s-1/sqrt(pi)*int(exp(-u^2)*tanh(1/t*(s+delta0(i)*u/Tc(1))),u,[-inf,inf]);
 % s is the variable that defines the order parameter sz that goes from 0 to 1
 % t = T/Tc(1) is a reduced temperature, which also goes from 0 to 1
 
 % Sigma is the self-consistent equation defining pseudospin x as a function 
 % of temperature T. The value of the pseudospin Sz is simply the solution of sigma=0, 
 % hence the use of fzero below.
-    sgm = matlabFunction(sigma(t,x));% converting into non-symbolic function for computation of values
-    sz = @(t) fzero(@(x)sgm(t,x),[1e-7 1]);
-    
+%     sgm = matlabFunction(sigma);% converting into non-symbolic function for computation of values
+    sgm = @(s,t)s-1/sqrt(pi)*integral(@(u)tanh((s+u.*delta0(i)/Tc(1))./t).*exp(-u.^2),-Inf,Inf);
+    sz = @(t) fzero(@(s)sgm(s,t),[1e-7 1]);
+
+%% Important note
+% the alphabetical order of function variables matters to Matlab! Always
+% check that the order of variables when calling a function matches the 
+% function definition in the workspace.
+
     %% plot
     figure
     tplot = 0.8;
-    fplot(@(x)sgm(tplot,x),[0 1])
+    fplot(@(s)sgm(s,tplot),[0 1])
     line(xlim,[0 0],'color','black','linestyle','--')
     line([sz(tplot) sz(tplot)],ylim,'color','red','linestyle','--')
-    title('$y=0$ when $x = \sigma_z$');
+    title('$f_{\sigma}=0$ when $x = \sigma_z$');
     xlabel('$x$');
     ylabel(['$f_{\sigma}(x) = x-\frac{1}{\sqrt\pi} \int e^{-u^2}\cdot \tanh \left(\frac{1}{t}\cdot'...
         '\left(x+\frac{\delta_0(i)\cdot u}{Tc(1)}\right) \right)$d$u$']);
-    legend(sprintf('T/T$_c$(x=1)=%.1f',tplot));
+    legend(sprintf('t=%.1f',tplot));
 
 %% 
 % Test function sz
@@ -126,38 +130,67 @@ sz(0.99)
 % sigma goes to zero when increasing T from 0, until dsigma/dx(T,x=0) becomes 
 % positive, then the equation sigma(T,x>0)=0 does not have any solution anymore. 
 % Therefore, the max temperature of the ordering is reached when dsigma/dx(T,x=0)=0.
-
-dsigma = diff(sigma(t,x),x);
+dsigma = diff(sigma,s);
 g = matlabFunction(dsigma);
+
 %% Plot derivative of f_sigma wrt to x at a given temperature
 figure
-fplot(@(x)g(tplot,x),[0 1])
+fplot(@(s)g(s,tplot),[0 1])
 line(xlim,[0 0],'color','black','linestyle','--')
 % line([sz(Tplot) sz(Tplot)],ylim,'color','red','linestyle','--')
-title('Derivative of $f_{\sigma}$');
-xlabel('x');
-ylabel(sprintf('$\frac{\partial f_{\sigma}}{\partial x}$(t=%.1f,x)',tplot));
-g(tplot,0)
+title('$s$ derivative of $f_{\sigma}(s,t)$ vs $s$');
+xlabel('s');
+ylabel(['$\frac{\partial f_{\sigma}}{\partial s}$' sprintf('(t=%.1f,$s$)',tplot)]);
+g(0,tplot)
 
 %% Plot df_sigma/dx(x=0) vs temperature
 figure 
-fplot(@(t)g(t,0),[0 1])
-g(1e-3,0)
+fplot(@(t)g(0,t),[0 1])
+title('$s$ derivative of $f_{\sigma}(s=0,t)$ vs $t$');
+xlabel('t');
+ylabel(['$\frac{\partial f_{\sigma}}{\partial s}(s=0,t)$']);
+g(0,1e-3)
 %% Determine max value of reduced temperature for which the order parameter is defined
-maxT = fzero(@(t)g(t,0),[1e-3 1]);
+maxT = fzero(@(t)g(0,t),[1e-3 1]);
 
 %% Plot the order parameter vs reduced temperature
 figure;
 fplot(sz,[1e-2 maxT-1e-3]);
-ylim([0 1])
+title(sprintf('Order parameter vs temperature at $x$=%.2f',1-dpg(i)));
+xlabel('$t=\frac{T_D}{T_D(x=1)}$');
+ylabel('$\frac{\left<S^{z}\right>}{\left<S^{z}\right>_{x=1,T=0}}$');
+ylim([0 1]);
 
 %% Compute derivative of order parameter wrt temperature
-dsz = diff(@(t)sz(t),t);% does not work; compute dsz self-consistently
+ds = @(s1,t) s1-1/sqrt(pi)*integral(@(u)(s1./t-(sz(t)+u.*delta0(i)/Tc(1))./(t.^2))...
+    .*exp(-u.^2)./cosh((sz(t)+u.*delta0(i)/Tc(1))./t).^2,-Inf,Inf);
+dsz = @(t) fzero(@(s1)ds(s1,t),[-30 0]);
 
+%% Plot ds
+figure; hold on;
+tplot = 0.8;
+fplot(@(s)ds(s,tplot))
+line(xlim,[0 0],'color','black','linestyle','--')
 
+%% Plot dsz
+figure
+tplot = 0.8;
+fplot(@(t)dsz(t),[1e-2 maxT-1e-3])
+title(sprintf('Derivative of the order parameter vs temperature at $x$=%.2f',1-dpg(i)));
+xlabel('$t=\frac{T_D}{T_D(x=1)}$');
+ylabel('$\frac{\left<S^{z}\right>}{\left<S^{z}\right>_{x=1,T=0}}$');
 
+%% Compute molar heat capacity Cpm
+x = 1-dpg(i);
+d0r = delta0(i)/Tc(1);
+Er = @(t,u) (x.*sz(t)+u.*d0r)./t;
+integrand = @(t,u) x/2.*dsz(t).*tanh(Er(t,u))+...
+    (x.*sz(t)/2 + u*d0r).*(x/t.*dsz(t)-Er(t,u)./t)./cosh(Er(t,u)).^2;
+Cpm = @(t) x/sqrt(pi)*integral(@(u)exp(-u.^2).*integrand(t,u),-Inf,Inf);
 
-
+%% Plot Cpm
+figure
+fplot(@(t)Cpm(t),[1e-2 maxT-1e-3]);
 
 
 
