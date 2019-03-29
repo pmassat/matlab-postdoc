@@ -209,15 +209,16 @@ sm = x/sqrt(pi).*integral(@(u)exp(-u^2).*sintegrand(u),...
 integrand = @(t,u) -(x/2.*dsz(t).*tanh(Er(t,u))+...
     (x.*sz(t)/2 + u*d0r).*(x/t.*dsz(t)-Er(t,u)./t)./cosh(Er(t,u)).^2);
 Cpm = @(t) x/sqrt(pi)*integral(@(u)exp(-u.^2).*integrand(t,u),-Inf,Inf);
+% fplot(@(t)Cpm(t),[1e-2 maxT-1e-3]);
 %% Array computation (faster than functional form)
 Cpintegrand = @(u) -(x/2.*dsza.*tanh(Era(u))+...
     (x.*sza/2 + u*d0r).*(x.*dsza-Era(u))./ta./cosh(Era(u)).^2);
 Cpma = x/sqrt(pi)*integral(@(u)exp(-u.^2).*Cpintegrand(u),-Inf,Inf,'ArrayValued',true);
 %% Plot Cpm
 figure; hold on
-% fplot(@(t)Cpm(t),[1e-2 maxT-1e-3]);
 plot(ta,Cpma);
 R = 8.314;
+% plot(ta,Cpintegrand(0));
 errorbar(avgData(i).T/Tc(1),avgData(i).Cp/R,avgData(i).CpFullErr/R,'.','MarkerSize',18,'DisplayName',['x = ',num2str(dpg(i))])
 plot(ta,Cpma*1.675);
 

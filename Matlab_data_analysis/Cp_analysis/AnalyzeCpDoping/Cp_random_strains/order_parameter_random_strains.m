@@ -1,0 +1,78 @@
+function [sz,maxT] = order_parameter_random_strains(temp,Tc1,Tcx)
+% Tc1 is the transition temperature at zero doping i.e. x(Tm)=1
+% Tcx is the transition temperature at non-zero doping i.e. x(Tm)<1
+
+delta0 = strain_energy_scale(Tc1/Tcx);%
+%% Compute the pseudospin as a function of temperature
+% See Gehring1976a equation 4
+
+syms s t u% symbolic math used to derive the expression of pseudospin sz 
+%%
+    %% compute
+% %     sigma = @(x,T) 1/sqrt(pi)*integral(@(u)exp(-u^2)*tanh((delta0(i)*u+lambda*x)./T),-inf,inf,'ArrayValued',true)-x
+% %     sigma = @(x,T) 1/sqrt(pi)*vpaintegral(exp(-u^2)*tanh((delta0(i)*u+lambda*x)./T),u,[-inf,inf])-x
+    fsigma = s-1/sqrt(pi)*int(exp(-u^2)*tanh(1/t*(s+delta0*u/Tc1)),u,[-inf,inf]);
+% s is the variable that defines the order parameter sz that goes from 0 to 1
+% t = T/Tc(1) is a reduced temperature, which also goes from 0 to 1
+
+% Sigma is the self-consistent equation defining pseudospin x as a function 
+% of temperature T. The value of the pseudospin Sz is simply the solution of sigma=0, 
+% hence the use of fzero below.
+%     sgm = matlabFunction(sigma);% converting into non-symbolic function for computation of values
+    sgm = @(s)s-1/sqrt(pi).*integral(@(u)tanh((s+u.*delta0/Tc1)./temp).*exp(-u.^2),-Inf,Inf,'ArrayValued',true);
+    sz = fzero(@(s)sgm(s),[1e-7 1]);
+
+%% Important note
+% the alphabetical order of function variables matters to Matlab! Always
+% check that the order of variables when calling a function matches the 
+% function definition in the workspace.
+
+    %% plot sgm
+%     figure
+%     tplot = 0.8;
+%     fplot(@(s)sgm(s,tplot),[0 1])
+%     line(xlim,[0 0],'color','black','linestyle','--')
+%     line([sz(tplot) sz(tplot)],ylim,'color','red','linestyle','--')
+%     title('$f_{\sigma}=0$ when $x = \sigma_z$');
+%     xlabel('$x$');
+%     ylabel(['$f_{\sigma}(x) = x-\frac{1}{\sqrt\pi} \int e^{-u^2}\cdot \tanh \left(\frac{1}{t}\cdot'...
+%         '\left(x+\frac{\delta_0(i)\cdot u}{Tc(1)}\right) \right)$d$u$']);
+%     legend(sprintf('t=%.1f',tplot));
+% 
+%% Compute the derivative of sigma, to determine the max temperature of the ordering
+% sigma goes to zero when increasing T from 0, until dsigma/dx(T,x=0) becomes 
+% positive, then the equation sigma(T,x>0)=0 does not have any solution anymore. 
+% Therefore, the max temperature of the ordering is reached when dsigma/dx(T,x=0)=0.
+dsigma = diff(fsigma,s);
+dfsigma = matlabFunction(dsigma);
+
+%% Plot derivative of f_sigma wrt to x at a given temperature
+% figure
+% fplot(@(s)dfsigma(s,tplot),[0 1])
+% line(xlim,[0 0],'color','black','linestyle','--')
+% % line([sz(Tplot) sz(Tplot)],ylim,'color','red','linestyle','--')
+% title('$s$ derivative of $f_{\sigma}(s,t)$ vs $s$');
+% xlabel('s');
+% ylabel(['$\frac{\partial f_{\sigma}}{\partial s}$' sprintf('(t=%.1f,$s$)',tplot)]);
+% dfsigma(0,tplot)
+
+%% Plot df_sigma/dx(x=0) vs temperature
+% figure 
+% fplot(@(t)dfsigma(0,t),[0 1])
+% title('$s$ derivative of $f_{\sigma}(s=0,t)$ vs $t$');
+% xlabel('t');
+% ylabel(['$\frac{\partial f_{\sigma}}{\partial s}(s=0,t)$']);
+% dfsigma(0,1e-3)
+
+%% Determine max value of reduced temperature for which the order parameter is defined
+maxT = fzero(@(t)dfsigma(0,temp),[1e-3 1]);
+
+%% Plot the order parameter vs reduced temperature
+% figure;
+% fplot(sz,[1e-2 maxT-1e-3]);
+% title(sprintf('Order parameter vs temperature at $x$=%.2f',1-dpg(i)));
+% xlabel('$t=\frac{T_D}{T_D(x=1)}$');
+% ylabel('$\frac{\left<S^{z}\right>}{\left<S^{z}\right>_{x=1,T=0}}$');
+% ylim([0 1]);
+% 
+end
