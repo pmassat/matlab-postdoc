@@ -99,7 +99,7 @@ i=2;
 % of temperature T. The value of the pseudospin Sz is simply the solution of sigma=0, 
 % hence the use of fzero below.
 %     sgm = matlabFunction(sigma);% converting into non-symbolic function for computation of values
-    sgm = @(s,t)s-1/sqrt(pi)*integral(@(u)tanh((s+u.*delta0(i)/Tc(1))./t).*exp(-u.^2),-Inf,Inf);
+    sgm = @(s,t)s-1/sqrt(pi).*integral(@(u)tanh((s+u.*delta0(i)/Tc(1))./t).*exp(-u.^2),-Inf,Inf,'ArrayValued',true);
     sz = @(t) fzero(@(s)sgm(s,t),[1e-7 1]);
 
 %% Important note
@@ -180,19 +180,46 @@ title(sprintf('Derivative of the order parameter vs temperature at $x$=%.2f',1-d
 xlabel('$t=\frac{T_D}{T_D(x=1)}$');
 ylabel('$\frac{\left<S^{z}\right>}{\left<S^{z}\right>_{x=1,T=0}}$');
 
+%% Compute numerical arrays of sz and dsz for faster plotting with plot than fplot
+% Initialize
+ta = linspace(1e-2,maxT-1e-3,1000);
+sza = repmat(ta,1);
+dsza = repmat(ta,1);
+%% Compute for sz
+for k=1:length(sza)
+    sza(k) = sz(ta(k));
+end
+%% Same with dsz 
+for k=1:length(sza)
+    dsza(k) = dsz(ta(k));
+end
+
 %% Compute molar heat capacity Cpm
 x = 1-dpg(i);
 d0r = delta0(i)/Tc(1);
 Er = @(t,u) (x.*sz(t)+u.*d0r)./t;
-integrand = @(t,u) x/2.*dsz(t).*tanh(Er(t,u))+...
-    (x.*sz(t)/2 + u*d0r).*(x/t.*dsz(t)-Er(t,u)./t)./cosh(Er(t,u)).^2;
+Era = @(u) (x.*sza+u.*d0r)./ta;
+%% Compute integral of molar heat capacity
+%% Compute integrand
+sintegrand = @(u)-(x.*sza/2 + u*d0r).*tanh(Era(u));
+%% Molar entropy
+sm = x/sqrt(pi).*integral(@(u)exp(-u^2).*sintegrand(u),...
+    -Inf,Inf,'ArrayValued',true);
+%% Functional form of Cp
+integrand = @(t,u) -(x/2.*dsz(t).*tanh(Er(t,u))+...
+    (x.*sz(t)/2 + u*d0r).*(x/t.*dsz(t)-Er(t,u)./t)./cosh(Er(t,u)).^2);
 Cpm = @(t) x/sqrt(pi)*integral(@(u)exp(-u.^2).*integrand(t,u),-Inf,Inf);
-
+%% Array computation (faster than functional form)
+Cpintegrand = @(u) -(x/2.*dsza.*tanh(Era(u))+...
+    (x.*sza/2 + u*d0r).*(x.*dsza-Era(u))./ta./cosh(Era(u)).^2);
+Cpma = x/sqrt(pi)*integral(@(u)exp(-u.^2).*Cpintegrand(u),-Inf,Inf,'ArrayValued',true);
 %% Plot Cpm
-figure
-fplot(@(t)Cpm(t),[1e-2 maxT-1e-3]);
-
-
+figure; hold on
+% fplot(@(t)Cpm(t),[1e-2 maxT-1e-3]);
+plot(ta,Cpma);
+R = 8.314;
+errorbar(avgData(i).T/Tc(1),avgData(i).Cp/R,avgData(i).CpFullErr/R,'.','MarkerSize',18,'DisplayName',['x = ',num2str(dpg(i))])
+plot(ta,Cpma*1.675);
 
 
 
