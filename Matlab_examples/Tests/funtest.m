@@ -1,5 +1,7 @@
 function y = funtest(varargin)
+disp('1')
     if nargin>0
+        disp('2')
     end
 end
 
