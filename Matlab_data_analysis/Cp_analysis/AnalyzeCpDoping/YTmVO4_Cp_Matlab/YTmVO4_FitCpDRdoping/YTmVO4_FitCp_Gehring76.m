@@ -90,19 +90,6 @@ xlabel('$t=\frac{T_D}{T_D(x=1)}$');
 ylabel('$\frac{d\left<S^{z}\right>}{dt}$');
 
 %% Compute molar heat capacity Cpm
-Era = @(u) (x.*sz+u.*d0(i))./ta;
-%% Compute integral of molar heat capacity
-%% Compute integrand
-sintegrand = @(u)-(x.*sz/2 + u*d0(i)).*tanh(Era(u));
-
-%% Array computation (faster than functional form)
-Cpintegrand = @(u) -(x/2.*dsz.*tanh(Era(u))+...
-    (x.*sz/2 + u*d0(i)).*(x.*dsz-Era(u))./ta./cosh(Era(u)).^2);
-Cpma = x/sqrt(pi)*integral(@(u)exp(-u.^2).*Cpintegrand(u),-Inf,Inf,'ArrayValued',true);
-% When Cpma is divided by x wrt the expression in the paper, it compares
-% data *per Tm ion*
-
-%%
 Cpma =  Cpm_random_strains(d0(i),ta,sz,dsz,x);
 %% Plot Cpm
 figure; hold on
