@@ -45,9 +45,9 @@ ylabel('$T_D$/($x$(Tm)$\cdot T_D$($\Delta_0$=0))');
 %% Compute average gap delta0 from transition temperature
 d0 = ones(size(Tc));
 delta0 = repmat(d0,1);
-for i=2
+for i=1
     x = 1-dpg(i);
-    tc = Tc(i)/Tc(1);
+    tc = 0.999;% Tc(i)/Tc(1);
     d0(i) = random_strains_energy_scale(tc);% Note: only works for i>1 (not for i=1)
     % do not include x in d0(i) as we want the value of d0 that corresponds to the actual value of Tc(i)
     delta0(i) = d0(i)*x*Tc(1);% delta0(i) should be of the same OM as Tc(i)
