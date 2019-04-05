@@ -1,10 +1,10 @@
-function y = random_strains_phase_boundary_equation(delta,t)
+function y = random_strains_phase_boundary_equation(delta,ea,t)
 % See Gehring1976a equation 5.
 % t is a reduced temperature t = T_D/(x.lambda), where lambda = T_D(x=1)
 % and d is a reduced spread in the strain distribution: d = Delta_0/(x.lambda)
 % x stands for the concentration of the JT-active (Tm) ion, which therefore equals
 % 1-dpg(i), since dpg(i) is the concentration of the JT-inactive (Y) ion.
-y = t-1/sqrt(pi)*integral(@(u)exp(-u^2)/(cosh(delta*u/t)^2),-inf,inf,'ArrayValued',true);
+y = t-1/sqrt(pi)*integral(@(u)exp(-(u+ea)^2)/(cosh(delta*u/t)^2),-inf,inf,'ArrayValued',true);
 
 % % % Plot equation vs reduced temperature for a given spread in the strain
 % % % distribution, just to check that it performs well

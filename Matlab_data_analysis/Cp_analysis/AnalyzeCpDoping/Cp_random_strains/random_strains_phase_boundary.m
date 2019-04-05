@@ -1,5 +1,5 @@
-function y = random_strains_phase_boundary(delta)
-tc = @(t) random_strains_phase_boundary_equation(delta,t);
+function y = random_strains_phase_boundary(delta,ea)
+tc = @(t) random_strains_phase_boundary_equation(delta,ea,t);
 y = fzero(tc,[-1 2]);% when tc goes to zero, fzero needs to go to negative values to output a value
 
 % %% Plot phase boundary
