@@ -1,5 +1,5 @@
-function dsz = order_parameter_derivative_random_strains(delta0,temp,sz,x)
-dsgm = @(ds) ds-x/sqrt(pi)*integral(@(u)(ds./temp-(sz+u.*delta0)./(temp.^2))...
+function dsz = order_parameter_derivative_random_strains(delta0,temp,sz)
+dsgm = @(ds) ds-1/sqrt(pi)*integral(@(u)(ds./temp-(sz+u.*delta0)./(temp.^2))...
     .*exp(-(u).^2)./cosh((sz+u.*delta0)./temp).^2,-Inf,Inf);
 dsz = fzero(@(ds)dsgm(ds),[-30 0]);% lowest empirical value is ~-27
 

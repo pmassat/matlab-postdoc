@@ -40,27 +40,27 @@ ylabel('$\frac{\left<S^{z}\right>}{\left<S^{z}\right>_{x=1,T=0}}$');
 xlim([0 1]); ylim([0 1]);
 
 %% Arrays with size that allow for computation of dsz 
-% sz = sz1((ta1<=tc-1e-3));
-% dsz = repmat(ta,1);
-% 
-% %% Compute dsz 
-% for k=1:length(dsz)
-%     try
-%     dsz(k) = order_parameter_derivative_random_strains(d0,ta(k),sz(k));
-%     catch
-%         disp(k)
-%     end
-% end
-% %% Plot dsz
-% figure
-% plot(ta,dsz);
-% title(sprintf('Derivative of the order parameter vs temperature at $x$=%.2f',x));
-% xlabel('$t=\frac{T_D}{T_D(x=1)}$');
-% ylabel('$\frac{d\left<S^{z}\right>}{dt}$');
+sz = sz1((ta1<=tc-1e-3));
+dsz = repmat(ta_paper,1);
 
-%% Compute molar heat capacity Cpm
-% Cpma =  Cpm_random_strains(d0,ta,sz,dsz,x);
-Cpma = Cp_sz_dsz_random_strains(d0paper,ta_paper,x);
+%% Compute dsz 
+for k=1:length(dsz)
+    try
+    dsz(k) = order_parameter_derivative_random_strains(d0paper,ta_paper(k),sz(k));
+    catch
+        disp(k)
+    end
+end
+%% Plot dsz
+figure
+plot(ta_paper,dsz);
+title(sprintf('Derivative of the order parameter vs temperature at $x$=%.2f',x));
+xlabel('$t=\frac{T_D}{T_D(x=1)}$');
+ylabel('$\frac{d\left<S^{z}\right>}{dt}$');
+
+%% Compute molar heat capacity *per Tm ion*
+% Cpma =  Cpm_random_strains(d0,ta_paper,sz,dsz,x);
+Cpma = Cp_sz_dsz_random_strains(d0paper,0,ta_paper);
 
 %%
 Cpma2 = Cp_sz_dsz_random_strains(d0paper,ta_paper,x);
@@ -74,16 +74,16 @@ Cpm_test = Cp_sz_dsz_random_strains(d0_test,ta_test,x);
 Tplot = ta_paper*x*Tc0;
 figure; hold on
 % plot(ta,Cpintegrand(0));
-plot(ta_paper*x*Tc0,Cpma*1.4,'DisplayName','Paper fit');
+% plot(ta_paper*x*Tc0,Cpma*1.4,'DisplayName','Paper fit');
 plot(data.T,data.Cp,'.','DisplayName','Data')
-plot(ta_paper*x*Tc0,Cpma,'DisplayName','Eqn (6)');
+plot(ta_paper*x*Tc0,Cpma*x,'DisplayName','Eqn (6)');
 title(sprintf('Heat capacity of Tm$_{%.1f}$Lu$_{%.1f}$VO$_4$',x,1-x));
 xlabel('$T$ (K)');
 ylabel('C$_p$ (J$\cdot$mol$^{-1}\cdot$K$^{-1}$)');
 legend('show','Location','northwest');
 xlim([0 3]); ylim([0 1.4]);
-plot(ta_test*x*Tc0,Cpm_test*1.2,'DisplayName','Test');
-plot(ta_onset*x*Tc0,Cpm_onset*1.4,'DisplayName','T$_{c,onset}$');
+% plot(ta_test*x*Tc0,Cpm_test*1.2,'DisplayName','Test');
+% plot(ta_onset*x*Tc0,Cpm_onset*1.4,'DisplayName','T$_{c,onset}$');
 %% Compute Cp from magnetic dipole interactions
 % Gehring et al. 1976, equation 7
 syms t
