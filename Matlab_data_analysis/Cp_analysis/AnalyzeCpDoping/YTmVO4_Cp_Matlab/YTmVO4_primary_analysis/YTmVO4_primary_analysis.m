@@ -138,33 +138,6 @@ srtd = srtd';
 % not output anything.
 %% Compute average of data points taken
 for i = 1:L
-%     Tm = [];Cpm = [];stdCpm = [];% initialize temporary tables;
-%     k = 1;% initiliaze loop index k
-%     while k<length(srtd{i}.T)% loop over k
-%         ind = [k];% initialize temporary table of indices
-%         j = k+1;% initialize subloop index 
-%         while abs(srtd{i}.T(j)-srtd{i}.T(k))<Tsep
-%             % loop over datapoints within a temperature interval of Tsep
-%             % i.e. datapoints measured at the same temperature setpoint
-%             ind = [ind, j];% store index of current datapoint
-%             j = j+1;% increase subloop index
-%             if j>= length(srtd{i}.T)% safety condition
-%                 break
-%             end
-%         end
-%         if length(ind)>1% do not include isolated data points
-%             Tm = [Tm,mean(srtd{i}.T(ind))];% average of temperature for data points
-%             % taken at the same temperature setpoint
-%             Cpm = [Cpm,mean(srtd{i}.Cpmol(ind))];% average of heat capacity
-%             stdCpm = [stdCpm,std(srtd{i}.Cpmol(ind))];% standard deviation of heat capacity
-%         end
-%         k = j+1;% once all datapoints measured at the same temperature setpoints are averaged,
-%         % increase the main loop index in order to jump to the next data point measured
-%         % at a different temperature setpoint
-%     end
-%     avgData(i).T = Tm;% store the full averaged temperature table
-%     avgData(i).Cp = Cpm;% store the full averaged heat capacity table
-%     avgData(i).stdCp = stdCpm;% store the full table of standard deviation of heat capacity
     avgData(i) = averageCp(6e-3,srtd{i}.T,srtd{i}.Cpmol,srtd{i}.CpmolErr);
 end
 

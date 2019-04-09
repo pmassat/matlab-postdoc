@@ -20,11 +20,25 @@ title(ttlCpY)
 %%
 Tmfmax = [2.1,1.4,0.9,0.2,0.68];% Maximum temperature of mean-field jump for x=0 to x=0.219
 % This is a visual estimate of the temperature below which Cp shows a mean-field jump. It only applies for x<xc.
-Tc = [2.2,1.57,1.11,0.24,0.69];% Transition temperature
+Tc = [2.2,1.6,1.11,0.24,0.69];% Transition temperature; try higher value of Tc(2) for fit like Gehring 1976
 Tschmin = [2.3,1.7,1.2,0.25,0.7];% temperature above which the data are essentially Schottky-like
 x0 = [1e-7 0.5];% range of the pseudospin
 Hc = 0.51;% critical field in Tesla, in the absence of demag factor
-
+Tmax = [2.15; 1.51; 1.05];% temperature of the maximum of the Cp jump
+%% Plot Cp data vs reduced temperature
+figure; %
+for i=1:3
+    avgData(i).t = (avgData(i).T-Tmax(i))/Tmax(i);
+    avgData(i).tp = avgData(i).t(avgData(i).t>0);
+    avgData(i).tm = avgData(i).t(avgData(i).t<0);
+    semilogx(avgData(i).tp,avgData(i).Cp(avgData(i).t>0),'.',...
+        'Color',co(i,:),'DisplayName',sprintf('x=%.2f t$>$0',dpg(i)));
+    hold on;
+    semilogx(-avgData(i).tm,avgData(i).Cp(avgData(i).t<0),'x',...
+        'MarkerSize',8,'Color',co(i,:),'DisplayName',sprintf('x=%.2f t$<$0',dpg(i)));
+end
+legend('show','Location','best')
+% xlim([0 1])
 %% Fit mean-field jump for pure TmVO4
 for i=1
     [avgData(i).fitmf, avgData(i).ffgof] = fitCpTFIM(avgData(i).T',...
@@ -34,7 +48,7 @@ end
 %% Fit data for x>0
 %% Reproduce figure 3a of Gehring1976a 
 % Equation defining the transition temperature as a function of parameter delta
-td = @(d) random_strains_phase_boundary(d);
+td = @(d) random_strains_phase_boundary(d,0);
 %% Plot phase boundary
 figure;
 fplot(@(d)td(d),[1e-3 1.25],'LineWidth',2)
@@ -45,10 +59,10 @@ ylabel('$T_D$/($x$(Tm)$\cdot T_D$($\Delta_0$=0))');
 %% Compute average gap delta0 from transition temperature
 d0 = ones(size(Tc));
 delta0 = repmat(d0,1);
-for i=1
+for i=2
     x = 1-dpg(i);
-    tc = 0.999;% Tc(i)/Tc(1);
-    d0(i) = random_strains_energy_scale(tc);% Note: only works for i>1 (not for i=1)
+    tc = Tc(i)/(x*Tc(1));
+    d0(i) = random_strains_energy_scale(tc,0);% Note: only works for i>1 (not for i=1)
     % do not include x in d0(i) as we want the value of d0 that corresponds to the actual value of Tc(i)
     delta0(i) = d0(i)*x*Tc(1);% delta0(i) should be of the same OM as Tc(i)
 end
@@ -58,7 +72,7 @@ end
 
 %% Compute numerical arrays of sz and dsz for faster plotting with plot than fplot
 % Initialize
-ta1 = linspace(1.5e-3,tc-1e-5,1000);
+ta1 = linspace(3e-3,tc-1e-5,1000);
 sz1 = repmat(ta1,1);
 
 %% Compute sz
@@ -80,7 +94,11 @@ dsz = repmat(ta,1);
 
 %% Compute dsz 
 for k=1:length(dsz)
+    try
     dsz(k) = order_parameter_derivative_random_strains(d0(i),ta(k),sz(k));
+    catch
+        disp(k)
+    end
 end
 %% Plot dsz
 figure
@@ -96,8 +114,8 @@ figure; hold on
 plot(ta,Cpma);
 R = 8.314;
 % plot(ta,Cpintegrand(0));
-errorbar(avgData(i).T/Tc(1),avgData(i).Cp/R*x,avgData(i).CpFullErr/R*x,'.','MarkerSize',18,'DisplayName',['x = ',num2str(dpg(i))])
-plot(ta,Cpma*1.45);
+errorbar(avgData(i).T/(x*Tc(1)),avgData(i).Cp/R,avgData(i).CpFullErr/R,'.','MarkerSize',18,'DisplayName',['x = ',num2str(dpg(i))])
+% plot(ta,Cpma*1.45);
 
 %% arrays for fit
 X = avgData(i).T/Tc(1);

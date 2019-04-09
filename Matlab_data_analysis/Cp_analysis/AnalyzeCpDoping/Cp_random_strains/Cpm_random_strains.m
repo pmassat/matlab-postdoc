@@ -12,12 +12,12 @@ y = zeros(size(t));
 % Cpintegrand = cell(size(t));
 for k=1:length(t)
     %% Compute expression in integrand of Cpm
-    Er = @(u) (x.*sz(k)+u.*d0)./t(k);
+    Er = @(u) (sz(k)+u.*d0)./t(k);
 
-    Cpintegrand = @(u) -(x/2.*dsz(k).*tanh(Er(u))+...
-        (x.*sz(k)/2 + u*d0).*(x.*dsz(k)-Er(u))./t(k)./cosh(Er(u)).^2);
+    Cpintegrand = @(u) -(dsz(k)/2.*tanh(Er(u))+...
+        (sz(k)/2 + u*d0).*(dsz(k)-Er(u))./t(k)./cosh(Er(u)).^2);
 
-    y(k) = x/sqrt(pi)*integral(@(u)exp(-u.^2).*Cpintegrand(u),-Inf,Inf,'ArrayValued',true);
+    y(k) = 1/sqrt(pi)*integral(@(u)exp(-u.^2).*Cpintegrand(u),-Inf,Inf,'ArrayValued',true);
     % When Cpm is divided by x, it compares data *per Tm ion*
 end
 

@@ -6,7 +6,6 @@ optargs(1:nvarargs) = varargin;
 [istart,iend,ttl, ylbl] = optargs{:};% The optional argument defines the label of the y axis of the plot
 
 %% Actual plot
-close 
 figure
 for i=istart:iend
     plot(mycellarray{i}.T,mycellarray{i}.Cpmol,'.','MarkerSize',18,'DisplayName',['x = ',num2str(lgdarray(i))])
