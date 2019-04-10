@@ -40,7 +40,7 @@ ylabel('$\frac{\left<S^{z}\right>}{\left<S^{z}\right>_{x=1,T=0}}$');
 xlim([0 1]); ylim([0 1]);
 
 %% Arrays with size that allow for computation of dsz 
-sz = sz1((ta1<=tc-1e-3));
+sz = sz1((ta1<=tcpaper-1e-3));
 dsz = repmat(ta_paper,1);
 
 %% Compute dsz 
@@ -63,7 +63,9 @@ ylabel('$\frac{d\left<S^{z}\right>}{dt}$');
 Cpma = Cp_sz_dsz_random_strains(d0paper,0,ta_paper);
 
 %%
-Cpma2 = Cp_sz_dsz_random_strains(d0paper,ta_paper,x);
+tafull = linspace(3e-3,2,1000);
+A = 2.5;% amplitude of the Schottky distribution
+Cpma2 = Cp_full_random_strains(A,d0paper,0,tafull);
 %%
 Cpm_onset = Cp_sz_dsz_random_strains(d0_onset,ta_onset,x);
 
@@ -71,12 +73,12 @@ Cpm_onset = Cp_sz_dsz_random_strains(d0_onset,ta_onset,x);
 Cpm_test = Cp_sz_dsz_random_strains(d0_test,ta_test,x);
 
 %% Plot Cpm
-Tplot = ta_paper*x*Tc0;
+Tplot = tafull*x*Tc0;
 figure; hold on
 % plot(ta,Cpintegrand(0));
 % plot(ta_paper*x*Tc0,Cpma*1.4,'DisplayName','Paper fit');
 plot(data.T,data.Cp,'.','DisplayName','Data')
-plot(ta_paper*x*Tc0,Cpma*x,'DisplayName','Eqn (6)');
+plot(Tplot,Cpma2*x,'DisplayName','Eqn (6)');
 title(sprintf('Heat capacity of Tm$_{%.1f}$Lu$_{%.1f}$VO$_4$',x,1-x));
 xlabel('$T$ (K)');
 ylabel('C$_p$ (J$\cdot$mol$^{-1}\cdot$K$^{-1}$)');
@@ -84,6 +86,11 @@ legend('show','Location','northwest');
 xlim([0 3]); ylim([0 1.4]);
 % plot(ta_test*x*Tc0,Cpm_test*1.2,'DisplayName','Test');
 % plot(ta_onset*x*Tc0,Cpm_onset*1.4,'DisplayName','T$_{c,onset}$');
+
+%% Create variables for fit using Curve fitting tool
+dataT = data.T;
+dataCp = data.Cp;
+
 %% Compute Cp from magnetic dipole interactions
 % Gehring et al. 1976, equation 7
 syms t

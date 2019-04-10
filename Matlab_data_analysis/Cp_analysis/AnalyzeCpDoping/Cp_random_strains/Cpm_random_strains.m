@@ -1,4 +1,4 @@
-function y = Cpm_random_strains(d0,t,sz,dsz,x)
+function y = Cpm_random_strains(d0,t,sz,dsz)
 % % % Compute integral of molar heat capacity
 % See Gehring et al. 1976
 % t is an array of reduced temperature T/Tc(x=1)

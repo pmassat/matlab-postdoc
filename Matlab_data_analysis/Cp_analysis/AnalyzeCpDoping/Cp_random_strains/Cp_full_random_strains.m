@@ -1,4 +1,4 @@
-function [Cp,sz,dsz] = Cp_sz_dsz_random_strains(d0,da,t)
+function [Cp,sz,dsz] = Cp_full_random_strains(A,d0,da,t)
 % % % Compute integral of molar heat capacity
 % See Gehring et al. 1976
 % t is an array of reduced temperature T/Tc(x=1)
@@ -12,6 +12,7 @@ Cp = zeros(size(t));
 tc = random_strains_phase_boundary(d0,da);
 
 for k=1:length(t)
+    if t(k)<tc-1e-3
     sz(k) = order_parameter_random_strains(d0,t(k));
     try
     dsz(k) = order_parameter_derivative_random_strains(d0,t(k),sz(k));
@@ -27,6 +28,9 @@ for k=1:length(t)
 
     Cp(k) = 1/sqrt(pi)*integral(@(u)exp(-(u+da).^2).*Cpintegrand(u),-Inf,Inf,'ArrayValued',true);
     % When Cp is divided by x, it compares data *per Tm ion*
+    else
+        Cp(k) = fnrmtemp_sym(A,da,d0,t(k));
+    end
 end
 
 end

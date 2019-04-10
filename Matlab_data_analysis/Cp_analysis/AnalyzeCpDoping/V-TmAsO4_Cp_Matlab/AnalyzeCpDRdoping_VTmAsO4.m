@@ -117,4 +117,7 @@ for i=1:2
     semilogx(-avgDataAs(i).tm,avgDataAs(i).Cp(avgDataAs(i).t<0),'x',...
         'MarkerSize',8,'Color',co(i,:),'DisplayName',sprintf('x=%.2f t$<$0',dpg(i)));
 end
+title([ttlCpAs]);
+xlabel('$|t|=\left|\frac{T-T_D}{x\cdot T_D(x=1)}\right|$');
+ylabel(ylblCp);
 legend('show','Location','best')

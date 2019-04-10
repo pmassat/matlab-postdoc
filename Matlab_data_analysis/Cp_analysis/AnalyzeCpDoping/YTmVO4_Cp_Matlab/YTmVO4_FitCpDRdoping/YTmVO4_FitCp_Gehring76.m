@@ -27,6 +27,8 @@ Hc = 0.51;% critical field in Tesla, in the absence of demag factor
 Tmax = [2.15; 1.51; 1.05];% temperature of the maximum of the Cp jump
 %% Plot Cp data vs reduced temperature
 figure; %
+ax = gca;
+co = ax.ColorOrder;
 for i=1:3
     avgData(i).t = (avgData(i).T-Tmax(i))/Tmax(i);
     avgData(i).tp = avgData(i).t(avgData(i).t>0);
@@ -37,6 +39,9 @@ for i=1:3
     semilogx(-avgData(i).tm,avgData(i).Cp(avgData(i).t<0),'x',...
         'MarkerSize',8,'Color',co(i,:),'DisplayName',sprintf('x=%.2f t$<$0',dpg(i)));
 end
+title([ttlCpY]);
+xlabel('$|t|=\left|\frac{T-T_D}{x\cdot T_D(x=1)}\right|$');
+ylabel(ylblCp);
 legend('show','Location','best')
 % xlim([0 1])
 %% Fit mean-field jump for pure TmVO4
@@ -111,11 +116,14 @@ ylabel('$\frac{d\left<S^{z}\right>}{dt}$');
 Cpma =  Cpm_random_strains(d0(i),ta,sz,dsz,x);
 %% Plot Cpm
 figure; hold on
+errorbar(avgData(i).T/(x*Tc(1)),avgData(i).Cp/R,avgData(i).CpFullErr/R,'.','MarkerSize',18,'DisplayName',['x = ',num2str(dpg(i))])
 plot(ta,Cpma);
 R = 8.314;
 % plot(ta,Cpintegrand(0));
-errorbar(avgData(i).T/(x*Tc(1)),avgData(i).Cp/R,avgData(i).CpFullErr/R,'.','MarkerSize',18,'DisplayName',['x = ',num2str(dpg(i))])
 % plot(ta,Cpma*1.45);
+title([ttlCpY sprintf(' at $x$=%.2f',1-dpg(i))]);
+xlabel('$t=\frac{T_D}{x\cdot T_D(x=1)}$');
+ylabel(ylblCp);
 
 %% arrays for fit
 X = avgData(i).T/Tc(1);
