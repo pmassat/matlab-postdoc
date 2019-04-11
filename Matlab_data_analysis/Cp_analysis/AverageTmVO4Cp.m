@@ -1,6 +1,9 @@
-% fileImp = '2019-02-27_TmVO4-LS5228-RUS-1';
-% fileImp = '2019-02-27_TmVO4-LS5228-RUS-1-S';
-fileImp = '2019-03-01_TmVO4-LS5249-RUS-2';
+%% Create new workspace for new data analysis
+clear all;% clear workspace, since variables change for each sample
+M = 283.87;% molar mass of TmVO4, in g/mol
+% fileImp = '2019-03-25_TmVO4-LS5216-NMR-FIB-01'; m = 2.42*1e-3;% mass of sample measured, in g
+% fileImp = '2019-03-29_TmVO4-LS5216-NMR-FIB-03-HC1'; m = 0.43*1e-3;% mass of sample measured, in g
+fileImp = '2019-04-04_TmVO4-LS5214-NMR-FIB-02-HC1'; m = 0.83*1e-3;% mass of sample measured, in g
 DATA=ImportTmVO4Cp([fileImp '.dat']);% Use this data to plot Cp vs H, T superimposed on theoretical curves
 % Average data points at each temperature + field 
 %%
@@ -69,67 +72,54 @@ end
 Tsep = 6e-3;% Data points taken within an interval of Tsep are considered to be measured at the same temperature setpoint
 % 6mK is an empirical estimate of the dispersion of data points taken consecutively at a given temperature. 
 for i = 1:length(fields)
-    T2 = repmat(separatedCpData(i).T,1);
-    Tm = zeros(length(separatedCpData(i).T),1);
-    Tsd = zeros(length(separatedCpData(i).T),1);
-    Cpm = zeros(length(separatedCpData(i).Cp),1);
-    Cpsd = zeros(length(separatedCpData(i).Cp),1);
-    CpmErr = zeros(length(separatedCpData(i).Cp),1);
-    for k = 1:length(T2)
-        if T2(k)==0
-            continue
-        elseif length(T2(abs(T2-T2(k))<Tsep))>3
-            Tsep2 = Tsep/2;% reduce the temperature interval
-%             T2(abs(T2-T2(k))<Tsep2)%print out values of temperature which
-%             verify the if statement
-            Tm(k) = mean(T2(abs(T2-T2(k))<Tsep2));
-            Tsd(k) = std(T2(abs(T2-T2(k))<Tsep2));
-            Cpm(k) = mean(separatedCpData(i).Cp(abs(T2-T2(k))<Tsep2));
-            Cpsd(k) = std(separatedCpData(i).Cp(abs(T2-T2(k))<Tsep2));
-            CpmErr(k) = sum(separatedCpData(i).CpErr(abs(T2-T2(k))<Tsep2))/...
-                sqrt(length(separatedCpData(i).CpErr(abs(T2-T2(k))<Tsep2)));
-            T2(abs(T2-T2(k))<Tsep2)=0;
-        else
-            Tm(k) = mean(T2(abs(T2-T2(k))<Tsep));
-            Tsd(k) = std(T2(abs(T2-T2(k))<Tsep));
-            Cpm(k) = mean(separatedCpData(i).Cp(abs(T2-T2(k))<Tsep));
-            Cpsd(k) = std(separatedCpData(i).Cp(abs(T2-T2(k))<Tsep));
-            CpmErr(k) = sum(separatedCpData(i).CpErr(abs(T2-T2(k))<Tsep))/...
-                sqrt(length(separatedCpData(i).CpErr(abs(T2-T2(k))<Tsep)));
-            T2(abs(T2-T2(k))<Tsep)=0;
-        end
-    end
-    separatedCpData(i).Hm = separatedCpData(i).H(Tm>0);
-    separatedCpData(i).Tm = Tm(Tm>0);
-    separatedCpData(i).Tsd = Tsd(Tm>0);
-    separatedCpData(i).Cpm = Cpm(Cpm>0);
-    separatedCpData(i).CpmFullErr = Cpsd(Cpm>0) + CpmErr(Cpm>0);
+    averageCpData(i) = averageCp(Tsep,separatedCpData(i).T,...
+        separatedCpData(i).Cp,separatedCpData(i).CpErr);
+    averageCpData(i).H = separatedCpData(i).H(1:length(averageCpData(i).T));
 end
+
+%% Compute molar quantities, if accessible
+for i = 1:length(fields)
+    averageCpData(i).Cpm = averageCpData(i).Cp*1e-6*M/m;% Cp measured in PPMS He4 is in uJ/K
+    averageCpData(i).CpmErr = averageCpData(i).CpFullErr*1e-6*M/m;% Cp measured in PPMS He4 is in uJ/K
+end
+
+%% Separate file name into date and sample name
+fnamesep = strsplit(fileImp,'_');
+date = fnamesep{1};
+sample = fnamesep{2};
 
 %% Plot averaged data at each field separately
 figure
 hold on
 for i=1:length(fields)
-    errorbar(separatedCpData(i).Tm,separatedCpData(i).Cpm,separatedCpData(i).CpmFullErr,'.','MarkerSize',18)
+    if isfield(averageCpData(i),'Cpm')
+    errorbar(averageCpData(i).T,averageCpData(i).Cpm,averageCpData(i).CpmErr,'.','MarkerSize',18)
+    ylabel('C$_p$ (J/K/mol)')
+    else
+    errorbar(averageCpData(i).T,averageCpData(i).Cp,averageCpData(i).CpFullErr,'.','MarkerSize',18)
+    ylabel('C$_p$ (uJ/K)')
+    end
 end
-xlabel('Temperature (K)'); ylabel('Cp (uJ/K)')
+title(sample)
+xlabel('Temperature (K)');
 legendCell = cellstr(num2str(fields, '%-d Oe'));
 legend(legendCell)
 hold off
 
 %% Concatenate data for exportation 
-exportArray = [separatedCpData(i).Hm,separatedCpData(i).Tm,...
-separatedCpData(i).Tsd,separatedCpData(i).Cpm,separatedCpData(i).CpmFullErr];
+if isfield(averageCpData(i),'Cpm')
+exportArray = [averageCpData(i).H,averageCpData(i).T,...
+averageCpData(i).Tsd,averageCpData(i).Cpm,averageCpData(i).CpmErr];
+else
+exportArray = [averageCpData(i).H,averageCpData(i).T,...
+averageCpData(i).Tsd,averageCpData(i).Cp,averageCpData(i).CpFullErr];
+end
 
 %% Export data to txt file
-fileExp = [fileImp '_avg.txt'];% '_R=' sprintf('%2.e',ap1('R'))
+fileExp = [fileImp '_avg.txt'];
 fileID = fopen(fileExp,'a');
 fprintf(fileID,['Magnetic Field\tTemperature\tTemperature_StDev\tCp\tCp_Err\n'...
-    'Oe\tK\tK\tuJ/K\tuJ/K\n']);
-% for i=1:length(fields)
-% fprintf(fileID,'%d\n\n',exportArray);
-% end
-% export(exportArray,'File',fileID,'Delimiter',',')
+    'Oe\tK\tK\tJ/K/mol\tJ/K/mol\n']);
 dlmwrite(fileExp,exportArray,'-append','delimiter','\t');
 fprintf(fileID,'\n');
 fclose(fileID);
