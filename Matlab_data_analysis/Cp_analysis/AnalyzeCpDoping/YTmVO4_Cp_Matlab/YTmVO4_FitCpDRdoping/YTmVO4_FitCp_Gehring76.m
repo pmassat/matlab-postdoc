@@ -45,11 +45,20 @@ ylabel(ylblCp);
 legend('show','Location','best')
 % xlim([0 1])
 %% Fit mean-field jump for pure TmVO4
+% figure;
+R = 8.314;
+e = 0.01;
 for i=1
-    [avgData(i).fitmf, avgData(i).ffgof] = fitCpTFIM(avgData(i).T',...
-        avgData(i).Cp',1./avgData(i).CpFullErr,Tc(i),0,0.95);
+    [avgData(i).fitmf, avgData(i).ffgof] = fitCpTFIM_offset_strain(avgData(i).T',...
+        avgData(i).Cp'/R,R./avgData(i).CpFullErr,0,Tc(i)+.025);
+%     errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.','MarkerSize',18,'DisplayName',['x = ',num2str(dpg(i))])
+%     hold on
+%     fplot(@(t)Cp_TFIM_offset_strain(t/Tc(i),e,0),[0 4*Tc(i)]);
 end
-
+%% Prepare data for curve fitting tool
+dataT = avgData(i).T;
+dataCp = avgData(i).Cp/R;
+dataWeights = R./avgData(i).CpFullErr;
 %% Fit data for x>0
 %% Reproduce figure 3a of Gehring1976a 
 % Equation defining the transition temperature as a function of parameter delta

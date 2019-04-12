@@ -1,4 +1,4 @@
-function [Cp,sz,dsz] = Cp_full_random_strains(A,d0,da,t)
+function [Cp,sz,dsz] = Cp_full_random_strains(d0,da,t)
 % % % Compute integral of molar heat capacity
 % See Gehring et al. 1976
 % t is an array of reduced temperature T/Tc(x=1)
@@ -10,15 +10,15 @@ sz = zeros(size(t));
 dsz = zeros(size(t));
 Cp = zeros(size(t));
 tc = random_strains_phase_boundary(d0,da);
+dt = 1e-2;
 
 for k=1:length(t)
-    if t(k)<tc-1e-3
-    sz(k) = order_parameter_random_strains(d0,t(k));
+    if t(k)<tc-dt || da>0
+    sz(k) = order_parameter_random_strains_offset(d0,da,t(k));
     try
-    dsz(k) = order_parameter_derivative_random_strains(d0,t(k),sz(k));
+    dsz(k) = order_parameter_derivative_random_strains_offset(d0,da,t(k),sz(k));
     catch
-        disp(k);
-        break
+        disp(k);% the following commands do not solve the errors: dt = tc-t(k); k = k-1;% continue;
     end
     %% Compute expression in integrand of Cpm
     Er = @(u) (sz(k)+u.*d0)./t(k);
@@ -26,11 +26,12 @@ for k=1:length(t)
     Cpintegrand = @(u) -(dsz(k)./2.*tanh(Er(u))+...
         (sz(k)/2 + u*d0).*(dsz(k)-Er(u))./t(k)./cosh(Er(u)).^2);
 
-    Cp(k) = 1/sqrt(pi)*integral(@(u)exp(-(u+da).^2).*Cpintegrand(u),-Inf,Inf,'ArrayValued',true);
+    Cp(k) = 1/sqrt(pi)*integral(@(u)exp(-(u-da).^2).*Cpintegrand(u),-Inf,Inf,'ArrayValued',true);
     % When Cp is divided by x, it compares data *per Tm ion*
-    else
-        Cp(k) = fnrmtemp_sym(A,da,d0,t(k));
     end
+%     if t(k)>=tc-dt
+%         Cp(k) = Cp(k) + fnrmtemp_sym(da,d0,t(k));
+%     end
 end
 
 end

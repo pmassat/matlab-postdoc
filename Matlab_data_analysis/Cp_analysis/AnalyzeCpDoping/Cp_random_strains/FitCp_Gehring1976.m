@@ -63,14 +63,15 @@ ylabel('$\frac{d\left<S^{z}\right>}{dt}$');
 Cpma = Cp_sz_dsz_random_strains(d0paper,0,ta_paper);
 
 %%
-tafull = linspace(3e-3,2,1000);
-A = 2.5;% amplitude of the Schottky distribution
-Cpma2 = Cp_full_random_strains(A,d0paper,0,tafull);
-%%
 Cpm_onset = Cp_sz_dsz_random_strains(d0_onset,ta_onset,x);
 
 %%
 Cpm_test = Cp_sz_dsz_random_strains(d0_test,ta_test,x);
+%%
+e = 1e-3;
+tafull = linspace(3e-3,2,1000);
+% A = 2.5;% amplitude of the Schottky distribution
+Cpma2 = Cp_full_random_strains(d0paper,e,tafull);
 
 %% Plot Cpm
 Tplot = tafull*x*Tc0;
