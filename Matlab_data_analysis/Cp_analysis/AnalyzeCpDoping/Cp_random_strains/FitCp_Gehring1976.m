@@ -72,6 +72,9 @@ e = 1e-3;
 tafull = linspace(3e-3,2,1000);
 % A = 2.5;% amplitude of the Schottky distribution
 Cpma2 = Cp_full_random_strains(d0paper,e,tafull);
+%%
+e3 = 1e-2;
+Cpma3 = Cp_full_random_strains(d0paper,e3,tafull);
 
 %% Plot Cpm
 Tplot = tafull*x*Tc0;
@@ -80,6 +83,7 @@ figure; hold on
 % plot(ta_paper*x*Tc0,Cpma*1.4,'DisplayName','Paper fit');
 plot(data.T,data.Cp,'.','DisplayName','Data')
 plot(Tplot,Cpma2*x,'DisplayName','Eqn (6)');
+plot(Tplot,Cpma3*x,'DisplayName','Eqn (6)');
 title(sprintf('Heat capacity of Tm$_{%.1f}$Lu$_{%.1f}$VO$_4$',x,1-x));
 xlabel('$T$ (K)');
 ylabel('C$_p$ (J$\cdot$mol$^{-1}\cdot$K$^{-1}$)');

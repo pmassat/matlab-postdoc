@@ -56,6 +56,8 @@ for i=1
 %     fplot(@(t)Cp_TFIM_offset_strain(t/Tc(i),e,0),[0 4*Tc(i)]);
 end
 %% Prepare data for curve fitting tool
+i = 2;
+R = 8.314;
 dataT = avgData(i).T;
 dataCp = avgData(i).Cp/R;
 dataWeights = R./avgData(i).CpFullErr;
