@@ -141,8 +141,8 @@ Stbl(Ntbl).(fitStrnp).Rsquare = rsquarenp;% store r^2 value in a new column
 flag = 0;% reset flag for next run
 
 %% Plot ratio of peak intensities as a function of field
-figure; hold on;
 if ismember('I1', Stbl(end).(fitStr).Properties.VariableNames) && ismember('I2', Stbl(end).(fitStr).Properties.VariableNames)
+    figure; hold on;
     If1 = Stbl(end).(fitStr).I1; If1Err = Stbl(end).(fitStr).I1_RelErr.*If1;
     If2 = Stbl(end).(fitStr).I2; If2Err = Stbl(end).(fitStr).I2_RelErr.*If2;
     Iratio = If1./If2;
@@ -241,8 +241,9 @@ opts.Exclude = excludedPoints;
 %% Print fit parameter values with error bars
 cval = coeffvalues(fitresult);% extract fit parameter values
 cft=confint(fitresult);% extract confidence intervals from fit
-strHc = sprintf("$H_c$ = %.3f(%.0f)T",cval(1),(cval(1)-cft(1,1))*1e3);% print out value of critical temperature, with error bars
-strSplit = sprintf("$\\frac{(a-b)}{a_0}|_{H=0}$ = %.2f(%.0f)e-3 ",cval(2)*1e3,(cval(2)-cft(1,2))*1e5);% print out value of splitting at zero field, with error bars
+strHc = sprintf('$H_c$ = %.3f(%.0f)T',cval(1),(cval(1)-cft(1,1))*1e3);% print out value of critical temperature, with error bars
+strSplit = [sprintf('$\\frac{(a-b)}{a_0}|_{H=0}$ = %.2f(%.0f)',...
+    cval(2)*1e3,(cval(2)-cft(1,2))*1e5) '$\cdot 10^{-3}$'];% print out value of splitting at zero field, with error bars
 
 %% Calculate effective temperature
 Tc0 = 2.15;% critical temperature at zero field (better to use the actual value of Tc from Cp data?)
@@ -256,30 +257,6 @@ dTeff = Tc0*dx*abs(atanh(x)-x/(1-x^2))/(atanh(x)^2);% effective temperature calc
 % calculated by differentiating the expression of Teff wrt x
 sTeff = sprintf('T = %.2f(%.0f)K',Teff,dTeff*1e2);% Effective temperature with error bars
 sTdr = sprintf('$T_{DR}$=%.1fK',nData(1).temp);
-
-%% Plot fit with data.
-plotRng = field<0.93;
-xPlot = xData(plotRng);
-yPlot = yData(plotRng);
-spltPlot = spltRE(plotRng);
-exclPlot = excludedPoints(plotRng);
-Xfit = linspace(0,max(field),1000);
-Yfit = fitresult(Xfit);% compute fit over a controlled number of points
-figure; hold on
-pfit = plot(Xfit,Yfit,'r-');
-pdat = errorbar(xPlot,yPlot,spltPlot,'.b','MarkerSize',10,'LineWidth',2);
-% pexcl = plot(xPlot(exclPlot),yPlot(exclPlot),'xk','MarkerSize',6);
-% legend([pdat,pexcl,pfit],'Splitting','Excluded','MF fit');
-legend([pdat,pfit],'Splitting','MF fit');
-title('TmVO$_4$ (8 8 0) peak splitting vs field');
-xlabel('H (T)'); ylabel('(a-b)/a$_0$'); grid on
-ylim([0 6e-3]);
-ann2 = annotation('textbox',[0.15 0.3 0.2 0.1],'interpreter','latex',...
-    'String',{'Peak at (8 8 0)' [sTeff] strSplit strHc},...
-    'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...
-    'LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
-ann2.FitBoxToText='on';% fit annotation box to text
-ax = gca; ax.TitleFontSizeMultiplier = 0.8;
 
 %% Estimate critical field at the effective temperature in the absence of demagnetizing factor
 % Function defining the critical field
@@ -309,6 +286,32 @@ demag_correction = H_c/cval(1);% cval(1) is the value of critical field
 % see results of the below code when using demag_correction = 1
 field2 = extractfield(nData2,'field')*demag_correction;
 
+%% Plot fit with data.
+plotRng = field<0.93;
+xPlot = xData(plotRng)*demag_correction;
+yPlot = yData(plotRng);
+spltPlot = spltRE(plotRng);
+exclPlot = excludedPoints(plotRng);
+Xfit = linspace(0,max(field)*demag_correction,1000);
+Yfit = cval(2).*sqrt(1-(Xfit/H_c).^2);% compute fit over a controlled number of points
+figure; hold on
+pfit = plot(Xfit,Yfit,'r-');
+pdat = errorbar(xPlot,yPlot,spltPlot,'.b','MarkerSize',10,'LineWidth',2);
+% pexcl = plot(xPlot(exclPlot),yPlot(exclPlot),'xk','MarkerSize',6);
+% legend([pdat,pexcl,pfit],'Splitting','Excluded','MF fit');
+legend([pdat,pfit],'Splitting','MF fit');
+% title('TmVO$_4$ (8 8 0) peak splitting vs field');
+xlabel('H (T)'); ylabel('(a-b)/a$_0$'); grid on
+xlim([0 0.6]); ylim([0 6e-3]);
+ax = gca; ax.TitleFontSizeMultiplier = 0.8;
+ann21 = annotation('textbox',[0.15 0.3 0.2 0.1],'interpreter','latex',...
+    'String',{'Bragg peak at (8 8 0)' sTeff strSplit strHc},...
+    'FontSize',14,'LineStyle','-','EdgeColor','k','FitBoxToText','on',...
+    'LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
+ann22 = annotation('textbox',[0 0 0.2 0.1],'interpreter','latex',...
+    'String',{'(b)'},'FontSize',ax.FontSize,'LineStyle','-','EdgeColor','none',...
+    'FitBoxToText','on','LineWidth',2,'BackgroundColor','none','Color','k');% add annotation
+
 %% Data formatting for curve fitting tool analysis
 i=1;
 hh1 = nData2(i).hh0;
@@ -333,11 +336,12 @@ xlabel("(h h 0)"); ylabel("H (T)");
 if exist('sTeff','var'); Tstr = sTeff; elseif exist('sTdr','var'); Tstr = sTdr; end
 txtrow = 60; txtcol = 3;
 xs = X(txtrow,Xsel(1,:)); ys = Y(txtrow,Xsel(1,:)); is = Ifull(txtrow,Xsel(1,:));
-ann = annotation('textbox',[0.15 0.82 0.2 0.1],'interpreter','latex',...
-    'String',{Tstr},...
-    'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...
-    'LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
-ann.FitBoxToText='on';% fit annotation box to text
+ann11 = annotation('textbox',[0.15 0.85 0.2 0.1],'interpreter','latex',...
+    'String',{Tstr},'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...
+    'FitBoxToText','on','LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
+ann12 = annotation('textbox',[-.01 -.01 0.2 0.1],'interpreter','latex',...
+    'String',{'(a)'},'FontSize',ax.FontSize,'LineStyle','-','EdgeColor','none',...
+    'FitBoxToText','on','LineWidth',2,'BackgroundColor','none','Color','k');% add annotation
 caxis('auto');% auto rescale of color scale
 view(0,90);
 
