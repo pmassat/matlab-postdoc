@@ -225,10 +225,10 @@ ylim([0 6e-3])
 
 %% Fit splitting
 [xData, yData, weights] = prepareCurveData( field, splitting, wghts );
-
+HMaxFit = 0.74;% maximum value of field for which to include data for fit
 % Set up fittype and options.
 ft = fittype( 'delta0*sqrt(1-(H/Hc)^2)', 'independent', 'H', 'dependent', 'y' );
-excludedPoints = excludedata( xData, yData, 'Domain', [0 0.74] );
+excludedPoints = excludedata( xData, yData, 'Domain', [0 HMaxFit] );
 opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
 opts.Display = 'Off';
 opts.StartPoint = [0.8 6e-3];
@@ -287,13 +287,13 @@ demag_correction = H_c/cval(1);% cval(1) is the value of critical field
 field2 = extractfield(nData2,'field')*demag_correction;
 
 %% Plot fit with data.
-plotRng = field<0.93;
+plotRng = field<HMaxFit;
 xPlot = xData(plotRng)*demag_correction;
 yPlot = yData(plotRng);
 spltPlot = spltRE(plotRng);
 exclPlot = excludedPoints(plotRng);
 Xfit = linspace(0,max(field)*demag_correction,1000);
-Yfit = cval(2).*sqrt(1-(Xfit/H_c).^2);% compute fit over a controlled number of points
+Yfit = cval(2).*sqrt(1-(Xfit/(cval(1)*demag_correction)).^2);% compute fit over a controlled number of points
 figure; hold on
 pfit = plot(Xfit,Yfit,'r-');
 pdat = errorbar(xPlot,yPlot,spltPlot,'.b','MarkerSize',10,'LineWidth',2);
@@ -301,8 +301,8 @@ pdat = errorbar(xPlot,yPlot,spltPlot,'.b','MarkerSize',10,'LineWidth',2);
 % legend([pdat,pexcl,pfit],'Splitting','Excluded','MF fit');
 legend([pdat,pfit],'Splitting','MF fit');
 % title('TmVO$_4$ (8 8 0) peak splitting vs field');
-xlabel('H (T)'); ylabel('(a-b)/a$_0$'); grid on
-xlim([0 0.6]); ylim([0 6e-3]);
+xlabel('H (T)'); ylabel('$\delta \equiv 2(a_o-b_o)/(a_o+b_o)$'); grid on
+xlim([0 0.54]); ylim([0 6e-3]);
 ax = gca; ax.TitleFontSizeMultiplier = 0.8;
 ann21 = annotation('textbox',[0.15 0.3 0.2 0.1],'interpreter','latex',...
     'String',{'Bragg peak at (8 8 0)' sTeff strSplit strHc},...
