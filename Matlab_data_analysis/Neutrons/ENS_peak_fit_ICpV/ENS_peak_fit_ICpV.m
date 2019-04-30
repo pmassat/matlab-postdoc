@@ -319,27 +319,31 @@ I1dat = nData2(i).I;
 dI = nData2(i).dI;
 
 %% Color plot of intensity in H-(hh0) 2D-map
+% Compute orthorhombic lattice parameter data
+at = 7.0426;% in-plane lattice parameter in the tetragonal phase
+ao = hh1*sqrt(2)*at/hcenter;% in-plane lattice parameter in the orthorhombic phase
 % Prepare plot
-[X,Y] = meshgrid(hh1,field2);
+[X,Y] = meshgrid(ao,field2);
 Ifull = cell2mat( arrayfun(@(c) c.I', nData2(1:length(nData2)).', 'Uniform', 0) );% intensity data combined in one big matrix
 
 %% Plot 
-xmargin = 0.1;
-Xsel = X>hcenter-xmargin & X<hcenter+xmargin;
-figure
-sp = surf(X(:,Xsel(1,:)),Y(:,Xsel(1,:)),Ifull(:,Xsel(1,:)),'EdgeColor','None');
-xlim([hcenter-xmargin hcenter+xmargin]); ylim([0 max(field2)]); colormap jet;
+ybounds = [9.85 10.05];
+aocenter = sqrt(2)*at;
+Xsel = X>ybounds(1) & X<ybounds(2)+.01;
+fsplt = figure;
+sp = surf(Y(:,Xsel(1,:)),X(:,Xsel(1,:)),Ifull(:,Xsel(1,:)),'EdgeColor','None');
+ylim([ybounds(1) ybounds(2)]); xlim([0 max(field2)]); colormap jet;
 cb = colorbar; cbl = cb.Label; cbl.String = 'I (a.u.)';
 cbl.Interpreter = 'latex'; cb.TickLabelInterpreter = 'latex';
 cbl.Position = [-.75 8.15e6 0]; cbl.Rotation = 0;% horizontal colorbar label
-xlabel("(h h 0)"); ylabel("H (T)");
+ylabel('$a_o,b_o$ (\AA)'); xlabel('H (T)');
 if exist('sTeff','var'); Tstr = sTeff; elseif exist('sTdr','var'); Tstr = sTdr; end
 txtrow = 60; txtcol = 3;
 xs = X(txtrow,Xsel(1,:)); ys = Y(txtrow,Xsel(1,:)); is = Ifull(txtrow,Xsel(1,:));
-ann11 = annotation('textbox',[0.15 0.85 0.2 0.1],'interpreter','latex',...
+ann11 = annotation('textbox',[0.5 0.8 0.2 0.1],'interpreter','latex',...
     'String',{Tstr},'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...
     'FitBoxToText','on','LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
-ann12 = annotation('textbox',[-.01 -.01 0.2 0.1],'interpreter','latex',...
+ann12 = annotation('textbox',[0 0 0.2 0.1],'interpreter','latex',...
     'String',{'(a)'},'FontSize',ax.FontSize,'LineStyle','-','EdgeColor','none',...
     'FitBoxToText','on','LineWidth',2,'BackgroundColor','none','Color','k');% add annotation
 caxis('auto');% auto rescale of color scale
