@@ -15,5 +15,6 @@ function printPDF(filestr)
     set(gca, 'Position', [InSet(1:2), 0.99-InSet(1)-InSet(3), 1-InSet(2)-InSet(4)]);% for all other plots
 %     print(h,'-fillpage',filestr,'-dpdf','-r0');
       print(h,filestr,'-dpdf','-r0');
+%       saveas(h,filestr,'pdf');
     h.Color = 'w';% set figure background color back to 'white' for use in Matlab
 end

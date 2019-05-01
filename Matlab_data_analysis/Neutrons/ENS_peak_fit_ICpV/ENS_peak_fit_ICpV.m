@@ -4,7 +4,7 @@ cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_neutrons\2019-02_ORNL_Corelli\20
 FilesOrtho = dir('p6K_*.txt');
 for i=1:length(FilesOrtho)
     tbl1 = ImportNeutronsLineCut(FilesOrtho(i).name);
-    nData(i).file = FilesOrtho(i);
+    nData(i).file = FilesOrtho(i).name;
     nData(i).hh0 = tbl1.hh0;
     nData(i).I = tbl1.I;
     nData(i).dI = tbl1.dI;
@@ -103,9 +103,16 @@ for i=rng
     fitStr = ['fit'  int2str(lx) 'ICpV' int2str(Nprms)]; 
     gofStr = ['gof'  int2str(lx) 'ICpV' int2str(Nprms)];
     [nData(i).(fitStr), nData(i).(gofStr)] = myfit.compute_fit();
+    if exist('demag_correction','var'); hfactor = demag_correction;
+    else hfactor = 1;end
     if mod(i,20)==1% select data to plot
-        myfit.plot_fit(nData(i).(fitStr)); title(label);
-%         xlim([hc-.8 hc+.6]);
+        myfit.plot_fit(nData(i).(fitStr));% title(label);
+    xlim([hcenter-.1 hcenter+.1]);
+    ann00 = annotation('textbox',[0.15 0.8 0.2 0.1],'interpreter','latex',...
+        'String',{sprintf('T=%.2fK',nData(i).temp) sprintf('H=%.2fT',field(i)*hfactor)},...
+        'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...
+        'FitBoxToText','on','LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
+% hAnnotAxes = findall(gcf,'Tag','scribeOverlay');% retrieve annotation object, in case it is necessary to manipulate it
     end
     disp(label); disp(nData(i).(fitStr)); disp(nData(i).(gofStr));
 end
@@ -196,7 +203,10 @@ fclose(fileID);
 % end
 
 %% Extract splitting between peaks as the distance between peak maxima
-xM1 = ones(length(rng),1); xM2 = ones(length(rng),1); splitting = zeros(length(rng),1);
+xM1 = ones(length(rng),1); xM2 = ones(length(rng),1); 
+splitting = zeros(length(rng),1);
+hM1 = repmat(xM1,1); hM2 = repmat(xM2,1); 
+Imax1 = repmat(xM1,1); Imax2 = repmat(xM2,1); 
 for i=rng
     label = sprintf(fmt,nData(i).temp,field(i),Nprms);
 %     I1 = nData(i).(fitStr).I1; 
@@ -206,9 +216,15 @@ for i=rng
     f1 = @(x)-(I2*0.46*voigtIkedaCarpenter_ord(x,[0,140,0,0,0.05,6.6e-3,x01]));
     f2 = @(x)-(I2*voigtIkedaCarpenter_ord(x,[0,140,0,0,0.05,6.6e-3,x02]));
 %fnfit = -1*[fit function] so that the maximum becomes a minimum
-    xM1(i) = fminbnd(f1,xc(1)-.1,xc(1)+.1);% Identify position of the maximum on interval [hc-0.2 hc+0.2]
-    xM2(i) = fminbnd(f2,xc(2)-.1,xc(2)+.1);% Identify position of the maximum on interval [hc-0.2 hc+0.2]
+    xM1(i) = fminbnd(f1,xc(1)-.1,xc(1)+.1);% Identify position of the maximum of fit of peak 1 on interval [hc-0.2 hc+0.2]
+    xM2(i) = fminbnd(f2,xc(2)-.1,xc(2)+.1);% Same for peak 2
     splitting(i) = -(xM2(i) - xM1(i))/hcenter;
+    [~,idxM1] = min(abs((nData(i).hh0-xM1(i))));% extract index of max of peak 1 in dataset
+    hM1(i) = nData(i).hh0(idxM1);% position of peak 1 in dataset
+    Imax1(i) = nData(i).I(idxM1);% max of peak 1
+    [~,idxM2] = min(abs((nData(i).hh0-xM2(i))));% same for peak 2
+    hM2(i) = nData(i).hh0(idxM2);%
+    Imax2(i) = nData(i).I(idxM2);%
 end
 
 % Estimation of error bars using error bars on peak position from fit
@@ -275,7 +291,7 @@ sprintf("Critical field at T/Tc0=%.2f: Hc(T)/Hc0 = %.2f",t,h_c)
 nData2 = nData;% create an independent copy of nData
 for i=length(nData2):-1:1
     if size(nData2(i).I)~=2200% if none of the dimensions of nData2(i).I is 2200
-        nData2(i)=[];
+        nData2(i)=[];% simply remove this dataset from the structure
     end
 end
 
@@ -321,9 +337,10 @@ dI = nData2(i).dI;
 %% Color plot of intensity in H-(hh0) 2D-map
 % Compute orthorhombic lattice parameter data
 at = 7.0426;% in-plane lattice parameter in the tetragonal phase
-ao = hh1*sqrt(2)*at/hcenter;% in-plane lattice parameter in the orthorhombic phase
+rstolp = sqrt(2)*at/hcenter;% conversion factor from reciprocal space units
+% to units of the in-plane lattice parameter in the orthorhombic phase
 % Prepare plot
-[X,Y] = meshgrid(ao,field2);
+[X,Y] = meshgrid(rstolp*hh1,field2);
 Ifull = cell2mat( arrayfun(@(c) c.I', nData2(1:length(nData2)).', 'Uniform', 0) );% intensity data combined in one big matrix
 
 %% Plot 
@@ -331,24 +348,33 @@ ybounds = [9.85 10.05];
 aocenter = sqrt(2)*at;
 Xsel = X>ybounds(1) & X<ybounds(2)+.01;
 fsplt = figure;
-sp = surf(Y(:,Xsel(1,:)),X(:,Xsel(1,:)),Ifull(:,Xsel(1,:)),'EdgeColor','None');
-ylim([ybounds(1) ybounds(2)]); xlim([0 max(field2)]); colormap jet;
-cb = colorbar; cbl = cb.Label; cbl.String = 'I (a.u.)';
-cbl.Interpreter = 'latex'; cb.TickLabelInterpreter = 'latex';
-cbl.Position = [-.75 8.15e6 0]; cbl.Rotation = 0;% horizontal colorbar label
+sp = surf(Y(:,Xsel(1,:)),X(:,Xsel(1,:)),-Ifull(:,Xsel(1,:)),'EdgeColor','None');
+% I am plotting -Ifull instead of Ifull in order to be able to plot the
+% position of peak maxima on top; see 'Matlab_debugging.pptx' for more info
+ylim([ybounds(1) ybounds(2)]); xlim([0 max(field2)]); 
+colormap(flipud(jet));% flip the values of the colormap for negative intensities
+% see https://www.mathworks.com/matlabcentral/answers/103691-how-can-i-invert-the-distribution-of-colors-in-a-colormap-in-matlab-8-1-r2013a?s_tid=gn_loc_drop
+% cb = colorbar; cb.Direction = 'reverse';% reverse colorbar for negative intensities
+% cbl = cb.Label; cbl.String = 'I (a.u.)';%
+% cbl.Interpreter = 'latex'; cb.TickLabelInterpreter = 'latex';
+% cbl.Position = [-.75 -8.15e6 0]; cbl.Rotation = 0;% horizontal colorbar label
 ylabel('$a_o,b_o$ (\AA)'); xlabel('H (T)');
 if exist('sTeff','var'); Tstr = sTeff; elseif exist('sTdr','var'); Tstr = sTdr; end
 txtrow = 60; txtcol = 3;
+ax = gca; ax.LineWidth = 1.5; ax.Layer = 'top';% show ticks on top of plot
 xs = X(txtrow,Xsel(1,:)); ys = Y(txtrow,Xsel(1,:)); is = Ifull(txtrow,Xsel(1,:));
-ann11 = annotation('textbox',[0.5 0.8 0.2 0.1],'interpreter','latex',...
+ann11 = annotation('textbox',[0.7 0.85 0.2 0.1],'interpreter','latex',...
     'String',{Tstr},'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...
     'FitBoxToText','on','LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
 ann12 = annotation('textbox',[0 0 0.2 0.1],'interpreter','latex',...
     'String',{'(a)'},'FontSize',ax.FontSize,'LineStyle','-','EdgeColor','none',...
     'FitBoxToText','on','LineWidth',2,'BackgroundColor','none','Color','k');% add annotation
 caxis('auto');% auto rescale of color scale
+grid off;
 view(0,90);
-
+hold on;
+plot(field(plotRng)*demag_correction,xM1(plotRng)*rstolp,'.k');% plot position of max of peak 1
+plot(field(plotRng)*demag_correction,xM2(plotRng)*rstolp,'.k');% same for peak 2
 
 
 

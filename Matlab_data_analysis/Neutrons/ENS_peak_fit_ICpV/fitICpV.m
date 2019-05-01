@@ -305,7 +305,8 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
             pdat = errorbar(xData,yData,obj.dY,'.b','MarkerSize',18,'LineWidth',2);
             pexcl = plot(obj.X(excludedPoints),obj.Y(excludedPoints),'xk',...
                 'MarkerSize',9);
-            legend([pdat,pexcl,pfit],'I vs. hh0','Excluded','fit ICpV');
+            legend([pdat,pfit],'I vs. hh0','fit ICpV','Location','best');
+%             legend([pdat,pexcl,pfit],'I vs. hh0','Excluded','fit ICpV');
             % Label axes
             xlabel("hh0"); ylabel("I (a.u.)");
             xlim([obj.X(minIndex)-0.05 obj.X(maxIndex)+0.05]);
