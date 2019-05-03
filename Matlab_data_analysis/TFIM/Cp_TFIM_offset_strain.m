@@ -1,4 +1,4 @@
-function y = Cp_TFIM_offset_strain(t,e,h)
+ function y = Cp_TFIM_offset_strain(t,e,h)
 % t is the reduced temperature T/Tc
 y = zeros(size(t));
 
