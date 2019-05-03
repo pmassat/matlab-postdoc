@@ -34,11 +34,11 @@ Tsep = Tsprtn;% Data points taken within an interval of Tsep are considered to b
             T2(abs(T2-T2(k))<Tsep)=0;
         end
     end
+    S.H = H(Tm>0);
     S.T = Tm(Tm>0);
     S.Tsd = Tsd(Tm>0);
     S.Cp = Cpm(Cpm>0);
     S.CpFullErr = Cpsd(Cpm>0) + CpmErr(Cpm>0);
-    S.H = H(Tm>0);
 end
 
 

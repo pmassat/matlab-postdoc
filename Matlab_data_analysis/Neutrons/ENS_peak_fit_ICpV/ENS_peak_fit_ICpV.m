@@ -257,7 +257,6 @@ opts.Exclude = excludedPoints;
 %% Print fit parameter values with error bars
 cval = coeffvalues(fitresult);% extract fit parameter values
 cft=confint(fitresult);% extract confidence intervals from fit
-strHc = sprintf('$H_c$ = %.3f(%.0f)T',cval(1),(cval(1)-cft(1,1))*1e3);% print out value of critical temperature, with error bars
 strSplit = [sprintf('$\\frac{(a-b)}{a_0}|_{H=0}$ = %.2f(%.0f)',...
     cval(2)*1e3,(cval(2)-cft(1,2))*1e5) '$\cdot 10^{-3}$'];% print out value of splitting at zero field, with error bars
 
@@ -301,6 +300,8 @@ demag_correction = H_c/cval(1);% cval(1) is the value of critical field
 % and 0.969 is the value of Hc/Hc0 at the effective temperature of the measurement
 % see results of the below code when using demag_correction = 1
 field2 = extractfield(nData2,'field')*demag_correction;
+strHc = sprintf('$H_c$ = %.3f(%.0f)T',H_c,...
+    (cval(1)-cft(1,1))*demag_correction*1e3);% print out value of critical temperature, with error bars
 
 %% Plot fit with data.
 plotRng = field<HMaxFit;

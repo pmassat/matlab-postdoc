@@ -40,7 +40,14 @@ end
 %% Surface plot and colorbar handling
 % see 'ENS_peak_fit_ICpV.m'
 
-
+%% Loop over the fieldnames of a structure
+% https://www.mathworks.com/matlabcentral/answers/341454-how-to-loop-over-the-structure-fields-and-get-the-type-of-data
+fn = fieldnames(mystruct);
+for k=1:numel(fn)
+    if( isnumeric(mystruct.(fn{k})) )
+        % do stuff
+    end
+end
 
 
 
