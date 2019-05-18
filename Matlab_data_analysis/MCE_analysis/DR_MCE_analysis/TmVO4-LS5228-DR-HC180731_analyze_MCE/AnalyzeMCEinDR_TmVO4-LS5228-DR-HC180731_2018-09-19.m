@@ -92,7 +92,6 @@ for j = 1:lusr% for each value of sweep rate
 %     ylabel('Temperature (K)')
 end
 %% Plot upsweep and downsweep data with same sweeprate together
-%%
 for jj = 1:lusr/2% for each value of sweep rate
     figure
     plot(Hmce(FilterSR(:,jj)),Tb2(FilterSR(:,jj)),'.','DisplayName',strcat(num2str(usr(jj)),'Oe/s'))
@@ -108,12 +107,11 @@ end
 %% Note about the interpretation of data
 % The MCE observed here is different from what is reported in Kohama et al. 
 %% Differentiate the temperature change with respect to magnetic field
-%%
 sigma = 1;% width of the smoothing gaussian
 [Tb2smth, dtb2s] = gConvolve(Tb2,sigma);% smooth platform bridge 2 temperature data & derivative
 [Hsmth, dhs] = gConvolve(Hmce,sigma);% smooth field data and derivative
-mceder = dtb2s./dhs*10^3.*exp(2-Tmce)% derivative of the temperature change
-% the exponential term allows the low temperature data to be multiplied by a higher factor than the low T data
+mceder = dtb2s./dhs*10^3.*exp(2-Tmce);% derivative of the temperature change
+% the exponential term allows the low temperature data to be multiplied by a higher factor than the high T data
 for jj = 1:lusr/2% for each value of sweep rate
     figure
     plot(Hmce(FilterSR(:,jj)),Tmce(FilterSR(:,jj))+mceder(FilterSR(:,jj)),'.','DisplayName',strcat(num2str(usr(jj)),'Oe/s'))
@@ -125,9 +123,10 @@ for jj = 1:lusr/2% for each value of sweep rate
     xlim([0,Hmax])
     ylim([0 max(Tmce)])
     xlabel('Field (Oe)')
-    ylabel('T+d\DeltaT')
+    ylabel('T+d$\Delta$T')
 end
-%%
+%% 
+% Which is more reliable, this section or the previous one?...
 mcediff = diff(Tb2smth)*10^2;
 for jj = 1:lusr/2% for each value of sweep rate
     figure
@@ -140,7 +139,7 @@ for jj = 1:lusr/2% for each value of sweep rate
     xlim([0,Hmax])
     ylim([0 max(Tmce)])
     xlabel('Field (Oe)')
-    ylabel('T+d\DeltaT')
+    ylabel('T+d$\Delta$T')
 end
 %% 
 % Next steps:
@@ -152,7 +151,6 @@ end
 % # Identify max of derivative => transition temperature (with error bar)
 % # Plot phase diagram
 %% Below this point: code imported from AnalyzeSR830MCEPierre >> to be adpated
-%%
 % ref_sweep = 0.6e-3;%Reference sweep rate of magnetic field (in Tesla/s) used 
 %to discriminate between high and low sweep rates
 FilterUp = diff(Data(1).H)>0;

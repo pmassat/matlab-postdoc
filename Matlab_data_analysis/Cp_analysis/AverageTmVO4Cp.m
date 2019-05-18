@@ -1,9 +1,10 @@
 %% Create new workspace for new data analysis
 clear all;% clear workspace, since variables change for each sample
-M = 283.87;% molar mass of TmVO4, in g/mol
-% fileImp = '2019-03-25_TmVO4-LS5216-NMR-FIB-01'; m = 2.42*1e-3;% mass of sample measured, in g
-% fileImp = '2019-03-29_TmVO4-LS5216-NMR-FIB-03-HC1'; m = 0.43*1e-3;% mass of sample measured, in g
-fileImp = '2019-04-04_TmVO4-LS5214-NMR-FIB-02-HC1'; m = 0.83*1e-3;% mass of sample measured, in g
+cd 'C:\Users\Pierre\Desktop\Postdoc\YTmVO4\YTmVO4_HeatCapacity\YVO4\2019-05-10_YVO4-LS5259-HC1905-1\2019-05-10_YVO4-LS5259-HC1905-1_analysis';
+% M = 283.87;% molar mass of TmVO4, in g/mol
+M = 203.85;% molar mass of YVO4, in g/mol
+m = 1.79*1e-3;% mass of sample measured, in g
+fileImp = '2019-05-10_YVO4-LS5259-HC1905-1'; 
 DATA=ImportTmVO4Cp([fileImp '.dat']);% Use this data to plot Cp vs H, T superimposed on theoretical curves
 % Average data points at each temperature + field 
 %%
@@ -12,8 +13,10 @@ DATA=ImportTmVO4Cp([fileImp '.dat']);% Use this data to plot Cp vs H, T superimp
 % Cp=[DATA.SampHCJmoleK; DATA(2).SampHCJmoleK];
 H=[DATA.FieldOersted];
 T=[DATA.SampleTempKelvin];
-Cp=[DATA.SampHCJmoleK];
-CpErr=[DATA.SampHCErrJmoleK];
+% Cp=[DATA.SampHCJmoleK];
+% CpErr=[DATA.SampHCErrJmoleK];
+Cp=[DATA.AddendaHCJK];
+CpErr=[DATA.AddendaHCErrJK];
 
 whichPoints = isfinite(H) & isfinite(T) & isfinite(Cp);
 H=H(whichPoints);
@@ -24,14 +27,19 @@ CpErr=CpErr(whichPoints);
 fields = unique(round(H,-1));%[10,linspace(1000,4000,4),4500,4750,5000];
 hmax=max(fields);
 
+%%
+figure
+plot(T,Cp,'.')
+
 %% Plot 3D scatter (only for measurements at different magnetic fields)
 figure
-scatter3(H,T,Cp,'.')
+plot(T,Cp,'.')
+% scatter3(H,T,Cp,'.')
 % xlim([0 hmax])
-ylim([0 3])
+% ylim([0 3])
 xlabel('Field (Oe)')
 ylabel('Temperature (K)')
-zlabel('Cp (uJ/K)')
+zlabel('C$_p$ ($\mu$J/K)')
 view(90,0)
 
 %% (only for measurements at different magnetic fields)
@@ -69,10 +77,10 @@ end
 %% Average datapoints taken at any given temperature and field setpoint
 % We want to compute the average of data points that are repetitions of the
 % same measurement, i.e. with same temperature and field setpoints
-Tsep = 6e-3;% Data points taken within an interval of Tsep are considered to be measured at the same temperature setpoint
-% 6mK is an empirical estimate of the dispersion of data points taken consecutively at a given temperature. 
+relTsep = 3e-3;% Data points taken within a relative interval of T*(1+-Tsep) are considered to be measured at the same temperature setpoint
+% 3e-3 is an empirical estimate of the relative dispersion of data points taken consecutively at a given temperature. 
 for i = 1:length(fields)
-    averageCpData(i) = averageCp(Tsep,separatedCpData(i).T,...
+    averageCpData(i) = averageCp_relT(relTsep,separatedCpData(i).T,...
         separatedCpData(i).Cp,separatedCpData(i).CpErr);
     averageCpData(i).H = separatedCpData(i).H(1:length(averageCpData(i).T));
 end
@@ -89,12 +97,13 @@ date = fnamesep{1};
 sample = fnamesep{2};
 
 %% Plot averaged data at each field separately
+R = 8.314;% gas constant, in J/K/mol
 figure
 hold on
 for i=1:length(fields)
     if isfield(averageCpData(i),'Cpm')
-    errorbar(averageCpData(i).T,averageCpData(i).Cpm,averageCpData(i).CpmErr,'.','MarkerSize',18)
-    ylabel('C$_p$ (J/K/mol)')
+    errorbar(averageCpData(i).T,averageCpData(i).Cpm/R,averageCpData(i).CpmErr/R,'.','MarkerSize',18)
+    ylabel('$C_p/R$')
     else
     errorbar(averageCpData(i).T,averageCpData(i).Cp,averageCpData(i).CpFullErr,'.','MarkerSize',18)
     ylabel('C$_p$ (uJ/K)')
@@ -103,8 +112,15 @@ end
 title(sample)
 xlabel('Temperature (K)');
 legendCell = cellstr(num2str(fields, '%-d Oe'));
-legend(legendCell)
+legend(legendCell,'Location','best')
 hold off
+
+%% Prepare curve fit tool
+avgT = averageCpData.T;
+avgCp = averageCpData.Cp;
+
+%% Print figure to pdf
+printPDF([fileImp '_avg']);
 
 %% Concatenate data for exportation 
 if isfield(averageCpData(i),'Cpm')

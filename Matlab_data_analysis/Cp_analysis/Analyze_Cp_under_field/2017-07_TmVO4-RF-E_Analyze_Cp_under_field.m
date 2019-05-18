@@ -167,7 +167,7 @@ end
 %% Add stuff to the table
 % tbl.comments(1) = string(filename);
 %% Export table of averaged data
-writetable(tbl,'2019-05-02_TmVO4-RF-E_Cp_avgData');
+%writetable(tbl,'2019-05-02_TmVO4-RF-E_Cp_avgData');
 
 %% Create mesh for 2D contour
 [Hgm,Tgm] = meshgrid(0:hstep:hmax,tmin:tstep:tmax);% for use with gridfit
@@ -186,7 +186,7 @@ fplot(@(h)h/atanh(h),[0 1.1],'Color','k')
 xlabel('H/H$_c$'); ylabel('T/T$_D$');
 zlabel('-dCp/dT (J/K$^2$/mol)');
 % title(sprintf('n = %i',n));
-h=colorbar('eastoutside');
+% h=colorbar('eastoutside');
 
 %% Identify experimental critical temperature at each field
 % Then we can plot Tc vs uh and fit using equation f(h) = Tc/Hc*h/atanh(h/Hc)
@@ -205,7 +205,8 @@ rng = 1:4:length(uh);
 clr = cell(size(rng));
 eb = cell(size(rng));
 for i=rng
-    fp = fplot(@(t)Cp_TFIM_offset_strain(t/2.125,1.5e-3,uh(i)/(5.1e3)),[0 4],'LineWidth',2);
+    fp = fplot(@(t)Cp_TFIM_offset_strain(t/2.14,0,uh(i)/(5.1e3)),[0 4],'LineWidth',2);
+%     fp = fplot(@(t)Cp_TFIM_offset_strain(t/2.125,1.5e-3,uh(i)/(5.1e3)),[0 4],'LineWidth',2);
 % Fit parameters on data at H=0: Tc=2.125(3), e=1.5(4)e-3
 % Note: the values of amplitude coefficient and Tc extracted from fit 
 % in curve fitting tool using the Cp_TFIM (no offset strain) are A=7.35 and Tc=2.142K
@@ -213,15 +214,19 @@ for i=rng
 end
 for i=rng
     eb{rng==i} = errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,...
-        '.','MarkerSize',18,'DisplayName',num2str(uh(i)/1e4,'%.2f T'),...
+        '.','MarkerSize',18,'DisplayName',num2str(uh(i)/(Hc0*1e4),'%.2f'),...
         'Color',clr{rng==i},'LineWidth',2);
 end
 xlabel('Temperature (K)'); ylabel('C$_p$/R');%ylabel('C$_p$ (JK$^{-1}$mol$^{-1}$)');
 % title('Heat capacity of TmVO4 at various fields')
-legend([eb{:}]);
+lgd = legend([eb{:}]); lgd.Title.String = '$H/H_c$';
 % legendCell = cellstr(num2str(uh, '%-d Oe'));
 % legend(legendCell)
 hold off
+
+%% Export figure 
+% printPNG('2019-05-17_TmVO4-RF-E_Cp_vs_T_4H_+fits_No-strain')
+% printPDF('2019-05-17_TmVO4-RF-E_Cp_vs_T_4H_+fits')
 
 %% Prepare MF fit of Cp vs Temperature at zero field
 T0 = avgData(1).T;

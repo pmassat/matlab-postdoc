@@ -305,12 +305,13 @@ strHc = sprintf('$H_c$ = %.3f(%.0f)T',H_c,...
 
 %% Plot fit with data.
 plotRng = field<HMaxFit;
-xPlot = xData(plotRng)*demag_correction;
+xPlot = xData(plotRng)/cval(1);%xData(plotRng)*demag_correction to plot using calculated value of Hc(T)
 yPlot = yData(plotRng);
 spltPlot = spltRE(plotRng);
 exclPlot = excludedPoints(plotRng);
-Xfit = linspace(0,max(field)*demag_correction,1000);
-Yfit = cval(2).*sqrt(1-(Xfit/(cval(1)*demag_correction)).^2);% compute fit over a controlled number of points
+Xfit = linspace(0,max(field)/cval(1),1000);%max(field)*demag_correction to plot using calculated value of Hc(T)
+Yfit = cval(2).*sqrt(1-(Xfit).^2);% compute fit over a controlled number of points
+% Xfit/(cval(1)*demag_correction) to plot using calculated value of Hc(T)
 figure; hold on
 pfit = plot(Xfit,Yfit,'r-');
 pdat = errorbar(xPlot,yPlot,spltPlot,'.b','MarkerSize',10,'LineWidth',2);
@@ -318,16 +319,20 @@ pdat = errorbar(xPlot,yPlot,spltPlot,'.b','MarkerSize',10,'LineWidth',2);
 % legend([pdat,pexcl,pfit],'Splitting','Excluded','MF fit');
 legend([pdat,pfit],'Splitting','MF fit');
 % title('TmVO$_4$ (8 8 0) peak splitting vs field');
-xlabel('H (T)'); ylabel('$\delta \equiv 2(a_o-b_o)/(a_o+b_o)$'); grid on
-xlim([0 0.54]); ylim([0 6e-3]);
+xlabel('$H/H_c(T)$'); ylabel('$\delta \equiv 2(a_o-b_o)/(a_o+b_o)$'); grid on
+xlim([0 1.1]); %ylim([0 6e-3]);
 ax = gca; ax.TitleFontSizeMultiplier = 0.8;
-ann21 = annotation('textbox',[0.15 0.3 0.2 0.1],'interpreter','latex',...
-    'String',{'Bragg peak at (8 8 0)' sTeff strSplit strHc},...
+% ann21 = annotation('textbox',[0.15 0.3 0.2 0.1],'interpreter','latex',...
+%     'String',{'Bragg peak at (8 8 0)' sTeff strSplit strHc},...
+%     'FontSize',14,'LineStyle','-','EdgeColor','k','FitBoxToText','on',...
+%     'LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
+% ann22 = annotation('textbox',[0 0 0.2 0.1],'interpreter','latex',...
+%     'String',{'(b)'},'FontSize',ax.FontSize,'LineStyle','-','EdgeColor','none',...
+%     'FitBoxToText','on','LineWidth',2,'BackgroundColor','none','Color','k');% add annotation
+ann23 = annotation('textbox',[0.15 0.2 0.2 0.1],'interpreter','latex',...
+    'String',{'TmVO$_4$' sTeff},...
     'FontSize',14,'LineStyle','-','EdgeColor','k','FitBoxToText','on',...
-    'LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
-ann22 = annotation('textbox',[0 0 0.2 0.1],'interpreter','latex',...
-    'String',{'(b)'},'FontSize',ax.FontSize,'LineStyle','-','EdgeColor','none',...
-    'FitBoxToText','on','LineWidth',2,'BackgroundColor','none','Color','k');% add annotation
+    'LineWidth',1,'BackgroundColor',[1 1 1],'Color','k');% add annotation
 
 %% Data formatting for curve fitting tool analysis
 i=1;
@@ -341,41 +346,46 @@ at = 7.0426;% in-plane lattice parameter in the tetragonal phase
 rstolp = sqrt(2)*at/hcenter;% conversion factor from reciprocal space units
 % to units of the in-plane lattice parameter in the orthorhombic phase
 % Prepare plot
-[X,Y] = meshgrid(rstolp*hh1,field2);
+[X,Y] = meshgrid(field2,rstolp*hh1);
 Ifull = cell2mat( arrayfun(@(c) c.I', nData2(1:length(nData2)).', 'Uniform', 0) );% intensity data combined in one big matrix
+Ift = Ifull';
 
 %% Plot 
 ybounds = [9.85 10.05];
 aocenter = sqrt(2)*at;
-Xsel = X>ybounds(1) & X<ybounds(2)+.01;
+Ysel = Y>ybounds(1) & Y<ybounds(2)+.01;
 fsplt = figure;
-sp = surf(Y(:,Xsel(1,:)),X(:,Xsel(1,:)),-Ifull(:,Xsel(1,:)),'EdgeColor','None');
+n = 300;
+% contourf(Hg./5100,Tg,-d1Cpg,n,'EdgeColor','none');
+sp = contourf(X(Ysel(:,1),:)/H_c,Y(Ysel(:,1),:),Ift(Ysel(:,1),:),n,'EdgeColor','None');
+% sp = surf(X(Ysel(:,1),:),Y(Ysel(:,1),:),-Ifull(Ysel(:,1),:),'EdgeColor','None');
 % I am plotting -Ifull instead of Ifull in order to be able to plot the
 % position of peak maxima on top; see 'Matlab_debugging.pptx' for more info
-ylim([ybounds(1) ybounds(2)]); xlim([0 max(field2)]); 
-colormap(flipud(jet));% flip the values of the colormap for negative intensities
-% see https://www.mathworks.com/matlabcentral/answers/103691-how-can-i-invert-the-distribution-of-colors-in-a-colormap-in-matlab-8-1-r2013a?s_tid=gn_loc_drop
+ylim([ybounds(1) ybounds(2)]); %xlim([0 max(field2)]); 
+colormap(jet);
 % cb = colorbar; cb.Direction = 'reverse';% reverse colorbar for negative intensities
 % cbl = cb.Label; cbl.String = 'I (a.u.)';%
 % cbl.Interpreter = 'latex'; cb.TickLabelInterpreter = 'latex';
 % cbl.Position = [-.75 -8.15e6 0]; cbl.Rotation = 0;% horizontal colorbar label
-ylabel('$a_o,b_o$ (\AA)'); xlabel('H (T)');
+ylabel('$a_o,b_o$ (\AA)'); xlabel('$H/H_c(T)$');
 if exist('sTeff','var'); Tstr = sTeff; elseif exist('sTdr','var'); Tstr = sTdr; end
-txtrow = 60; txtcol = 3;
 ax = gca; ax.LineWidth = 1.5; ax.Layer = 'top';% show ticks on top of plot
-xs = X(txtrow,Xsel(1,:)); ys = Y(txtrow,Xsel(1,:)); is = Ifull(txtrow,Xsel(1,:));
 ann11 = annotation('textbox',[0.7 0.85 0.2 0.1],'interpreter','latex',...
     'String',{Tstr},'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...
-    'FitBoxToText','on','LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
-ann12 = annotation('textbox',[0 0 0.2 0.1],'interpreter','latex',...
-    'String',{'(a)'},'FontSize',ax.FontSize,'LineStyle','-','EdgeColor','none',...
-    'FitBoxToText','on','LineWidth',2,'BackgroundColor','none','Color','k');% add annotation
+    'FitBoxToText','on','LineWidth',1,'BackgroundColor',[1 1 1],'Color','k');% add annotation
+% ann12 = annotation('textbox',[0 0 0.2 0.1],'interpreter','latex',...
+%     'String',{'(a)'},'FontSize',ax.FontSize,'LineStyle','-','EdgeColor','none',...
+%     'FitBoxToText','on','BackgroundColor','none','Color','k');% add annotation
+ann13 = annotation('textbox',[0.2 0.85 0.2 0.1],'interpreter','latex',...
+    'String',{'TmVO$_4$'},...
+    'FontSize',14,'LineStyle','-','EdgeColor','k','FitBoxToText','on',...
+    'LineWidth',1,'BackgroundColor',[1 1 1],'Color','k');% add annotation
 caxis('auto');% auto rescale of color scale
 grid off;
 view(0,90);
 hold on;
-plot(field(plotRng)*demag_correction,xM1(plotRng)*rstolp,'.k');% plot position of max of peak 1
-plot(field(plotRng)*demag_correction,xM2(plotRng)*rstolp,'.k');% same for peak 2
+plot(field(plotRng)/cval(1),xM1(plotRng)*rstolp,'.k');% plot position of max of peak 1
+plot(field(plotRng)/cval(1),xM2(plotRng)*rstolp,'.k');% same for peak 2
 
 
 

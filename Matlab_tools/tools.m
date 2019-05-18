@@ -49,8 +49,15 @@ for k=1:numel(fn)
     end
 end
 
+%% Flip the values of a colormap for negative intensities
+colormap(flipud(jet));% in this case, color map jet
+% see https://www.mathworks.com/matlabcentral/answers/103691-how-can-i-invert-the-distribution-of-colors-in-a-colormap-in-matlab-8-1-r2013a?s_tid=gn_loc_drop
 
-
+%% Delete files or objects
+% https://www.mathworks.com/help/matlab/ref/delete.html
+delete filename
+delete filename1 ... filenameN
+delete(obj)
 
 
 
