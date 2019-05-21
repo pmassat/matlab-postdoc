@@ -1,6 +1,7 @@
 %% Analyze heat capacity from DR
 % This routine is intended at anaLzing Cp data acquired with our DR used in 
 % the Dynacool PPMS of the Lee lab
+cd 'C:\Users\Pierre\Desktop\Postdoc\YTmVO4\YTmVO4_HeatCapacity\YTmVO4_Cp_analysis'
 %% To do: 
 % * Error bars:
 % *     For dT data, use standard deviation
@@ -94,7 +95,7 @@ for i=1:L
 end
 
 %% Plot the dataset for YTmVO4
-plotCpDoping(split,dpg,1,L,ttlCpY)
+% plotCpDoping(split,dpg,1,L,ttlCpY)
 %
 % 
 % 
@@ -142,14 +143,15 @@ for i = 1:L
 end
 
 %% Plot averaged data
+R = 8.314;
 figure
-for i=1:L
-    errorbar(avgData(i).T,avgData(i).Cp,avgData(i).CpFullErr,'.','MarkerSize',18,'DisplayName',['x = ',num2str(dpg(i))])
+for i=[1:3,6]
+    errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.','MarkerSize',18,'DisplayName',['x = ',num2str(dpg(i))])
     hold on
 end
-xlabel(xlblTemp); ylabel(ylblCp);
+xlabel(xlblTemp); ylabel('$C_p/R$');
 title(ttlCpY);
-legend('show');
+lgd = legend('show'); lgd.Title.String='Y content $x$';
 
 %% Display name of structure containing average data
 %%

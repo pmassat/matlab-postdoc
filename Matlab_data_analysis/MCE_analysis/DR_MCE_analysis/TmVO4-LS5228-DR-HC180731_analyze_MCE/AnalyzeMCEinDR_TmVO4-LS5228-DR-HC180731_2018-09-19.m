@@ -46,15 +46,21 @@ hold off
 legend('show')
 xlabel('Time stamp (s)')
 ylabel('Temperature (K)')
-%% 
-% Plot the actual T-H MCE traces
 
+%% Compute derivatives of relevant quantities
+sigma = 1;% width of the smoothing gaussian, in number of data points
+[Tb2smth, d1tb2s, d2tb2s] = gConvolve(Tb2,sigma);% smooth platform bridge 2 temperature data & derivative
+[Hsmth, d1hs, d2hs] = gConvolve(Hmce,sigma);% smooth field data and derivative
+[tmsth, d1ts, d2ts] = gConvolve(t,sigma);% smooth timestamp and derivative; 
+
+%% Plot the actual T-H MCE traces
 plot(Hmce,Tb2,'.-')
 % ylim([0,2])
 xlim([0,Hmax])
 xlabel('Field (Oe)')
 ylabel('Temperature (K)')
 title('T-H MCE traces')
+
 %% Filter data according to bridge 2 excitation current
 uec = unique(excCurrent)% values of excitation current without repetition
 FilterEC = false(length(excCurrent),length(uec));% initialize logical array
@@ -70,7 +76,9 @@ for i = 1:length(uec)% for each value of excitation current
     ylabel('Temperature (K)')
 end
 %% Filter data according to magnetic field sweep rate
-sweeprate = diff(Hmce)./diff(t);% magnetic field sweep rate
+% swprt = diff(Hmce)./diff(t);% magnetic field sweep rate;
+% Computation of sweeprate using diff is deprecated, as it removes a data point
+sweeprate = d1hs./d1ts;
 usr = unique(round(sweeprate,-1));% values of sweep rate rounded to nearest tenth without repetition
 for ii = length(usr):-1:1% for each sweeprate value
     if length(sweeprate(abs(sweeprate-usr(ii))<5))<10% if there are less than 10 data points with this sweeprate
@@ -92,11 +100,11 @@ for j = 1:lusr% for each value of sweep rate
 %     ylabel('Temperature (K)')
 end
 %% Plot upsweep and downsweep data with same sweeprate together
-for jj = 1:lusr/2% for each value of sweep rate
+for jj = 1:lusr/2% for each absolute value of sweep rate
     figure
-    plot(Hmce(FilterSR(:,jj)),Tb2(FilterSR(:,jj)),'.','DisplayName',strcat(num2str(usr(jj)),'Oe/s'))
+    plot(Hmce(FilterSR(:,jj)),Tb2(FilterSR(:,jj)),'.','DisplayName',strcat(num2str(usr(jj)),' Oe/s'))
     hold on
-    plot(Hmce(FilterSR(:,lusr-jj+1)),Tb2(FilterSR(:,lusr-jj+1)),'.','DisplayName',strcat(num2str(usr(lusr-jj+1)),'Oe/s'))
+    plot(Hmce(FilterSR(:,lusr-jj+1)),Tb2(FilterSR(:,lusr-jj+1)),'.','DisplayName',strcat(num2str(usr(lusr-jj+1)),' Oe/s'))
     hold off
     % plot data for each magnetic field sweep rate separately
     legend('show')
@@ -104,13 +112,39 @@ for jj = 1:lusr/2% for each value of sweep rate
     xlabel('Field (Oe)')
     ylabel('Temperature (K)')
 end
+
+%% Figure exportation
+xlim([0 10000]); ylim([0.55 0.83]);
+% printPNG('2019-05-20_TmVO4-LS5228-DR-HC180731_MCE_20Oeps_p6K-p7K-p8K');
+%% Select full usable dataset
+% See labnotes for tables listing usable data
+useusr = usr(abs(usr)<30); lu2 = length(useusr);
+FullFilterSRup = false(size(sweeprate));
+FullFilterSRdown = false(size(sweeprate));
+for k=1:lu2/2
+    FullFilterSRup = FullFilterSRup | abs(sweeprate-useusr(k))<5;% Data at sweeprate of 40 Oe/s are not usable
+    FullFilterSRdown = FullFilterSRdown | abs(sweeprate-useusr(lu2+1-k))<5;% Data at sweeprate of 40 Oe/s are not usable
+end
+FullFilterEC = round(excCurrent,1)==0.1 | round(excCurrent,1)==0.4 |...
+    round(excCurrent,1)==1.0;% Usable excitation currents are .1 uA, .4 uA and 1.0 uA
+FullFilterT = round(Tb2,1)>=0.6;% Usable temperature range is .5 K and above
+
+FullFilterUp = FullFilterT & FullFilterEC & FullFilterSRup;
+FullFilterDown = FullFilterT & FullFilterEC & FullFilterSRdown;
+
+%% Plot full usable dataset
+figure
+plot(Hmce(FullFilterUp)/5500,Tb2(FullFilterUp),'.')
+hold on
+plot(Hmce(FullFilterDown)/5500,Tb2(FullFilterDown),'.')
+xlabel('$H/H_c$')
+ylabel('Temperature (K)')
+
+%% Rescale temperature of MCE data by factor (1+(1-T)/10)
 %% Note about the interpretation of data
 % The MCE observed here is different from what is reported in Kohama et al. 
 %% Differentiate the temperature change with respect to magnetic field
-sigma = 1;% width of the smoothing gaussian
-[Tb2smth, dtb2s] = gConvolve(Tb2,sigma);% smooth platform bridge 2 temperature data & derivative
-[Hsmth, dhs] = gConvolve(Hmce,sigma);% smooth field data and derivative
-mceder = dtb2s./dhs*10^3.*exp(2-Tmce);% derivative of the temperature change
+mceder = d1tb2s./d1hs*10^3.*exp(2-Tmce);% derivative of the temperature change
 % the exponential term allows the low temperature data to be multiplied by a higher factor than the high T data
 for jj = 1:lusr/2% for each value of sweep rate
     figure
@@ -125,8 +159,10 @@ for jj = 1:lusr/2% for each value of sweep rate
     xlabel('Field (Oe)')
     ylabel('T+d$\Delta$T')
 end
-%% 
-% Which is more reliable, this section or the previous one?...
+%% Same using differentiation
+% In order to not get confused with shifting of datasets due to reduction
+% of number of data points when using diff, I prefer the above convolution
+% method
 mcediff = diff(Tb2smth)*10^2;
 for jj = 1:lusr/2% for each value of sweep rate
     figure
