@@ -15,6 +15,7 @@ FullData=ImportMCEinDRmatrix('2018-08-01_MCE_TmVO4-LS5228-DR-HC180731.dat');%
 % the PPMS are formatted the same way.
 %% Parameters
 Hmax = 10000;% high magnetic fields boundary for the plots
+Tc180731 = 2.20;% from peak in dCp/dT in 'TmVO4_LS5228_201808_AnalyzeCpDR.mlx'
 %% R-H MCE traces
 Data = repmat(FullData,1);% make a copy of the data
 Data(Data(:,20)<0,:)=[];% remove rows with negative bridge 2 resistance, which does not make any sense
@@ -48,12 +49,13 @@ xlabel('Time stamp (s)')
 ylabel('Temperature (K)')
 
 %% Compute derivatives of relevant quantities
-sigma = 1;% width of the smoothing gaussian, in number of data points
+sigma = 3;% width of the smoothing gaussian, in number of data points
 [Tb2smth, d1tb2s, d2tb2s] = gConvolve(Tb2,sigma);% smooth platform bridge 2 temperature data & derivative
 [Hsmth, d1hs, d2hs] = gConvolve(Hmce,sigma);% smooth field data and derivative
 [tmsth, d1ts, d2ts] = gConvolve(t,sigma);% smooth timestamp and derivative; 
 
 %% Plot the actual T-H MCE traces
+figure
 plot(Hmce,Tb2,'.-')
 % ylim([0,2])
 xlim([0,Hmax])
@@ -100,53 +102,61 @@ for j = 1:lusr% for each value of sweep rate
 %     ylabel('Temperature (K)')
 end
 %% Plot upsweep and downsweep data with same sweeprate together
-for jj = 1:lusr/2% for each absolute value of sweep rate
+for jj = 3%1:lusr/2% for each absolute value of sweep rate
     figure
     plot(Hmce(FilterSR(:,jj)),Tb2(FilterSR(:,jj)),'.','DisplayName',strcat(num2str(usr(jj)),' Oe/s'))
     hold on
     plot(Hmce(FilterSR(:,lusr-jj+1)),Tb2(FilterSR(:,lusr-jj+1)),'.','DisplayName',strcat(num2str(usr(lusr-jj+1)),' Oe/s'))
     hold off
     % plot data for each magnetic field sweep rate separately
-    legend('show')
+    legend('show','Location','best')
     xlim([0,Hmax])
-    xlabel('Field (Oe)')
+    xlabel('Magnetic field (Oe)')
     ylabel('Temperature (K)')
 end
 
 %% Figure exportation
 xlim([0 10000]); ylim([0.55 0.83]);
-% printPNG('2019-05-20_TmVO4-LS5228-DR-HC180731_MCE_20Oeps_p6K-p7K-p8K');
+printPNG('2019-05-20_TmVO4-LS5228-DR-HC180731_MCE_20Oeps_p6K-p7K-p8K');
 %% Select full usable dataset
 % See labnotes for tables listing usable data
 useusr = usr(abs(usr)<30); lu2 = length(useusr);
 FullFilterSRup = false(size(sweeprate));
 FullFilterSRdown = false(size(sweeprate));
-for k=1:lu2/2
+for k=1
     FullFilterSRup = FullFilterSRup | abs(sweeprate-useusr(k))<5;% Data at sweeprate of 40 Oe/s are not usable
     FullFilterSRdown = FullFilterSRdown | abs(sweeprate-useusr(lu2+1-k))<5;% Data at sweeprate of 40 Oe/s are not usable
 end
 FullFilterEC = round(excCurrent,1)==0.1 | round(excCurrent,1)==0.4 |...
     round(excCurrent,1)==1.0;% Usable excitation currents are .1 uA, .4 uA and 1.0 uA
-FullFilterT = round(Tb2,1)>=0.6;% Usable temperature range is .5 K and above
+FullFilterT = round(Tb2,1)>=0.6;% Usable temperature range is .6 K and above
+FullFilterH = Hmce>3300 & Hmce<6000;
 
-FullFilterUp = FullFilterT & FullFilterEC & FullFilterSRup;
-FullFilterDown = FullFilterT & FullFilterEC & FullFilterSRdown;
+FullFilterUp = FullFilterT & FullFilterH & FullFilterEC & FullFilterSRup;
+FullFilterDown = FullFilterT & FullFilterH & FullFilterEC & FullFilterSRdown;
 
 %% Plot full usable dataset
-figure
-plot(Hmce(FullFilterUp)/5500,Tb2(FullFilterUp),'.')
+% Use this section to plot the MCE traces on top of the T-H dCp/dT colormap
+% from '2017-07_TmVO4-RF-E_Analyze_Cp_under_field.m'
+% figure% comment this line out to combine with the 2D colormap
+pup = plot(Hmce(FullFilterUp)/5500,Tb2(FullFilterUp)/Tc180731,'.g');
 hold on
-plot(Hmce(FullFilterDown)/5500,Tb2(FullFilterDown),'.')
-xlabel('$H/H_c$')
-ylabel('Temperature (K)')
+pdown = plot(Hmce(FullFilterDown)/5500,Tb2(FullFilterDown)/Tc180731,'.r');
+xlabel('$H/H_c$');
+ylabel('$T/T_D$');
+title('TmVO4-LS5228-DR-HC180731 MCE full usable dataset');
+legend([pup,pdown],'Downsweep','Upsweep','Location','best');
+
+%% Print the phase diagram combining dCp/dT + MCE traces
+% printPNG('2019-05-21_TmVO4-LS5228-DR-HC180731_MCE_+_2017-07-20_TmVO4_dCp-dT')
 
 %% Rescale temperature of MCE data by factor (1+(1-T)/10)
 %% Note about the interpretation of data
 % The MCE observed here is different from what is reported in Kohama et al. 
-%% Differentiate the temperature change with respect to magnetic field
+%% Plot the first derivative of temperature change with respect to magnetic field
 mceder = d1tb2s./d1hs*10^3.*exp(2-Tmce);% derivative of the temperature change
 % the exponential term allows the low temperature data to be multiplied by a higher factor than the high T data
-for jj = 1:lusr/2% for each value of sweep rate
+for jj = 3%1:lusr/2% for each value of sweep rate
     figure
     plot(Hmce(FilterSR(:,jj)),Tmce(FilterSR(:,jj))+mceder(FilterSR(:,jj)),'.','DisplayName',strcat(num2str(usr(jj)),'Oe/s'))
     hold on
@@ -158,11 +168,12 @@ for jj = 1:lusr/2% for each value of sweep rate
     ylim([0 max(Tmce)])
     xlabel('Field (Oe)')
     ylabel('T+d$\Delta$T')
+    title(['$\sigma = $' sprintf('%i',sigma)])
 end
+
 %% Same using differentiation
 % In order to not get confused with shifting of datasets due to reduction
-% of number of data points when using diff, I prefer the above convolution
-% method
+% of number of data points when using diff, I prefer the above convolution method
 mcediff = diff(Tb2smth)*10^2;
 for jj = 1:lusr/2% for each value of sweep rate
     figure
@@ -177,6 +188,28 @@ for jj = 1:lusr/2% for each value of sweep rate
     xlabel('Field (Oe)')
     ylabel('T+d$\Delta$T')
 end
+
+%% Plot the second derivative of temperature change with respect to magnetic field
+% sigma = 3;% width of the smoothing gaussian, in number of data points
+% [~, d1tb2s, d2tb2s] = gConvolve(Tb2,sigma);% smooth platform bridge 2 temperature data & derivative
+% [~, d1hs, d2hs] = gConvolve(Hmce,sigma);% smooth field data and derivative
+mceder2 = d2tb2s./d1hs.^2*10^5.*exp(2-Tmce);% derivative of the temperature change
+% the exponential term allows the low temperature data to be multiplied by a higher factor than the high T data
+for jj = 3%1:lusr/2% for each value of sweep rate
+    figure
+    plot(Hmce(FilterSR(:,jj)),Tmce(FilterSR(:,jj))+mceder2(FilterSR(:,jj)),'.','DisplayName',strcat(num2str(usr(jj)),'Oe/s'))
+    hold on
+    plot(Hmce(FilterSR(:,lusr-jj+1)),Tmce(FilterSR(:,lusr-jj+1))+mceder2(FilterSR(:,lusr-jj+1)),'.','DisplayName',strcat(num2str(usr(lusr-jj+1)),'Oe/s'))
+    hold off
+    % plot data for each magnetic field sweep rate separately
+    legend('show')
+    xlim([0,Hmax])
+    ylim([0 max(Tmce)])
+    xlabel('Field (Oe)')
+    ylabel('$T+\frac{\partial^2\Delta T}{\partial^2 H}$')
+    title(['$\sigma = $' sprintf('%i',sigma)])
+end
+
 %% 
 % Next steps:
 % 

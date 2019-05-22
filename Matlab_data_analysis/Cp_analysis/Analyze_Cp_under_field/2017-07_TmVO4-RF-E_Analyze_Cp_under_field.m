@@ -79,7 +79,7 @@ ylim([round(tmin,2) 3])
 xlim([0 hmax/10^4])
 view([0 90])
 
-%% Plot 2D contour of derivative of Cp
+%% Plot 2D contour of derivative of Cp before averaging data
 figure
 n = 300;
 contourf(Hg./5100,Tg,-d1Cpg,n,'EdgeColor','none');
@@ -177,6 +177,8 @@ Cpgm = gridfit(H,T,Cp,Hgml,Tgml);
 d1Cpgm = conv2(Cpgm,d1Gaussian','same');
 
 %% Plot 2D contour of derivative of Cp
+% Use this section to plot the phase diagram to combine with MCE traces
+% from 'AnalyzeMCEinDR_TmVO4-LS5228-DR-HC180731_2018-09-19.m'
 figure
 n = 300;
 Tc = 2.14;% Value of transition temperature in this sample

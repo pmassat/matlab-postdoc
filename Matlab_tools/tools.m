@@ -59,6 +59,8 @@ delete filename
 delete filename1 ... filenameN
 delete(obj)
 
+%% Custom legend for two plots called p1 and p2
+legend([p1,p2],'p1','p2','Location','best');
 
 
 
