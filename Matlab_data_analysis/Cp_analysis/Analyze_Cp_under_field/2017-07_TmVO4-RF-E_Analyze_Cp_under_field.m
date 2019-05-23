@@ -159,10 +159,10 @@ for i = 1:length(uh)
 end
 
 %% Convert averaged data to table for exportation
-tbl = table();
+avgtbl = table();
 fn = fieldnames(avgData);
 for i=1:numel(fn)
-    tbl.(fn{i}) = cell2mat( arrayfun(@(c) c.(fn{i})(:), avgData(1:length(avgData)).', 'Uniform', 0) );
+    avgtbl.(fn{i}) = cell2mat( arrayfun(@(c) c.(fn{i})(:), avgData(1:length(avgData)).', 'Uniform', 0) );
 end
 %% Add stuff to the table
 % tbl.comments(1) = string(filename);
@@ -189,6 +189,16 @@ xlabel('H/H$_c$'); ylabel('T/T$_D$');
 zlabel('-dCp/dT (J/K$^2$/mol)');
 % title(sprintf('n = %i',n));
 % h=colorbar('eastoutside');
+
+%% Plot errorbar plot of Hc(T) from xls file
+% Need to import table from xls file first
+% figure;% comment out this line when plotting on top of above colormap
+ebup = errorbar(hctbl.Hcrup,hctbl.Tr,hctbl.dTr,hctbl.dTr,...
+    hctbl.dHcrup,hctbl.dHcrup,'.g','MarkerSize',12,'LineWidth',1);
+hold on;
+ebdown = errorbar(hctbl.Hcrdown,hctbl.Tr,hctbl.dTr,hctbl.dTr,...
+    hctbl.dHcrdown,hctbl.dHcrdown,'.r','MarkerSize',12,'LineWidth',1);
+legend([ebup,ebdown],'$H_c^{\mathrm{min}}$','$H_c^{\mathrm{max}}$','Location','northeast');
 
 %% Identify experimental critical temperature at each field
 % Then we can plot Tc vs uh and fit using equation f(h) = Tc/Hc*h/atanh(h/Hc)

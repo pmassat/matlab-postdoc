@@ -145,7 +145,7 @@ pdown = plot(Hmce(FullFilterDown)/5500,Tb2(FullFilterDown)/Tc180731,'.r');
 xlabel('$H/H_c$');
 ylabel('$T/T_D$');
 title('TmVO4-LS5228-DR-HC180731 MCE full usable dataset');
-legend([pup,pdown],'Downsweep','Upsweep','Location','best');
+legend([pup,pdown],'Upsweep','Downsweep','Location','best');
 
 %% Print the phase diagram combining dCp/dT + MCE traces
 % printPNG('2019-05-21_TmVO4-LS5228-DR-HC180731_MCE_+_2017-07-20_TmVO4_dCp-dT')
