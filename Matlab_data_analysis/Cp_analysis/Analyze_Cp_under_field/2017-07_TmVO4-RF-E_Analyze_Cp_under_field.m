@@ -184,8 +184,8 @@ n = 300;
 Tc = 2.14;% Value of transition temperature in this sample
 contourf(Hgm./5100,Tgm/Tc,-d1Cpgm,n,'EdgeColor','none');
 hold on;
-fplot(@(h)h/atanh(h),[0 1.1],'Color','k')
-xlabel('H/H$_c$'); ylabel('T/T$_D$');
+fplt = fplot(@(h)h/atanh(h),[0 1.1],'Color','k','LineWidth',1);
+xlabel('$H / H_c(T=0)$'); ylabel('$T / T_D(H=0)$');
 zlabel('-dCp/dT (J/K$^2$/mol)');
 % title(sprintf('n = %i',n));
 % h=colorbar('eastoutside');
@@ -193,11 +193,11 @@ zlabel('-dCp/dT (J/K$^2$/mol)');
 %% Plot errorbar plot of Hc(T) from xls file
 % Need to import table from xls file first
 % figure;% comment out this line when plotting on top of above colormap
-ebup = errorbar(hctbl.Hcrup,hctbl.Tr,hctbl.dTr,hctbl.dTr,...
-    hctbl.dHcrup,hctbl.dHcrup,'.g','MarkerSize',12,'LineWidth',1);
-hold on;
 ebdown = errorbar(hctbl.Hcrdown,hctbl.Tr,hctbl.dTr,hctbl.dTr,...
-    hctbl.dHcrdown,hctbl.dHcrdown,'.r','MarkerSize',12,'LineWidth',1);
+    hctbl.dHcrdown,hctbl.dHcrdown,'.m','MarkerSize',18,'LineWidth',2);
+hold on;
+ebup = errorbar(hctbl.Hcrup,hctbl.Tr,hctbl.dTr,hctbl.dTr,...
+    hctbl.dHcrup,hctbl.dHcrup,'.g','MarkerSize',18,'LineWidth',2);
 legend([ebup,ebdown],'$H_c^{\mathrm{min}}$','$H_c^{\mathrm{max}}$','Location','northeast');
 
 %% Identify experimental critical temperature at each field

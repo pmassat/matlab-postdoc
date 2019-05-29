@@ -146,19 +146,20 @@ end
 R = 8.314;
 figure
 for i=[1:3,6]
-    errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.','MarkerSize',18,'DisplayName',['x = ',num2str(dpg(i))])
+    errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.',...
+        'MarkerSize',18,'LineWidth',1,'DisplayName',['$x = $',num2str(round(dpg(i),2))])
     hold on
 end
 xlabel(xlblTemp); ylabel('$C_p/R$');
-title(ttlCpY);
-lgd = legend('show'); lgd.Title.String='Y content $x$';
+% title(ttlCpY);
+lgd = legend('show'); lgd.Title.String = {'Tm$_{1-x}$Y$_x$VO$_4$'};
+
+%% Print figure to PNG file
+% printPNG('2019-05-28_YTmVO4_Cp_vs_T_0-p11-p15-p22')
 
 %% Display name of structure containing average data
 %%
-disp("Structure containing averaged data is called avgData")
-% 
-% 
-% 
+% disp("Structure containing averaged data is called avgData")
 % 
 %% Export averaged Cp data to text file
 % savepath = 'C:\Users\Pierre\Desktop\Postdoc\YTmVO4\YTmVO4_HeatCapacity\YTmVO4_Cp_anaLsis\2018-10-17_YTmVO4_averaged_Cp\';

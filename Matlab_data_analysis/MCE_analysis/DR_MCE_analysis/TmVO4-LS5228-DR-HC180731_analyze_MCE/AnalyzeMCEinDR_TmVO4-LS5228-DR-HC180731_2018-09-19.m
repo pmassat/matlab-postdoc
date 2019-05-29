@@ -3,6 +3,7 @@ cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2018-08_TmVO4-LS52
 load('DR_thermometer_TvsHR_fit.mat');
 % 'DR_thermometer_TvsHR_fit.mat' is an sfit variable called 'stf', exported from file 'DR_platform_therm_cal.mlx'
 FullData=ImportMCEinDRmatrix('2018-08-01_MCE_TmVO4-LS5228-DR-HC180731.dat');%
+
 %% 
 % For some reason, Matlab does not want to import the MCE data in a table 
 % directly as numerics, it wants to import it as text, then convert it to numerics, 
@@ -16,6 +17,7 @@ FullData=ImportMCEinDRmatrix('2018-08-01_MCE_TmVO4-LS5228-DR-HC180731.dat');%
 %% Parameters
 Hmax = 10000;% high magnetic fields boundary for the plots
 Tc180731 = 2.20;% from peak in dCp/dT in 'TmVO4_LS5228_201808_AnalyzeCpDR.mlx'
+
 %% R-H MCE traces
 Data = repmat(FullData,1);% make a copy of the data
 Data(Data(:,20)<0,:)=[];% remove rows with negative bridge 2 resistance, which does not make any sense
@@ -24,12 +26,14 @@ Tmce = Data(:,3);% in K; Temperature of the platform thermometer is column #3 in
 Hmce = Data(:,4);% in Oe
 excCurrent = Data(:,9);% Bridge 2 excitation current, in uA
 Rb2 = Data(:,20);% Bridge 2 resistance, in Ohms
+figure
 plot(Hmce,Rb2,'.-')
 % ylim([3000,9000])
 xlim([0,Hmax])
 xlabel('Field (Oe)')
-ylabel('Platform resistance (\Omega)')
+ylabel('Platform resistance ($\Omega$)')
 title('R-H MCE traces')
+
 %% T-H MCE traces
 % Convert Bridge 2 resistance into temperature by using the sfit generated from 
 % the file 'DR_platform_therm_cal.mlx'
@@ -116,16 +120,16 @@ for jj = 3%1:lusr/2% for each absolute value of sweep rate
 end
 
 %% Figure exportation
-xlim([0 10000]); ylim([0.55 0.83]);
-printPNG('2019-05-20_TmVO4-LS5228-DR-HC180731_MCE_20Oeps_p6K-p7K-p8K');
+% xlim([0 10000]); ylim([0.55 0.83]);
+% printPNG('2019-05-20_TmVO4-LS5228-DR-HC180731_MCE_20Oeps_p6K-p7K-p8K');
 %% Select full usable dataset
 % See labnotes for tables listing usable data
 useusr = usr(abs(usr)<30); lu2 = length(useusr);
 FullFilterSRup = false(size(sweeprate));
 FullFilterSRdown = false(size(sweeprate));
-for k=1
-    FullFilterSRup = FullFilterSRup | abs(sweeprate-useusr(k))<5;% Data at sweeprate of 40 Oe/s are not usable
-    FullFilterSRdown = FullFilterSRdown | abs(sweeprate-useusr(lu2+1-k))<5;% Data at sweeprate of 40 Oe/s are not usable
+for k=1%k=1 corresponds to 20Oe/s only
+    FullFilterSRup = FullFilterSRup | abs(sweeprate-useusr(lu2+1-k))<5;% Data at sweeprate of +40 Oe/s are not usable
+    FullFilterSRdown = FullFilterSRdown | abs(sweeprate-useusr(k))<5;% Data at sweeprate of -40 Oe/s are not usable
 end
 FullFilterEC = round(excCurrent,1)==0.1 | round(excCurrent,1)==0.4 |...
     round(excCurrent,1)==1.0;% Usable excitation currents are .1 uA, .4 uA and 1.0 uA
@@ -141,11 +145,10 @@ FullFilterDown = FullFilterT & FullFilterH & FullFilterEC & FullFilterSRdown;
 % figure% comment this line out to combine with the 2D colormap
 pup = plot(Hmce(FullFilterUp)/5500,Tb2(FullFilterUp)/Tc180731,'.g');
 hold on
-pdown = plot(Hmce(FullFilterDown)/5500,Tb2(FullFilterDown)/Tc180731,'.r');
-xlabel('$H/H_c$');
-ylabel('$T/T_D$');
-title('TmVO4-LS5228-DR-HC180731 MCE full usable dataset');
-legend([pup,pdown],'Upsweep','Downsweep','Location','best');
+pdown = plot(Hmce(FullFilterDown)/5500,Tb2(FullFilterDown)/Tc180731,'.m');
+xlabel('$H / H_c(T=0)$'); ylabel('$T / T_D(H=0)$');
+% title('TmVO4-LS5228-DR-HC180731 MCE full usable dataset');
+lgd = legend([pup,pdown],'Upsweep','Downsweep');
 
 %% Print the phase diagram combining dCp/dT + MCE traces
 % printPNG('2019-05-21_TmVO4-LS5228-DR-HC180731_MCE_+_2017-07-20_TmVO4_dCp-dT')
