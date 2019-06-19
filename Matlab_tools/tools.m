@@ -62,6 +62,11 @@ delete(obj)
 %% Custom legend for two plots called p1 and p2
 legend([p1,p2],'p1','p2','Location','best');
 
+%% Annotation
+annttl = annotation('textbox',[0.55 0.775 0.2 0.1],'interpreter','latex',...
+    'String',{'Tm$_{1-x}$Y$_x$VO$_4$'},'LineStyle','-','EdgeColor','k',...
+    'FitBoxToText','on','LineWidth',1,'BackgroundColor','w','Color','k');% add annotation
+
 
 
 

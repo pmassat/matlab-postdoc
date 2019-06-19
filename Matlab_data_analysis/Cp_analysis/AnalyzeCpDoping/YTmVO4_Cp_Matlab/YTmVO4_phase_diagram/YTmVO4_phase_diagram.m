@@ -52,17 +52,21 @@ pdtable(5:6,:) = [];% remove x=0.18 and 0.22 for which data points are uncertain
 %% Plot
 figure()
 hold on
+olive = [0 .5 0];
 % Y-TmVO4 transition temperatures
+ar = area(pdtable.x_full,pdtable.Tc./Tc(1),'FaceColor',[0 1 0],...
+    'EdgeColor',olive,'LineWidth',1);% light green [0 1 0]
 p0 = errorbar(pdtable.x_full,pdtable.Tc./Tc(1),pdtable.dTc./Tc(1),...
-    pdtable.dTc./Tc(1),pdtable.dxm,pdtable.dxp,'.','Markersize',24);
+    pdtable.dTc./Tc(1),pdtable.dxm,pdtable.dxp,'.','Markersize',24,...
+    'Color',olive,'MarkerEdgeColor',olive,'LineWidth',1);
 xfit = [1, 1, 1, 0, 0];% weigh doping values in order to fit only up to x=0.1
 x0 = 1;% Value of doping at which a linear fit of Tc would reach 0
 % value determined after using curve fitting tool
 xl = 0:0.01:x0;% range of linear plot
 yl = 1/x0*(x0-xl);
-p1 = plot(xl,yl,'--');
+% p1 = plot(xl,yl,'--');
 
-annttl = annotation('textbox',[0.15 0.175 0.2 0.1],'interpreter','latex',...
+annttl = annotation('textbox',[0.55 0.775 0.2 0.1],'interpreter','latex',...
     'String',{'Tm$_{1-x}$Y$_x$VO$_4$'},'LineStyle','-','EdgeColor','k',...
     'FitBoxToText','on','LineWidth',1,'BackgroundColor','w','Color','k');% add annotation
 
@@ -70,11 +74,12 @@ annttl = annotation('textbox',[0.15 0.175 0.2 0.1],'interpreter','latex',...
 xlim([0 0.35]); ylim([0 1.1])
 ylabel('$T_D/T_D(x=0)$')
 xlabel('Y content $x$')
-lgd = legend([p0,p1],{'Experimental $T_D(x)$','$T_D(x=0)\cdot (1-x)$'});
+% lgd = legend([p0,p1],{'Experimental $T_D(x)$','$T_D(x=0)\cdot (1-x)$'});
+% lgd = legend([p0],{'Experimental $T_D(x)$','$T_D(x=0)\cdot (1-x)$'});
 
 %% Export figure 
-cd 'C:\Users\Pierre\Desktop\Postdoc\YTmVO4\YTmVO4_phase_diagram';
-printPNG('2019-05-30_YTmVO4_phase_diagram');
+% cd 'C:\Users\Pierre\Desktop\Postdoc\YTmVO4\YTmVO4_phase_diagram';
+printPNG('2019-06-02_YTmVO4_phase_diagram');
 
 %% Export table
 expname = '2018-11-12_YTmVO4_phase_diagram.txt';

@@ -1,4 +1,5 @@
 %% Data importation
+sample = 'TmVO4-RF-E';
 filename = 'TmVO4_RF-E_2017-07-14.dat';
 cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2017-07_TmVO4_Cp_MCE\2017-07-20_Cp\2017-07-20_TmVO4_Cp_analysis'
 DATA=ImportTmVO4Cp(filename);% Use this data to plot color map of phase diagram
@@ -6,6 +7,7 @@ DATA=ImportTmVO4Cp(filename);% Use this data to plot color map of phase diagram
 m = 0.25e-3;% mass of sample, in g
 M = 283.87;% molar mass of TmVO4, in g/mol
 R = 8.314;% gas constant, in J/K/mol
+Tc = 2.14;% Value of transition temperature in this sample
 %%
 Hc0 = 0.51;% value in Tesla units of the critical field at zero temperature
 % in the absence of demagnetizing factor
@@ -181,7 +183,6 @@ d1Cpgm = conv2(Cpgm,d1Gaussian','same');
 % from 'AnalyzeMCEinDR_TmVO4-LS5228-DR-HC180731_2018-09-19.m'
 figure
 n = 300;
-Tc = 2.14;% Value of transition temperature in this sample
 contourf(Hgm./5100,Tgm/Tc,-d1Cpgm,n,'EdgeColor','none');
 hold on;
 fplt = fplot(@(h)h/atanh(h),[0 1.1],'Color','k','LineWidth',1);
@@ -221,7 +222,7 @@ for i=rng
 %     fp = fplot(@(t)Cp_TFIM_offset_strain(t/2.125,1.5e-3,uh(i)/(5.1e3)),[0 4],'LineWidth',2);
 % Fit parameters on data at H=0: Tc=2.125(3), e=1.5(4)e-3
 % Note: the values of amplitude coefficient and Tc extracted from fit 
-% in curve fitting tool using the Cp_TFIM (no offset strain) are A=7.35 and Tc=2.142K
+% in curve fitting tool using Cp_TFIM (no offset strain) are A=7.35 and Tc=2.142K
     clr{rng==i} = get(fp,'Color');
 end
 for i=rng
@@ -240,24 +241,40 @@ hold off
 % printPNG('2019-05-17_TmVO4-RF-E_Cp_vs_T_4H_+fits_No-strain')
 % printPDF('2019-05-17_TmVO4-RF-E_Cp_vs_T_4H_+fits')
 
-%% Prepare MF fit of Cp vs Temperature at zero field
-T0 = avgData(1).T;
-Cp0 = avgData(1).Cp;
-Cp0Err = avgData(1).CpFullErr;
-wghts = 1./Cp0Err;
+%% Prepare MF fit of Cp vs Temperature at given field
+j=14;
+Tfit = avgData(j).T;
+Cpfit = avgData(j).Cp;
+CpfitErr = avgData(j).CpFullErr;
+wghts = 1./CpfitErr;
 %% Fit and plot
-[fitresult, gof] = fitCpmfvsTemp(T0,Cp0,wghts,2.142);
+[fitresult, gof] = fitCpmfvsTemp(Tfit,Cpfit,wghts,2.142);
 
 %% Prepare MF fit of Cp vs Temperature under field
-index = 5;
+index = 15;
 H1 = uh(index);
 T1 = avgData(index).T;
-Cp1 = avgData(index).Cp;
-Cp1Err = avgData(index).CpFullErr;
+Cp1 = avgData(index).Cp/R;
+Cp1Err = avgData(index).CpFullErr/R;
 wghts1 = 1./Cp1Err;
 %% Fit and plot
-[fitresult1, gof1] = fitCpTFIM(T1,Cp1,wghts1,2.142,H1/5.1e3);
-
+maxTfit = 2;%Kelvin
+hrstr = sprintf('%.2f',H1/(Hc0*1e4));
+% [fitresult1, gof1] = fitCpTFIM(T1,Cp1,wghts1,2.142,H1/5.1e3);
+[fitresult1, gof1] = fitSchTemp(T1,Cp1,wghts1,maxTfit);
+fitprms = coeffvalues(fitresult1);
+prmerr = coeffvalues(fitresult1)-confint(fitresult1);
+gapstr = [sprintf('%.2f',fitprms(1)) '$\pm$' sprintf('%.2f',prmerr(1,1))];
+offsetstr = [sprintf('%.3f',fitprms(2)) '$\pm$' sprintf('%.3f',prmerr(1,2))];
+title({['Schottky anomaly fit of ' sample],[' at $H/H_c=$' hrstr]});
+annfit = annotation('textbox',[0.575 0.175 0.2 0.1],'interpreter','latex',...
+    'String',{['$R^2=$ ' sprintf('%.4f',gof1.rsquare)] ['$\Delta=$ ' gapstr 'K']...
+    ['offset ' offsetstr]}, 'LineStyle','-','EdgeColor','k',...
+    'FitBoxToText','on','LineWidth',1,'BackgroundColor','w','Color','k');% add annotation
+formatFigure
+annfit.Position(2)=.175;
+%% Export figure to pdf
+printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
 
 
 
