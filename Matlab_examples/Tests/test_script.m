@@ -5,14 +5,14 @@
 % xlim([])
 figure;
 hold on
-e = 0.0;
+e = 0.01;
 for h=[0 0.6 0.8 0.9 0.99]
-fplot(@(t) OP_TFIM(t,h),[0 1.5],'LineWidth',2,'DisplayName',sprintf('$h=%.2f$',h))
+fplot(@(t)OP_TFIM(t,h,e),[0 1.5],'LineWidth',2,'DisplayName',sprintf('$h=%.2f$',h))
 end
 legend('show')
 xlabel('$T/T_{c,0}$'); ylabel('Order parameter');
 xlim([0 1.2]); ylim([-.1 1.1]);
-title('Order parameter vs temperature in the TFIM');
+title(sprintf('OP vs T in the TFIM w/ $e=%.3f$',e));
 % fplot(@(t)1./CpTFIMdenominator(t,e),[1e-3 2]);
 % xlabel('$T/T_c$'); ylabel('$C_p$ denominator');
 % fplot(@(t)Cp_TFIM_offset_strain(t,e,h),[1e-3 2]);
@@ -24,4 +24,4 @@ title('Order parameter vs temperature in the TFIM');
 
 %% Export figure
 formatFigure;
-printPDF('2019-06-19_OP_TFIM')
+% printPDF('2019-06-19_OP_TFIM')
