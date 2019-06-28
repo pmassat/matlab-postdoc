@@ -67,6 +67,9 @@ annttl = annotation('textbox',[0.55 0.775 0.2 0.1],'interpreter','latex',...
     'String',{'Tm$_{1-x}$Y$_x$VO$_4$'},'LineStyle','-','EdgeColor','k',...
     'FitBoxToText','on','LineWidth',1,'BackgroundColor','w','Color','k');% add annotation
 
+%% Find all text objects in figure
+a = findall(gcf,'Type','text');
+
 
 
 

@@ -303,6 +303,11 @@ field2 = extractfield(nData2,'field')*demag_correction;
 strHc = sprintf('$H_c$ = %.3f(%.0f)T',H_c,...
     (cval(1)-cft(1,1))*demag_correction*1e3);% print out value of critical temperature, with error bars
 
+%% Prepare tight subplot
+make_it_tight = true;
+subplot = @(m,n,p) subtightplot (m,n,p, [0 0], [0.1 0.1], [0.2 0.01]); 
+if ~make_it_tight,  clear subplot;  end
+
 %% Plot fit with data.
 plotRng = field<HMaxFit;
 xPlot = xData(plotRng)/cval(1);%xData(plotRng)*demag_correction to plot using calculated value of Hc(T)
@@ -312,27 +317,36 @@ exclPlot = excludedPoints(plotRng);
 Xfit = linspace(0,max(field)/cval(1),1000);%max(field)*demag_correction to plot using calculated value of Hc(T)
 Yfit = cval(2).*sqrt(1-(Xfit).^2);% compute fit over a controlled number of points
 % Xfit/(cval(1)*demag_correction) to plot using calculated value of Hc(T)
-figure; hold on
-pfit = plot(Xfit,Yfit,'r-');
-pdat = errorbar(xPlot,yPlot,spltPlot,'.b','MarkerSize',10,'LineWidth',2);
+fig = figure; fig.Units = 'inches'; fig.Position(2:4)=[0.5 4 6];
+ax2 = subplot(2,1,2);
+pfit = plot(Xfit,Yfit*1e3,'r-'); hold on; grid on
+pdat = plot(xPlot,yPlot*1e3,'.b','MarkerSize',18);
+% pdat = errorbar(xPlot,yPlot*1e3,spltPlot,'.b','MarkerSize',10,'LineWidth',2);
 % pexcl = plot(xPlot(exclPlot),yPlot(exclPlot),'xk','MarkerSize',6);
 % legend([pdat,pexcl,pfit],'Splitting','Excluded','MF fit');
-legend([pdat,pfit],'Splitting','MF fit');
+% legend([pdat,pfit],'Splitting','MF fit');
 % title('TmVO$_4$ (8 8 0) peak splitting vs field');
-xlabel('$H/H_c(T)$'); ylabel('$\delta \equiv 2(a_o-b_o)/(a_o+b_o)$'); grid on
+xlabel('$H/H_c(T)$'); ylabel({'$\delta = 2 (a_o-b_o)/(a_o+b_o)$', '($\times 10^{-3}$)'});
 xlim([0 1.1]); %ylim([0 6e-3]);
-ax = gca; ax.TitleFontSizeMultiplier = 0.8;
+% ax = gca; 
+ax2.TitleFontSizeMultiplier = 0.8; ax2.YTick = [0 2 4]; ax2.FontSize=16;
 % ann21 = annotation('textbox',[0.15 0.3 0.2 0.1],'interpreter','latex',...
 %     'String',{'Bragg peak at (8 8 0)' sTeff strSplit strHc},...
 %     'FontSize',14,'LineStyle','-','EdgeColor','k','FitBoxToText','on',...
 %     'LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
-ann22 = annotation('textbox',[0 0 0.2 0.1],'interpreter','latex',...
-    'String',{'(b)'},'FontSize',ax.FontSize,'LineStyle','-','EdgeColor','none',...
+ann22 = annotation('textbox',[ax2.Position(1)+.01 ax2.Position(2)+.01 0.2 0.1],'interpreter','latex',...
+    'String',{'(b)'},'FontSize',ax2.FontSize,'LineStyle','-','EdgeColor','none',...
     'FitBoxToText','on','LineWidth',2,'BackgroundColor','none','Color','k');% add annotation
-ann23 = annotation('textbox',[0.15 0.2 0.2 0.1],'interpreter','latex',...
+ann23 = annotation('textbox',[0.2 ax2.Position(2)+.05 0.2 0.1],'interpreter','latex',...
     'String',{'TmVO$_4$' sTeff},...
     'FontSize',14,'LineStyle','-','EdgeColor','k','FitBoxToText','on',...
     'LineWidth',1,'BackgroundColor',[1 1 1],'Color','k');% add annotation
+
+%% Figure formatting
+ann22.Position(1) = ax2.Position(1)+.01; ann22.Position(2) = ax2.Position(2)+.01;
+ann23.Position(1) = ax2.Position(1)+.1/diff(ax2.XLim)*ax2.Position(3);% position textbox at x=0.2 in x axis units
+ann23.Position(2) = ax2.Position(2)+.1;
+ax2.LineWidth = 1;
 
 %% Data formatting for curve fitting tool analysis
 i=1;
@@ -354,40 +368,47 @@ Ift = Ifull';
 ybounds = [9.85 10.05];
 aocenter = sqrt(2)*at;
 Ysel = Y>ybounds(1) & Y<ybounds(2)+.01;
-fsplt = figure;
-ax1 = subplot(2,1,1);
+% fsplt = figure;
+ax1 = subplot(2,1,1); 
+ax1.LineWidth = 1; ax1.Layer = 'top';% show ticks on top of plot
 n = 300;
 % contourf(Hg./5100,Tg,-d1Cpg,n,'EdgeColor','none');
 sp = contourf(X(Ysel(:,1),:)/H_c,Y(Ysel(:,1),:),Ift(Ysel(:,1),:),n,'EdgeColor','None');
 % sp = surf(X(Ysel(:,1),:),Y(Ysel(:,1),:),-Ifull(Ysel(:,1),:),'EdgeColor','None');
 % I am plotting -Ifull instead of Ifull in order to be able to plot the
 % position of peak maxima on top; see 'Matlab_debugging.pptx' for more info
-ylim([ybounds(1) ybounds(2)]); %xlim([0 max(field2)]); 
+ylim([ybounds(1) ybounds(2)]); %xlim([0 max(field2)]);
+ax1.XTickLabel={}; ax1.YTick=[9.85 9.95 10.05]; ax1.FontSize=16;
 colormap(jet);
 cb = colorbar; cb.Location = 'north'; cb.AxisLocation = 'out';% cb.Direction = 'reverse';% reverse colorbar for negative intensities
-cbl = cb.Label; cbl.String = '$\times 10^6$';%
+cb.Position(1) = ax1.Position(1); cb.Position(3) = ax1.Position(3);% expand colorbar to make it match the width of the plot
+cb.Position(2) = ax1.Position(2)+ax1.Position(4)+.01;% move colorbar just above figure
+cb.Ticks = 0:2e6:6e6;% reduce number of colorbar ticks
+cbtl = CbTixAbsolute(ax1,cb,0.0,0);% Reposition colorbar tick labels
+for i=1:length(cbtl); cbtl(i).FontSize=ax1.FontSize; end% adjust fontsize of tick labels to match the rest of the figure
+cbl = cb.Label; cbl.String = '(a.u.)';%
 cbl.Interpreter = 'latex'; cb.TickLabelInterpreter = 'latex';
-cbl.Position = [-.75 -8.15e6 0]; cbl.Rotation = 0;% horizontal colorbar label
-ylabel('$a_o,b_o$ (\AA)'); xlabel('$H/H_c(T)$');
+cbl.Position = [7e6 1 0]; cbl.Rotation = 0;% horizontal colorbar label
+ylabel('$a_o,b_o$ (\AA)');% xlabel('$H/H_c(T)$');
 if exist('sTeff','var'); Tstr = sTeff; elseif exist('sTdr','var'); Tstr = sTdr; end
-ax1.LineWidth = 1.5; ax1.Layer = 'top';% show ticks on top of plot
-ann11 = annotation('textbox',[0.7 0.85 0.2 0.1],'interpreter','latex',...
-    'String',{Tstr},'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...
-    'FitBoxToText','on','LineWidth',1,'BackgroundColor',[1 1 1],'Color','k');% add annotation
-ann12 = annotation('textbox',[0 0 0.2 0.1],'interpreter','latex',...
+
+% ann11 = annotation('textbox',[0.7 0.85 0.2 0.1],'interpreter','latex',...
+%     'String',{Tstr},'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...
+%     'FitBoxToText','on','LineWidth',1,'BackgroundColor',[1 1 1],'Color','k');% add annotation
+ann12 = annotation('textbox',[ann22.Position(1) 0.51 0.2 0.1],'interpreter','latex',...
     'String',{'(a)'},'FontSize',ax1.FontSize,'LineStyle','-','EdgeColor','none',...
-    'FitBoxToText','on','BackgroundColor','none','Color','k');% add annotation
-ann13 = annotation('textbox',[0.2 0.85 0.2 0.1],'interpreter','latex',...
-    'String',{'TmVO$_4$'},...
-    'FontSize',14,'LineStyle','-','EdgeColor','k','FitBoxToText','on',...
-    'LineWidth',1,'BackgroundColor',[1 1 1],'Color','k');% add annotation
+    'FitBoxToText','on','BackgroundColor','none','Color','w');% add annotation
+% ann13 = annotation('textbox',[0.2 0.85 0.2 0.1],'interpreter','latex',...
+%     'String',{'TmVO$_4$'},...
+%     'FontSize',14,'LineStyle','-','EdgeColor','k','FitBoxToText','on',...
+%     'LineWidth',1,'BackgroundColor',[1 1 1],'Color','k');% add annotation
 caxis('auto');% auto rescale of color scale
 grid off;
 view(0,90);
 hold on;
 plot(field(plotRng)/cval(1),xM1(plotRng)*rstolp,'.k');% plot position of max of peak 1
 plot(field(plotRng)/cval(1),xM2(plotRng)*rstolp,'.k');% same for peak 2
-
+linkaxes([ax1,ax2],'x');
 
 
 
