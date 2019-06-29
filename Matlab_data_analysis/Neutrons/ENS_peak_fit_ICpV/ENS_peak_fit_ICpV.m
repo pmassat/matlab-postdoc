@@ -276,10 +276,10 @@ sTdr = sprintf('$T_{DR}$=%.1fK',nData(1).temp);
 %% Estimate critical field at the effective temperature in the absence of demagnetizing factor
 % Function defining the critical field
 t = Teff / Tc0;% reduced temperature
-fnh = @(h) h - t*atanh(h);% when this function goes to zero,
-% the value of h is the reduced critical field
+fnh = @(h) h - t*atanh(h);% when this function goes to zero, the value of h is the reduced critical field
 figure
 fplot(fnh,[0 1])
+
 %% Compute critical field
 h_c = fzero(fnh,[1e-3 1-1e-3]);
 H_c = h_c*Hc_0;% value of the critical field at the effective temperature of
@@ -364,10 +364,12 @@ rstolp = sqrt(2)*at/hcenter;% conversion factor from reciprocal space units
 Ifull = cell2mat( arrayfun(@(c) c.I', nData2(1:length(nData2)).', 'Uniform', 0) );% intensity data combined in one big matrix
 Ift = Ifull';
 
-%% Plot 
+%% Select data to plot
 ybounds = [9.85 10.05];
 aocenter = sqrt(2)*at;
 Ysel = Y>ybounds(1) & Y<ybounds(2)+.01;
+
+%% Plot
 % fsplt = figure;
 ax1 = subplot(2,1,1); 
 ax1.LineWidth = 1; ax1.Layer = 'top';% show ticks on top of plot
@@ -410,7 +412,13 @@ plot(field(plotRng)/cval(1),xM1(plotRng)*rstolp,'.k');% plot position of max of 
 plot(field(plotRng)/cval(1),xM2(plotRng)*rstolp,'.k');% same for peak 2
 linkaxes([ax1,ax2],'x');
 
+%% 
+Iftplot = Ift(Ysel(:,1),:);
+Xplot = X(Ysel(:,1),:)/H_c;
+Yplot = Y(Ysel(:,1),:);
 
+%% Write the intensity matrix to a tab delimited file
+dlmwrite('2019-06-28_TmVO4_p6K_ENS_I_vs_field_&_hh0.txt',Iftplot,'Delimiter','\t')
 
 
 
