@@ -1,17 +1,30 @@
+%% Change to relevant directory
+cd C:\Users\Pierre\Desktop\Postdoc\Software\Matlab\Matlab_data_analysis\TFIM\OP_TFIM
+
 %% Plot the order parameter of the TFIM 
 % e = 0.01;
 T = linspace(0,3,1000);
 Y = repmat(T,1);
 f = @(h) h/atanh(h);
 figure; hold on;
-for h=0%[0 0.6 0.9]
-    for e = 0.01%[0, 0.01]
+for h=.9%[0 0.6 0.9]
+    counter = 0;% reset counter used to determine which color to use for the plot
+    for e = [0, 0.01]
         for j=1:length(T)
         Y(j) = OP_TFIM(T(j),h,e);
         end
-    plot(T,Y,'LineWidth',2,'DisplayName',sprintf('$h=%.2f$, $e=%1.1d$',h,e))
+        if counter>0
+            c = get(p,'Color');
+            plot(T,Y,'LineWidth',2,'Color',c,...
+                'DisplayName',sprintf('$h=%.2g$, $e=%.2g$',h,e));
+        else
+            p = plot(T,Y,'LineStyle',':','LineWidth',2,...
+                'DisplayName',sprintf('$h=%.2g$, $e=%.2g$',h,e));
+        end
+        counter = counter+1;
     end
-    line([f(h),f(h)],ylim,'LineStyle','--','DisplayName',sprintf('$T_c(h=%.2f)$',h));legend('show')
+%         line([f(h),f(h)],ylim,'LineStyle','--','LineWidth',1,'Color','k',...
+%         'DisplayName',sprintf('$T_c(h=%.2f)$',h));
 end
 legend('show')
 xlabel('$T/T_{c}(h=0)$'); ylabel('Order parameter');
@@ -29,4 +42,4 @@ title(sprintf('OP vs T in the TFIM'));
 
 %% Export figure
 formatFigure;
-% printPDF('2019-06-19_OP_TFIM')
+printPDF('2019-07-02_OP_TFIM_vs_t_h_e')
