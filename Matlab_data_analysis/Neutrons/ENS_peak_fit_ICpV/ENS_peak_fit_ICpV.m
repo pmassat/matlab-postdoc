@@ -81,7 +81,7 @@ freePrms1 = {'I2*0.46',I1;'x01',xc(1)};% free parameters
 freePrms2 = {'I2',I2;'x02',xc(2)};% free parameters
 % Note: the order in which free parameters are defined matters because of
 % how the array of initial fitting parameters 'initParams' is defined
-fmt = 'ENS at T=%.2fK H=%.3fT %i params fit';% string format for plot title
+fmt1 = 'ENS at T=%.2fK H=%.3fT %i params fit';% string format for plot title
 for i=rng
     nData1 = nData(i).hh0(nData(i).dI>0);
     datExcld = nData1<min(hcenter)-.7 | nData1>max(hcenter)+0.55 |...
@@ -99,11 +99,11 @@ for i=rng
     myfit.freeParams = {freePrms1,freePrms2};
     myfit.indepFreePrms();% compute array of *independent* free parameters
     Nprms = length(myfit.indepFreeParams);% total number of independent free parameters
-    label = sprintf(fmt,nData(i).temp,field(i),Nprms);
+    label = sprintf(fmt1,nData(i).temp,field(i),Nprms);
     fitStr = ['fit'  int2str(lx) 'ICpV' int2str(Nprms)]; 
     gofStr = ['gof'  int2str(lx) 'ICpV' int2str(Nprms)];
     [nData(i).(fitStr), nData(i).(gofStr)] = myfit.compute_fit();
-    if exist('demag_correction','var'); hfactor = demag_correction;
+    if exist('H_c','var'); hfactor = H_c/cval(1);
     else hfactor = 1;end
     if mod(i,20)==1% select data to plot
         myfit.plot_fit(nData(i).(fitStr));% title(label);
@@ -208,7 +208,7 @@ splitting = zeros(length(rng),1);
 hM1 = repmat(xM1,1); hM2 = repmat(xM2,1); 
 Imax1 = repmat(xM1,1); Imax2 = repmat(xM2,1); 
 for i=rng
-    label = sprintf(fmt,nData(i).temp,field(i),Nprms);
+    label = sprintf(fmt1,nData(i).temp,field(i),Nprms);
 %     I1 = nData(i).(fitStr).I1; 
     I2 = nData(i).(fitStr).I2;
 %         gamma1 = nData(i).fitStr.gamma1; gamma2 = nData(i).fitStr.gamma2;
@@ -255,10 +255,13 @@ opts.Exclude = excludedPoints;
 [fitresult, gof] = fit( xData, yData, ft, opts );
 
 %% Print fit parameter values with error bars
-cval = coeffvalues(fitresult);% extract fit parameter values
+cval = coeffvalues(fitresult);% extract fit parameter values; 
+% cval(1) is the value of H_c, cval(2) that of the orthorhombic distortion
 cft=confint(fitresult);% extract confidence intervals from fit
 strSplit = [sprintf('$\\frac{(a-b)}{a_0}|_{H=0}$ = %.2f(%.0f)',...
     cval(2)*1e3,(cval(2)-cft(1,2))*1e5) '$\cdot 10^{-3}$'];% print out value of splitting at zero field, with error bars
+strHMaxFit = sprintf('Max value of H/Hc for fit of orthorhombic distortion: %g',...
+    HMaxFit/cval(1));
 
 %% Calculate effective temperature
 Tc0 = 2.15;% critical temperature at zero field (better to use the actual value of Tc from Cp data?)
@@ -299,9 +302,38 @@ demag_correction = H_c/cval(1);% cval(1) is the value of critical field
 % that comes from the fit of the splitting extracted from the data at 0.94K
 % and 0.969 is the value of Hc/Hc0 at the effective temperature of the measurement
 % see results of the below code when using demag_correction = 1
-field2 = extractfield(nData2,'field')*demag_correction;
+field2 = extractfield(nData2,'field')*H_c/cval(1);%
 strHc = sprintf('$H_c$ = %.3f(%.0f)T',H_c,...
-    (cval(1)-cft(1,1))*demag_correction*1e3);% print out value of critical temperature, with error bars
+    (cval(1)-cft(1,1))*H_c/cval(1)*1e3);% print out value of critical field, with error bars
+
+%% Compute conversion factor from position of maxima to orthorhombic lattice parameter 
+at = 7.0426;% in-plane lattice parameter in the tetragonal phase
+rstolp = sqrt(2)*at/hcenter;% conversion factor from reciprocal space units
+% to units of the in-plane lattice parameter in the orthorhombic phase
+
+%% Prepare matrix of peak maxima for exportation
+Mmax = horzcat(field'/cval(1),xM1*rstolp,xM2*rstolp,splitting,spltRE);% matrix resulting from horizontal concatenation of 
+% field normalized to the critical field, 
+% orthorhombic lattice parameters a and b (calculated from positions of both peaks), 
+% relative splitting of the peaks (equals orthorhombic distortion) and 
+% relative error of the latter
+% Note: horzcat corresponds to stacking columns side by side
+
+%% Write matrix Mmax to a tab delimited file
+filename = '2019-06-28_TmVO4_p6K_ENS_peak-max_vs_field.txt';
+% Header
+hdr1={'H/Hc','a_o','b_o','Orthorhombic distortion','Relative error on orthorh. distortion'};% First line header: quantities names
+hdr2={'(no unit)','angstrom','angstrom','(no unit)','(no unit)'};% Second line header: units
+hdr3={sTeff,strHMaxFit};% Third line header: comments
+fmt1 = repmat('%s\t ', 1, length(hdr1)); fmt1(end:end+1) = '\n';% String formatting for header lines 1 and 2
+fmt3 = repmat('%s\t ', 1, length(hdr3)); fmt3(end:end+1) = '\n';% String formatting for header line 3
+fid = fopen(filename, 'wt');
+fprintf(fid, fmt1, hdr1{:});% header 1
+fprintf(fid, fmt1, hdr2{:});% header 2
+fprintf(fid, fmt3, hdr3{:});% header 3
+fclose(fid);
+% Write matrix
+% dlmwrite(filename,Mmax,'-append','Delimiter','\t')
 
 %% Prepare tight subplot
 make_it_tight = true;
@@ -310,13 +342,13 @@ if ~make_it_tight,  clear subplot;  end
 
 %% Plot fit with data.
 plotRng = field<HMaxFit;
-xPlot = xData(plotRng)/cval(1);%xData(plotRng)*demag_correction to plot using calculated value of Hc(T)
+xPlot = xData(plotRng)/cval(1);%xData(plotRng)*H_c/cval(1) to plot using calculated value of Hc(T)
 yPlot = yData(plotRng);
 spltPlot = spltRE(plotRng);
 exclPlot = excludedPoints(plotRng);
-Xfit = linspace(0,max(field)/cval(1),1000);%max(field)*demag_correction to plot using calculated value of Hc(T)
+Xfit = linspace(0,max(field)/cval(1),1000);%max(field)*H_c/cval(1) to plot using calculated value of Hc(T)
 Yfit = cval(2).*sqrt(1-(Xfit).^2);% compute fit over a controlled number of points
-% Xfit/(cval(1)*demag_correction) to plot using calculated value of Hc(T)
+% Xfit/(cval(1)*H_c/cval(1)) to plot using calculated value of Hc(T)
 fig = figure; fig.Units = 'inches'; fig.Position(2:4)=[0.5 4 6];
 ax2 = subplot(2,1,2);
 pfit = plot(Xfit,Yfit*1e3,'r-'); hold on; grid on
@@ -355,10 +387,6 @@ I1dat = nData2(i).I;
 dI = nData2(i).dI;
 
 %% Color plot of intensity in H-(hh0) 2D-map
-% Compute orthorhombic lattice parameter data
-at = 7.0426;% in-plane lattice parameter in the tetragonal phase
-rstolp = sqrt(2)*at/hcenter;% conversion factor from reciprocal space units
-% to units of the in-plane lattice parameter in the orthorhombic phase
 % Prepare plot
 [X,Y] = meshgrid(field2,rstolp*hh1);
 Ifull = cell2mat( arrayfun(@(c) c.I', nData2(1:length(nData2)).', 'Uniform', 0) );% intensity data combined in one big matrix
@@ -408,7 +436,7 @@ caxis('auto');% auto rescale of color scale
 grid off;
 view(0,90);
 hold on;
-plot(field(plotRng)/cval(1),xM1(plotRng)*rstolp,'.k');% plot position of max of peak 1
+plot(field(plotRng)/cval(1),xM1(plotRng)*rstolp,'.k');% plot position of max of peak 1 vs H/Hc
 plot(field(plotRng)/cval(1),xM2(plotRng)*rstolp,'.k');% same for peak 2
 linkaxes([ax1,ax2],'x');
 

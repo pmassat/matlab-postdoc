@@ -2,6 +2,9 @@
 cd C:\Users\Pierre\Desktop\Postdoc\Software\Matlab\Matlab_data_analysis\TFIM\OP_TFIM
 
 %% Plot the order parameter of the TFIM 
+% The order parameter in TFIM with non zero longitudinal field must show a rounding 
+% because the longitudinal field has the same symmetry as the OP (by
+% definition of a longitudinal field)
 % e = 0.01;
 T = linspace(0,3,1000);
 Y = repmat(T,1);
