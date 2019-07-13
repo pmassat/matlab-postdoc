@@ -3,28 +3,19 @@
 % figure
 % area(x,y,'FaceColor',[0 .5 0]);% dark green [0 .5 0]; light green [0 1 0]
 % xlim([])
-% figure; hold on
-e = 0.01;
-T = linspace(0,3,1000);
-Y = repmat(T,1);
-for h=0.%[0 0.6 0.8 0.9 0.99]
-    for j=1:length(T)
-    Y(j) = OP_TFIM(T(j),h,e);
-    end
-plot(T,Y,'LineWidth',2,'DisplayName',sprintf('$h=%.2f$, $e=%1.1d$',h,e))
+fig1 = figure; ax1 = subplot(1,1,1); hold(ax1,'on');
+fig2 = figure; ax2 = subplot(1,1,1);
+for h=[0 0.6 0.8 0.9 0.99]
+    plot(ax1,0:10,h*rand(1,11));
+    line(ax2,0:5,6*h*ones(1,6));
 end
-legend('show')
-xlabel('$T/T_{c,0}$'); ylabel('Order parameter');
-xlim([0 1.2]); ylim([-.1 1.1]);
-title(sprintf('OP vs T in the TFIM w/ $e=%.3f$',e));
-% fplot(@(t)1./CpTFIMdenominator(t,e),[1e-3 2]);
-% xlabel('$T/T_c$'); ylabel('$C_p$ denominator');
-% fplot(@(t)Cp_TFIM_offset_strain(t,e,h),[1e-3 2]);
-% xlabel('$T/T_c$'); ylabel('$C_p$');
-% ann01 = annotation('textbox',[0.6 0.75 0.2 0.1],'interpreter','latex',...
-%     'String',{['$e=$ ' sprintf('%.2f',e)] ['$h=$ ' sprintf('%.2f',h)]},...
-%     'LineStyle','-','EdgeColor','k',...
-%     'FitBoxToText','on','LineWidth',1,'BackgroundColor','w','Color','k');% add annotation
+legend(ax1,'show'); legend(ax2,'show')
+xlabel(ax1,'$T/T_{c}(h=0)$'); ylabel(ax1,'Order parameter');
+
+% legend('show')
+% xlabel('$T/T_{c,0}$'); ylabel('Order parameter');
+% xlim([0 1.2]); ylim([-.1 1.1]);
+% title(sprintf('OP vs T in the TFIM w/ $e=%.3f$',e));
 
 %% Export figure
 formatFigure;

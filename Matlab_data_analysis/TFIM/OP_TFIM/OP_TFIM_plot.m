@@ -7,21 +7,30 @@ cd C:\Users\Pierre\Desktop\Postdoc\Software\Matlab\Matlab_data_analysis\TFIM\OP_
 % definition of a longitudinal field)
 % e = 0.01;
 T = linspace(0,3,1000);
+den = repmat(T,1);
 Y = repmat(T,1);
 f = @(h) h/atanh(h);
-figure; hold on;
-for h=.9%[0 0.6 0.9]
+fig1 = figure; ax1 = subplot(1,1,1); hold(ax1,'on');
+fig2 = figure; ax2 = subplot(1,1,1); hold(ax2,'on');
+for h=.0%[0 0.6 0.9]
     counter = 0;% reset counter used to determine which color to use for the plot
+    disp(counter)
     for e = [0, 0.01]
         for j=1:length(T)
-        Y(j) = OP_TFIM(T(j),h,e);
+        r = OP_TFIM(T(j),h,e)/T(j);
+        den(j) = sech(r)^2./T(j);
+        Y(j) = 1./(1 - den(j));
         end
         if counter>0
-            c = get(p,'Color');
-            plot(T,Y,'LineWidth',2,'Color',c,...
+            c1 = get(p1,'Color');
+            plot(ax1,T,den,'LineWidth',2,'Color',c1,...
+                'DisplayName',sprintf('$h=%.2g$, $e=%.2g$',h,e));
+            plot(ax2,T,Y,'LineWidth',2,'Color',c1,...
                 'DisplayName',sprintf('$h=%.2g$, $e=%.2g$',h,e));
         else
-            p = plot(T,Y,'LineStyle',':','LineWidth',2,...
+            p1 = plot(ax1,T,den,'LineStyle',':','LineWidth',2,...
+                'DisplayName',sprintf('$h=%.2g$, $e=%.2g$',h,e));
+            p2 = plot(ax2,T,Y,'LineStyle',':','LineWidth',2,...
                 'DisplayName',sprintf('$h=%.2g$, $e=%.2g$',h,e));
         end
         counter = counter+1;
@@ -29,10 +38,12 @@ for h=.9%[0 0.6 0.9]
 %         line([f(h),f(h)],ylim,'LineStyle','--','LineWidth',1,'Color','k',...
 %         'DisplayName',sprintf('$T_c(h=%.2f)$',h));
 end
-legend('show')
-xlabel('$T/T_{c}(h=0)$'); ylabel('Order parameter');
+l = line(ax1,T,ones(1,length(T)),'Color','k','Linewidth',1);
+legend(ax1,'show'); legend(ax2,'show')
+xlabel(ax1,'$T/T_{c}(h=0)$'); ylabel(ax1,'Denominator');
+xlabel(ax2,'$T/T_{c}(h=0)$'); ylabel(ax2,'Y');
 % xlim([0 1.2]); 
-ylim([-.1 1.1]);
+% ylim([-.1 1.1]);
 title(sprintf('OP vs T in the TFIM'));
 % fplot(@(t)1./CpTFIMdenominator(t,e),[1e-3 2]);
 % xlabel('$T/T_c$'); ylabel('$C_p$ denominator');
