@@ -333,7 +333,8 @@ fprintf(fid, fmt1, hdr2{:});% header 2
 fprintf(fid, fmt3, hdr3{:});% header 3
 fclose(fid);
 % Write matrix
-% dlmwrite(filename,Mmax,'-append','Delimiter','\t')
+% dlmwrite(filename,Mmax,'-append','Delimiter','\t')% Increase precision of
+% exportation to full precision?
 
 %% Prepare tight subplot
 make_it_tight = true;
@@ -446,8 +447,9 @@ Xplot = X(Ysel(:,1),:)/H_c;
 Yplot = Y(Ysel(:,1),:);
 
 %% Write the intensity matrix to a tab delimited file
-dlmwrite('2019-06-28_TmVO4_p6K_ENS_I_vs_field_&_hh0.txt',Iftplot,'Delimiter','\t')
-
+% dlmwrite('2019-06-28_TmVO4_p6K_ENS_I_vs_field_&_hh0.txt',Iftplot,'Delimiter','\t')
+% Xplot and Yplot exported manually on 2019-06-28 by copying from Matlab 
+% variables and pasting into Originlab worksheet
 
 
 
