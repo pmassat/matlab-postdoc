@@ -214,12 +214,12 @@ end
 
 %% Plot averaged data at each field separately
 figure; hold on
-rng = 1:4:length(uh);
+rng = [1 5 7 9 13]
 clr = cell(size(rng));
 eb = cell(size(rng));
 for i=rng
-    fp = fplot(@(t)Cp_TFIM_offset_strain(t/2.14,0,uh(i)/(5.1e3)),[0 4],'LineWidth',2);
-%     fp = fplot(@(t)Cp_TFIM_offset_strain(t/2.125,1.5e-3,uh(i)/(5.1e3)),[0 4],'LineWidth',2);
+    fp = fplot(@(t)Cp_TFIM_offset_strain(t/2.14,uh(i)/(5.1e3),0),[0 3.2],'LineWidth',2);
+%     fp = fplot(@(t)Cp_TFIM_offset_strain(t/2.125,uh(i)/(5.1e3),1.5e-3),[0 4],'LineWidth',2);
 % Fit parameters on data at H=0: Tc=2.125(3), e=1.5(4)e-3
 % Note: the values of amplitude coefficient and Tc extracted from fit 
 % in curve fitting tool using Cp_TFIM (no offset strain) are A=7.35 and Tc=2.142K
@@ -233,13 +233,14 @@ end
 xlabel('Temperature (K)'); ylabel('C$_p$/R');%ylabel('C$_p$ (JK$^{-1}$mol$^{-1}$)');
 % title('Heat capacity of TmVO4 at various fields')
 lgd = legend([eb{:}]); lgd.Title.String = '$H/H_c$';
-% legendCell = cellstr(num2str(uh, '%-d Oe'));
-% legend(legendCell)
+% legendCell = cellstr(num2str(uh, '%-d Oe')); legend(legendCell)
+ax = gca; ax.YMinorTick = 'on';% Add minor ticks on Y axis
+grid on;%
 hold off
 
 %% Export figure 
 % printPNG('2019-05-17_TmVO4-RF-E_Cp_vs_T_4H_+fits_No-strain')
-% printPDF('2019-05-17_TmVO4-RF-E_Cp_vs_T_4H_+fits')
+% printPDF('2019-07-22_TmVO4-RF-E_Cp_vs_T_5H_+fits')
 
 %% Prepare MF fit of Cp vs Temperature at given field
 j=14;

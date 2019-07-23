@@ -107,21 +107,23 @@ for j = 1:lusr% for each value of sweep rate
 end
 %% Plot upsweep and downsweep data with same sweeprate together
 for jj = 3%1:lusr/2% for each absolute value of sweep rate
-    figure
-    plot(Hmce(FilterSR(:,jj)),Tb2(FilterSR(:,jj)),'.','DisplayName',strcat(num2str(usr(jj)),' Oe/s'))
-    hold on
-    plot(Hmce(FilterSR(:,lusr-jj+1)),Tb2(FilterSR(:,lusr-jj+1)),'.','DisplayName',strcat(num2str(usr(lusr-jj+1)),' Oe/s'))
+    figure; hold on
+    plot(Hmce(FilterSR(:,lusr-jj+1)),Tb2(FilterSR(:,lusr-jj+1)),'.','DisplayName',sprintf('+%g Oe/s',usr(lusr-jj+1)));
+	plot(Hmce(FilterSR(:,jj)),Tb2(FilterSR(:,jj)),'.','DisplayName',sprintf('%g Oe/s',usr(jj)));
     hold off
     % plot data for each magnetic field sweep rate separately
     legend('show','Location','best')
-    xlim([0,Hmax])
+    xlim([3200 6800]);% xlim([0,Hmax])
+    ylim([1 1.8]);
     xlabel('Magnetic field (Oe)')
     ylabel('Temperature (K)')
+    grid on
 end
 
 %% Figure exportation
 % xlim([0 10000]); ylim([0.55 0.83]);
 % printPNG('2019-05-20_TmVO4-LS5228-DR-HC180731_MCE_20Oeps_p6K-p7K-p8K');
+printPDF('2019-07-22_TmVO4-LS5228-DR-HC180731_MCE_20Oeps_1p1K-1p7K');
 %% Select full usable dataset
 % See labnotes for tables listing usable data
 useusr = usr(abs(usr)<30); lu2 = length(useusr);
@@ -133,8 +135,8 @@ for k=1%k=1 corresponds to 20Oe/s only
 end
 FullFilterEC = round(excCurrent,1)==0.1 | round(excCurrent,1)==0.4 |...
     round(excCurrent,1)==1.0;% Usable excitation currents are .1 uA, .4 uA and 1.0 uA
-FullFilterT = round(Tb2,1)>=0.6;% Usable temperature range is .6 K and above
-FullFilterH = Hmce>3300 & Hmce<6000;
+FullFilterT = round(Tb2,1)>=1.;% Usable temperature range is .6 K and above
+FullFilterH = Hmce>0;% FullFilterH = Hmce>3300 & Hmce<6000;
 
 FullFilterUp = FullFilterT & FullFilterH & FullFilterEC & FullFilterSRup;
 FullFilterDown = FullFilterT & FullFilterH & FullFilterEC & FullFilterSRdown;
@@ -142,10 +144,11 @@ FullFilterDown = FullFilterT & FullFilterH & FullFilterEC & FullFilterSRdown;
 %% Plot full usable dataset
 % Use this section to plot the MCE traces on top of the T-H dCp/dT colormap
 % from '2017-07_TmVO4-RF-E_Analyze_Cp_under_field.m'
-% figure% comment this line out to combine with the 2D colormap
-pup = plot(Hmce(FullFilterUp)/5500,Tb2(FullFilterUp)/Tc180731,'.g');
+figure% comment this line out to combine with the 2D colormap
+pup = plot(Hmce(FullFilterUp),Tb2(FullFilterUp),'.');
+% Divide by Tc180731 to normalize temperature and by 5500 for magnetic field
 hold on
-pdown = plot(Hmce(FullFilterDown)/5500,Tb2(FullFilterDown)/Tc180731,'.m');
+pdown = plot(Hmce(FullFilterDown),Tb2(FullFilterDown),'.');
 xlabel('$H / H_c(T=0)$'); ylabel('$T / T_D(H=0)$');
 % title('TmVO4-LS5228-DR-HC180731 MCE full usable dataset');
 lgd = legend([pup,pdown],'Upsweep','Downsweep');

@@ -13,13 +13,14 @@ for i=1:length(t)
     x = OP_TFIM(t(i),h,e);
     gamma = sqrt((x+e)^2+h^2);
     gc = (x+e)^3./gamma;
+% 	tr = t(i)/tc;
     r = gamma./t(i);
     D = 1 - sech(r)^2./t(i);
     if t(i)<tc% || e~=0
         % ratio of reduced order_parameter to reduced temperature
 % Note: the order parameter depends on the ratio t(i)/tc, not on t(i)
-        y(i) = r^2.*gc.*sech(r)^2 ./ (D*gc + e.*h^2./gamma);% mean-field heat capacity in the ordered phase
-%         y(i) = r1^2.*sech(r1)^2 ./ (1 - 1./t(i).*sech(r1)^2);% mean-field heat capacity in the ordered phase
+%         y(i) = r^2.*gc.*sech(r)^2 ./ (D*gc + e.*h^2./gamma);% mean-field heat capacity in the ordered phase
+        y(i) = r^2.*sech(r)^2 ./ D;% mean-field heat capacity in the ordered phase
 %         r1 = order_parameter_offset_strain(tr,e)./tr;
 %         % ratio of reduced order_parameter to reduced temperature
 % % Note: the order parameter depends on the ratio t(i)/tc, not on t(i)
@@ -35,7 +36,7 @@ for i=1:length(t)
 %         else
 %         r3 = (order_parameter_offset_strain(t(i),e))./t(i);% ratio of reduced order_parameter to reduced temperature
 %         Cord = r3^2.*sech(r3+e)^2 ./ (1 - 1./t(i).*sech(r3+e)^2);% mean-field heat capacity in the ordered phase
-        y(i) = r^2.*gc.*sech(r)^2 ./ (D*gc + e.*h^2./gamma);% mean-field heat capacity in the ordered phase
+%         y(i) = r^2.*gc.*sech(r)^2 ./ (D*gc + e.*h^2./gamma);% mean-field heat capacity in the ordered phase
         y(i) = r^2.*sech(r)^2;% mean-field heat capacity in the disordered phase            
 %         end
     end
