@@ -1,4 +1,5 @@
 syms Gam beta gam h x
+%% This code is unnecessary since the numerical one works
 % J = 1;
 % Equations are taken from Stinchcombe 1973(III) and adapted so as to have
 % kB*T_c = 1 and Gam/Gam_c = 1;
