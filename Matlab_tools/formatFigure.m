@@ -5,6 +5,7 @@ function formatFigure()
 %     set(h,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos(4)]);
     dim = [6 5];% dimensions, in the units set above
     h.Position(3:4) = dim;% match figure dimensions...
+    h.Position(2) = 1.0;
     h.PaperSize = dim;% ... with paper dimensions...
     InSet = get(gca, 'TightInset');% ... and expand axes to fill figure
 %     set(gca, 'Position', [InSet(1:2), 0.85-InSet(1)-InSet(3), 0.94-InSet(2)-InSet(4)]);% for color maps

@@ -1,5 +1,9 @@
 
-
-f1 = @(x,y) x(y) ;
-f2 = @(y) sin(y) ;
-f1(f2,pi/2)
+figure;
+ax = axes('LineStyleOrder',{'-*',':','--o'});
+hold(ax,'on');
+for i=1:3
+    ax.ColorOrderIndex = i;
+    ax.LineStyleOrderIndex = i;
+    plot(ax,1+10*i:10+10*i,rand(1,10))
+end

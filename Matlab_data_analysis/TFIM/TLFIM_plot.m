@@ -1,19 +1,16 @@
 function TLFIM_plot(x,y,h,e)
 %% Plot
-figure; hold on;
+figure;
+ax = axes('LineStyleOrder',{'-',':','--','-.'});
+hold(ax,'on');
 for jh = 1:length(h)
-    counter = 0;% reset counter used to determine which color to use for the plot
-    disp(counter)
     for je = 1:length(e)
-        if counter>0
-            c1 = get(p1,'Color');
-            plot(x,y(:,jh,je),'LineWidth',2,'Color',c1,...
-                'DisplayName',sprintf('$h=%.2g$, $e=%.2g$',h(jh),e(je)));
-        else
-            p1 = plot(x,y(:,jh,je),'LineStyle',':','LineWidth',2,...
-                'DisplayName',sprintf('$h=%.2g$, $e=%.2g$',h(jh),e(je)));
-        end
-        counter = counter+1;
+        ax.ColorOrderIndex = jh;% Same line color for same value of h
+        ax.LineStyleOrderIndex = je;% Same line style for same value of e
+        plot(x,y(:,jh,je),'LineWidth',2,...
+            'DisplayName',sprintf('%.2g, %.2g',h(jh),e(je)));
     end
 end
-legend('show')
+legend('show');
+lgd = ax.Legend;
+title(lgd, '$h,e$');
