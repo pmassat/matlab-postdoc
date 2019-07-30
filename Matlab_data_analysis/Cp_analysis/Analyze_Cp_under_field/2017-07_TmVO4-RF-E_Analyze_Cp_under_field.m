@@ -180,7 +180,7 @@ d1Cpgm = conv2(Cpgm,d1Gaussian','same');
 
 %% Plot 2D contour of derivative of Cp
 % Use this section to plot the phase diagram to combine with MCE traces
-% from 'AnalyzeMCEinDR_TmVO4-LS5228-DR-HC180731_2018-09-19.m'
+% from 'AnalyzeMCEinDR_TmVO4-LS5228-DR-HC180731.m'
 figure
 n = 300;
 contourf(Hgm./5100,Tgm/Tc,-d1Cpgm,n,'EdgeColor','none');
@@ -190,6 +190,23 @@ xlabel('$H / H_c(T=0)$'); ylabel('$T / T_D(H=0)$');
 zlabel('-dCp/dT (J/K$^2$/mol)');
 % title(sprintf('n = %i',n));
 % h=colorbar('eastoutside');
+
+%% Export d1Cp matrix to to a tab delimited file
+filename = '2019-07-29_TmVO4-RF-E_dCp-dT.txt';
+% Header
+hdr1={'From file "2017-07_TmVO4-RF-E_Analyze_Cp_under_field.m"'};% First line header: quantities names
+fmt1 = repmat('%s\t ', 1, length(hdr1)); fmt1(end:end+1) = '\n';% String formatting for header lines 1 and 2
+fid = fopen(filename, 'wt');
+fprintf(fid, fmt1, hdr1{:});% header 1
+fclose(fid);
+% dlmwrite(filename,-d1Cpgm,'-append','Delimiter','\t')
+
+%% Export X and Y axes values of above matrix
+Hgmr = Hgm(1,:)./5100;
+Tgmr = Tgm(:,1)/Tc;
+% Hgmr and Tgmr exported manually on 2019-07-29 by copying from Matlab 
+% variables and pasting into worksheet of TmVO4_phase_diagram_Cp_MCE.opju
+
 
 %% Plot errorbar plot of Hc(T) from xls file
 % Need to import table from xls file first
