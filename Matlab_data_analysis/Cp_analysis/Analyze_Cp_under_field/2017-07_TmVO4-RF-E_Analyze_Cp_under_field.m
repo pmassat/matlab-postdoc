@@ -209,7 +209,8 @@ Tgmr = Tgm(:,1)/Tc;
 
 
 %% Plot errorbar plot of Hc(T) from xls file
-% Need to import table from xls file first
+% Need to import table from xls file first, e.g.
+% '2019-05-21_TmVO4-LS5228-DR-HC180731_MCE_Hc_vs_T.xlsx'
 % figure;% comment out this line when plotting on top of above colormap
 ebdown = errorbar(hctbl.Hcrdown,hctbl.Tr,hctbl.dTr,hctbl.dTr,...
     hctbl.dHcrdown,hctbl.dHcrdown,'.m','MarkerSize',18,'LineWidth',2);
