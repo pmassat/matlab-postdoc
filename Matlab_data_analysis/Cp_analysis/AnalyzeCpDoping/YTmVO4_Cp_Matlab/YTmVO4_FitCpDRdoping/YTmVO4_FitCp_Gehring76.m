@@ -49,8 +49,8 @@ legend('show','Location','best')
 R = 8.314;
 e = 0.01;
 for i=1
-    [avgData(i).fitmf, avgData(i).ffgof] = fitCpTFIM_offset_strain(avgData(i).T',...
-        avgData(i).Cp'/R,R./avgData(i).CpFullErr,0,Tc(i)+.025);
+    [avgData(i).fitmf, avgData(i).ffgof] = fitCpLFIM(avgData(i).T',...
+        avgData(i).Cp'/R,R./avgData(i).CpFullErr,Tc(i)+.025);
 %     errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.','MarkerSize',18,'DisplayName',['x = ',num2str(dpg(i))])
 %     hold on
 %     fplot(@(t)Cp_TFIM_offset_strain(t/Tc(i),e,0),[0 4*Tc(i)]);

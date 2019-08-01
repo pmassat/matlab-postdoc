@@ -1,4 +1,4 @@
-function [fitresult, gof] = fitCpTFIM_offset_strain(T,Cp,wghts,h,Tfit)
+function [fitresult, gof] = fitCpLFIM(T,Cp,wghts,Tfit)
 %CREATEFIT(T1,CP1,WGHTS1)
 %  Create a fit.
 %
@@ -28,7 +28,7 @@ function [fitresult, gof] = fitCpTFIM_offset_strain(T,Cp,wghts,h,Tfit)
 [xData, yData, weights] = prepareCurveData( T, Cp, wghts );
 
 % Set up fittype and options.
-ft = fittype( sprintf('Cp_TFIM_offset_strain(t/Tc,%d,e)',h), 'independent', 't', 'dependent', 'y' );
+ft = fittype( 'Cp_LFIM(t/Tc,e)', 'independent', 't', 'dependent', 'y' );
 excludedPoints = excludedata( xData, yData, 'Domain', [0 Tfit] );
 opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
 opts.Display = 'Off';
@@ -53,7 +53,7 @@ legend([pdat,pexcl,pfit],'$C_p$ vs $T$','Excluded','MF fit');
 % Label axes
 xlabel T(K); ylabel $C_p$($\mu$J/K); grid on
 ann = annotation('textbox',[0.15 0.82 0.2 0.1],'interpreter','latex',...
-    'String',{[sprintf('$T_c=$ %.2f K',fitresult.Tc) newline sprintf('$e=$ %.0d',fitresult.e)]},...
+    'String',{[sprintf('$T_c=$ %.2f K',fitresult.Tc) newline sprintf('$e=$ %.1d',fitresult.e)]},...
     'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...
     'LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
 ann.FitBoxToText='on';% fit annotation box to text

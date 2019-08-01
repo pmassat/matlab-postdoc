@@ -55,7 +55,7 @@ for i=1:L%for all datasets
     split{i} = split{i}(round(split{i}.H,-1)==0,:);% keep only data at zero field
 end
 
-%% Plot parameters for heat capacity
+%% Parameters for plotting heat capacity
 xlblTemp = 'Temperature (K)';
 ylblCp = 'C$_p$ (J$\cdot$mol$^{-1}\cdot$K$^{-1}$)';
 ttlCpY = 'Heat capacity of Tm$_{1-x}$Y$_x$VO$_4$';
@@ -77,14 +77,15 @@ m = 1e-3*[0.38% mass in g of the sample on which each dataset was measured
 0.59
 0.76
 0.14];
-dpg = 1e-2*[0% Y content for each dataset
-10.6
-15.3%
-18.1%
-21.9%
-22.0%
-24.8%
-31.5];
+dpg = [0% Y content for each dataset, after interpolation of uprobe 
+% results; see 'YTmVO4_phase_diagram.m'
+0.106
+0.164
+0.196
+0.219
+0.237
+0.264
+0.315];
 % split{1}.Cpmol = split{1}.Cp *1e-3;% molar heat capacity, in J/mol/K,
 % starting from a heat capacity in mJ/mol/K as is measured in the shared PPMS
 for i=1:L
@@ -147,7 +148,7 @@ R = 8.314;
 figure
 for i=[1:3,6]
     errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.',...
-        'MarkerSize',18,'LineWidth',1,'DisplayName',['$x = $',num2str(round(dpg(i),2))])
+        'MarkerSize',18,'LineWidth',1,'DisplayName',sprintf('$x=%.2g$',dpg(i)))
     hold on
 end
 xlabel(xlblTemp); ylabel('$C_p/R$');
