@@ -123,8 +123,21 @@ title(sprintf('Derivative of the order parameter vs temperature at $x$=%.2f',1-d
 xlabel('$t=\frac{T_D}{T_D(x=1)}$');
 ylabel('$\frac{d\left<S^{z}\right>}{dt}$');
 
+%% Compute free energy above transition
+i = 2;
+C0 = 0.088;% See comment of equation (7) in Gehring 1976.
+F = @(t) - C0/(4*sqrt(pi)*Tc(1)) .* integral(@(u)exp(-u^2).*...
+    ((sech(d0(i)*u./t).^2./t) + tanh(d0(i)*u./t)./(u*d0(i))),-inf,inf,'ArrayValued',true);
+
+%%
+tb = linspace(3e-3,2,1000);
+S = - diff(F(tb))./diff(tb);
+
+%% 
+Cp =  tb(2:end-1).*diff(S)./diff(tb(2:end));
+
 %% Compute molar heat capacity Cpm
-Cpma =  Cpm_random_strains(d0(i),ta,sz,dsz,x);
+Cpma =  Cpm_random_strains(d0(i),ta,sz,dsz);
 %% Plot Cpm
 figure; hold on
 errorbar(avgData(i).T/(x*Tc(1)),avgData(i).Cp/R,avgData(i).CpFullErr/R,'.','MarkerSize',18,'DisplayName',['x = ',num2str(dpg(i))])
@@ -134,7 +147,7 @@ R = 8.314;
 % plot(ta,Cpma*1.45);
 title([ttlCpY sprintf(' at $x$=%.2f',1-dpg(i))]);
 xlabel('$t=\frac{T_D}{x\cdot T_D(x=1)}$');
-ylabel(ylblCp);
+ylabel('$C_p/R$');
 
 %% arrays for fit
 X = avgData(i).T/Tc(1);
