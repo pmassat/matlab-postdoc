@@ -20,7 +20,7 @@ title(ttlCpY)
 %%
 Tmfmax = [2.1,1.4,0.9,0.2,0.68];% Maximum temperature of mean-field jump for x=0 to x=0.219
 % This is a visual estimate of the temperature below which Cp shows a mean-field jump. It only applies for x<xc.
-Tc = [2.2,1.6,1.11,0.24,0.69];% Transition temperature; try higher value of Tc(2) for fit like Gehring 1976
+Tc = [2.2,1.56,1.11,0.24,0.69];% Transition temperature; try higher value of Tc(2) for fit like Gehring 1976
 Tschmin = [2.3,1.7,1.2,0.25,0.7];% temperature above which the data are essentially Schottky-like
 x0 = [1e-7 0.5];% range of the pseudospin
 Hc = 0.51;% critical field in Tesla, in the absence of demag factor
@@ -56,7 +56,7 @@ for i=1
 %     fplot(@(t)Cp_TFIM_offset_strain(t/Tc(i),e,0),[0 4*Tc(i)]);
 end
 %% Prepare data for curve fitting tool
-i = 2;
+i = 3;
 R = 8.314;
 dataT = avgData(i).T;
 dataCp = avgData(i).Cp/R;
@@ -72,16 +72,16 @@ title("T$_D$ vs spread in strain distribution");
 xlabel('$\Delta_0$/($x$(Tm)$\cdot T_D$($\Delta_0$=0))'); 
 ylabel('$T_D$/($x$(Tm)$\cdot T_D$($\Delta_0$=0))');
 
-%% Compute average gap delta0 from transition temperature
-d0 = ones(size(Tc));
-delta0 = repmat(d0,1);
-for i=2
-    x = 1-dpg(i);
-    tc = Tc(i)/(x*Tc(1));
-    d0(i) = random_strains_energy_scale(tc,0);% Note: only works for i>1 (not for i=1)
-    % do not include x in d0(i) as we want the value of d0 that corresponds to the actual value of Tc(i)
-    delta0(i) = d0(i)*x*Tc(1);% delta0(i) should be of the same OM as Tc(i)
-end
+%% Average gap delta0 from transition temperature
+% Initialize
+% d0 = ones(size(Tc));
+% delta0 = repmat(d0,1);
+%% Compute
+x = 1-dpg(i);
+tc = Tc(i)/(x*Tc(1));
+d0(i) = random_strains_energy_scale(tc,0);% Note: only works for i>1 (not for i=1)
+% do not include x in d0(i) as we want the value of d0 that corresponds to the actual value of Tc(i)
+delta0(i) = d0(i)*x*Tc(1);% delta0(i) should be of the same OM as Tc(i)
 
 %% Compute the pseudospin as a function of temperature
 % See Gehring1976a equation 4
@@ -129,15 +129,14 @@ C0 = 0.088;% See comment of equation (7) in Gehring 1976.
 F = @(t) - C0/(4*sqrt(pi)*Tc(1)) .* integral(@(u)exp(-u^2).*...
     ((sech(d0(i)*u./t).^2./t) + tanh(d0(i)*u./t)./(u*d0(i))),-inf,inf,'ArrayValued',true);
 
-%%
 tb = linspace(3e-3,2,1000);
 S = - diff(F(tb))./diff(tb);
 
-%% 
 Cp =  tb(2:end-1).*diff(S)./diff(tb(2:end));
 
 %% Compute molar heat capacity Cpm
 Cpma =  Cpm_random_strains(d0(i),ta,sz,dsz);
+
 %% Plot Cpm
 figure; hold on
 errorbar(avgData(i).T/(x*Tc(1)),avgData(i).Cp/R,avgData(i).CpFullErr/R,'.','MarkerSize',18,'DisplayName',['x = ',num2str(dpg(i))])
@@ -148,6 +147,15 @@ R = 8.314;
 title([ttlCpY sprintf(' at $x$=%.2f',1-dpg(i))]);
 xlabel('$t=\frac{T_D}{x\cdot T_D(x=1)}$');
 ylabel('$C_p/R$');
+
+%% Export Cpma
+cd 'C:\Users\Pierre\Desktop\Postdoc\Software\Origin\Origin_projects\YTmVO4\YTmVO4_Cp_analysis';
+%%
+expstr = sprintf('2019-08-02_Tm_{1-x}Y_{x}VO4_Cp_fit_Gehring1976_x=0p%g.txt',dpg(i)*1e3);
+fid = fopen(expstr, 'wt');
+fprintf(fid, '%s\n', ['Exported from AnaLzeCpDRdoping_2018-10-10_YTmVO4_VTmAsO4.mlx on ',date]);  % header
+fclose(fid);
+dlmwrite(expstr,cat(2,ta',Cpma'),'-append','delimiter','\t')
 
 %% arrays for fit
 X = avgData(i).T/Tc(1);
