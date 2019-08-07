@@ -1,3 +1,13 @@
+%% Edit Matlab path manually
+% The list of directories that Matlab uses is defined in the file
+% 'pathdef.m'
+
+%% Log Command Window text to file
+% diary
+% diary filename
+% diary off
+% diary on
+
 %% Batch rename files in current folder
 % Get all files with relevant name pattern in current folder
 filesrn = dir('HH*');
