@@ -1,24 +1,19 @@
+% Code was derived from 'YTmVO4_primary_analysis.m' on 2019-08-06
+
 %% Analyze heat capacity from DR
 % This routine is intended at anaLzing Cp data acquired with our DR used in 
 % the Dynacool PPMS of the Lee lab
-cd 'C:\Users\Pierre\Desktop\Postdoc\YTmVO4\YTmVO4_HeatCapacity\YTmVO4_Cp_analysis'
+cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2018-08_TmVO4-LS5228\TmVO4_TFIM_article1_fig1'
+
 %% To do: 
 % * Error bars:
 % *     For dT data, use standard deviation
-% *     For dCp values, add the SampHCErrmJmoleK field 
+
 %% Import data YTmVO4
 Data = ImportCpDR('2018-07-31_TmVO4-LS5228-DR-HC180731.dat');
 % Data0 = importCpSharedPPMS_('20180322_TmVO4-LS5228-MP3-Plt-HC1803_Cp.dat');
-Data10 = ImportCpDR('DRHC_10YTmVO4-LS5251-DR-HC180511.dat');
-Data15 = ImportCpDR('DRHC_15Y-TmVO4-LS5343-DR-HC180721.dat');
-Data18 = ImportCpDR('2018-07-24_DR-HC_18Y-TmVO4-LS5348-DR-HC180724.dat');
-Data20 = ImportCpDR('DRHC_20YTmVO4-LS5252-DR-HC180519.dat');
-Data22 = ImportCpDR('2018-07-23_DR-HC_22Y-TmVO4-LS5344-DR-HC180723.dat');
-Data24 = ImportCpDR('2018-07-25_DR-HC_24Y-TmVO4-LS5349-DR-HC180725.dat');
-Data30 = ImportCpDR('DRHC_30YTmVO4-LS5335-DR-HC180526.dat');
 %% Concatenate them in a cell array
-%%
-split = {Data; Data10; Data15; Data18; Data20; Data22; Data24; Data30};
+split = {Data};
 L = length(split);
 
 %% Rename variables
@@ -95,16 +90,6 @@ for i=1:L
     % Cpmol is calculated per mole of Tm3+ ions, hence the (1-dpg) factor in the denominator
 end
 
-%% Plot the dataset for YTmVO4
-% plotCpDoping(split,dpg,1,L,ttlCpY)
-%
-% 
-% 
-% 
-% 
-% 
-% 
-% 
 %% Sort each dataset by increasing value of temperature
 srtd = repmat(split,1);
 for i=1:L
@@ -114,54 +99,81 @@ for i=1:L
 end
 srtd = srtd';
 
-%% Test the temperature scattering between data points supposedL taken at the "same" temperature
-% 4mK is the empirical maximal dispersion of data points taken consecutiveL 
-% at a given temperature. In order to check this, one can run the following code 
-% on the temperature variable T:
-
-% nrep = 3;% number of repetitions of the measurement at each temperature
-% % We want to compute the temperature separation between two data points
-% % that are NOT repetitions of the same measurement
-% Tsep = 4e-3;% value of temperature separation to be tested, in Kelvin
-% % Data points taken within an interval of Tsep are considered to be measured at the same temperature setpoint
-% for i = 1
-%     for k = 1:length(srtd{i}.T)-nrep
-%         if abs(srtd{i}.T(k+nrep)-srtd{i}.T(k))<Tsep
-% % if the values of temperature for two data points
-% % measured at two different temperature setpoints are separated by less than Tsep
-%             srtd{i}.T(k);% display the value of temperature for the first data point
-%         end
-%     end
-% end
-%% 
-% If this piece of code outputs one or more values AND IF these values obviousL 
-% correspond to measurements that were supposed to be measured at different temperature 
-% setpoints, THEN reduce Tsep in order to reach a value for which the code does 
-% not output anything.
 %% Compute average of data points taken
 for i = 1:L
     avgData(i) = averageCp(6e-3,srtd{i}.T,srtd{i}.Cpmol,srtd{i}.CpmolErr);
 end
 
+%% Compute splitting of GS doublet vs temperature
+tvec = linspace(1e-3,4,2000);
+sz = zeros(size(tvec));
+for j=1:length(tvec)
+sz(j) = 2.95/2*OP_TFIM(tvec(j)/Tc,0,e);%2.95 cm-1 is the total splitting of the GS doublet, see e.g. Melcher1976, fig.2(a)
+end
+
+%% Prepare tight subplot
+subplot = @(m,n,p) subtightplot (m, n, p, [0.0 0.0], [0.1 0.02], [0.13 0.02]);
+figure; formatFigure([6 7]);
+ax = gca; ax.delete
+
+%% Plot splitting vs T
+ax1 = subplot(5,1,[1:2]); 
+plot(tvec,sz)
+hold on
+plot(tvec,-sz,'Color',lines(1))
+% ylim([-2 3]);
+% ylabel('$E$ (cm$^{-1}$)')
+% arr = annotation('doublearrow',[.2 .2],[0.76 .925]);% add annotation
+% anngap = annotation('textbox',[0.91 0.79 0.2 0.1],'interpreter','latex',...
+%     'String',{'$E_{g}$'}, 'LineStyle','-','EdgeColor','none',...
+%     'BackgroundColor','none','Color','k');% add annotation
+
+%% Prepare plot of theoretical curve 
+Tc = 2.193;%  (2.192, 2.194) value of transition temperature obtained from fit using Curve Fitting Tool
+e =  0.000643;%  (0.000583, 0.000703) value of longitudinal field obtained from fit using Curve Fitting Tool
+Cptheo = Cp_LFIM(tvec/Tc,e);
+
 %% Plot averaged data
 R = 8.314;
-figure
-for i=1%[1:3,6]
-    errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.',...
-        'MarkerSize',18,'LineWidth',1,'DisplayName',sprintf('$x=%.2g$',dpg(i)))
-    hold on
-end
+% figure; 
+ax2 = subplot(5,1,[3:5]); 
+fp = plot(tvec,Cptheo,'-r');
+hold on
+errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.b',...
+    'MarkerSize',18,'LineWidth',1)
 xlabel(xlblTemp); ylabel('$C_p/R$');
+ylim([0 1.55])
+% annttl = annotation('textbox',[0.2 0.75 0.1 0.1],'interpreter','latex',...
+%     'String',{'TmVO$_{4}$'}, 'LineStyle','-','EdgeColor','none',...
+%     'BackgroundColor','none','Color','k');% add annotation
+% annttl.FontSize = ax.XAxis.Label.FontSize;
+grid on
 % title(ttlCpY);
-lgd = legend('show'); lgd.Title.String = {'Tm$_{1-x}$Y$_x$VO$_4$'};
+% lgd = legend('show');
+
+%% Figure formatting when combining plots
+ax1.YLabel.Position(1) = ax2.YLabel.Position(1);
+anngap.FontSize = ax1.XAxis.Label.FontSize;
+ax1.XTickLabel={};
+ax1.YTick = [];
+ax2.XLabel.Position(2) = -.15;
+
+%% Prepare fit of Cp vs Temperature 
+% Use these variables in Curve fitting tool
+fitT = avgData(i).T;
+fitCp = avgData(i).Cp/R;
+fitCpErr = avgData(i).CpFullErr/R;
+fitwghts = 1./fitCpErr;
+
+%%
+maxTfit = 2.23;
+[fitresult, gof] = fitCpLFIM(fitT,fitCp,fitwghts,maxTfit);
 
 %% Print figure to PNG file
+% formatFigure
 % printPNG('2019-05-28_YTmVO4_Cp_vs_T_0-p11-p15-p22')
+% printSVG('2019-08-06_TmVO4-LS5228-DR-HC180731_Cp+fit')
 
-%% Display name of structure containing average data
-%%
-% disp("Structure containing averaged data is called avgData")
-% 
 %% Export averaged Cp data to text file
 % savepath = 'C:\Users\Pierre\Desktop\Postdoc\YTmVO4\YTmVO4_HeatCapacity\YTmVO4_Cp_anaLsis\2018-10-17_YTmVO4_averaged_Cp\';
 % for i=L-3:L

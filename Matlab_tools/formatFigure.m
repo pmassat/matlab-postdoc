@@ -1,11 +1,13 @@
-function formatFigure()
+function formatFigure(varargin)
     h = gcf;% get current figure
     set(h,'Units','Inches');
 %     pos = get(h,'Position');
 %     set(h,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos(4)]);
-    dim = [6 5];% dimensions, in the units set above
+    if nargin>0; dim = varargin{1};
+    else; dim = [6 5];% dimensions, in the units set above
+    end
     h.Position(3:4) = dim;% match figure dimensions...
-    h.Position(2) = 1.0;
+    h.Position(2) = -1;
     h.PaperSize = dim;% ... with paper dimensions...
     InSet = get(gca, 'TightInset');% ... and expand axes to fill figure
 %     set(gca, 'Position', [InSet(1:2), 0.85-InSet(1)-InSet(3), 0.94-InSet(2)-InSet(4)]);% for color maps
