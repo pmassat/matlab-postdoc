@@ -88,8 +88,8 @@ f1(f2,pi/2)
 %% Differentiate a matrix with respect to n-th dimension
 % Matlab doc: https://www.mathworks.com/help/matlab/ref/diff.html
 % Y = diff(X,n,dim) is the nth difference calculated along the dimension specified by dim. The dim input is a positive integer scalar.
-X = [1 3 5;7 11 13;17 19 23]
-Y = diff(X,1,1)
+X = [1 3 5;7 11 13;17 19 23];
+Y = diff(X,1,1);
 
 %% Default line colors array is called lines
 % Calling lines(n) returns a n by 3 array of RGB colors
@@ -99,6 +99,11 @@ C = lines(3);% Returns a 3x3 array
 % Note: the default line style order is {'-'} i.e. only one line style
 % See Matlab doc: https://www.mathworks.com/help/matlab/ref/matlab.graphics.axis.axes-properties.html#budumk7_sep_shared-LineStyleOrder
 ax = axes('LineStyleOrder',{'-',':','--','-.'});%
+
+%% Find light object
+l = findobj(gcf,'Type','Light');
+
+
 
 
 

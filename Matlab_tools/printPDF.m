@@ -13,7 +13,7 @@ function printPDF(filestr)
 % % one needs to adjust the values of elements 3 and 4 manually
 %     set(gca, 'Position', [InSet(1:2), 0.99-InSet(1)-InSet(3), 1-InSet(2)-InSet(4)]);% for all other plots
 % %     print(h,'-fillpage',filestr,'-dpdf','-r0');
-% %     set(h,'Color','none');% set figure background color to 'none'
+    set(h,'Color','none');% set figure background color to 'none'
     h.Color = 'none';
     print(h,filestr,'-dpdf','-r0');
 %       saveas(h,filestr,'pdf');

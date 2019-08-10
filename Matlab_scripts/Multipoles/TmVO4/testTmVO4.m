@@ -1,3 +1,7 @@
+%% Change working directory
+cd 'C:\Users\Pierre\Desktop\Postdoc\Software\Matlab\Matlab_scripts\Multipoles'
+
+%% Compute and plot multipoles
 clear all
 
 N=150;
@@ -13,10 +17,11 @@ pph=repmat(phi',1,length(theta));
     ff=1;
     
     % %      6   5    4 3   2   1   0    1   2   3   4   5   6 
-    vec1=[    0   0.89 0 0   0 -0.42 0  0    0   0.19 0   0   0 ];
+    vec1=[   0   0.89 0 0   0 -0.42 0    0   0  0.19 0   0   0 ];
     vec2=vec1(end:-1:1);
     
-    vec=vec1+exp(pi*1i*-0.5)*vec2;
+%     vec=vec1+exp(pi*1i*-0.5)*vec2;% For wavefunction in the orthorhombic phase
+    vec = vec1;% For wavefunction in the tetragonal phase
     vec=vec/norm(vec);
     label='Tm3+';
     
@@ -52,8 +57,8 @@ pph=repmat(phi',1,length(theta));
     Ze6=ff*abs(rhoe6).*cos(pph);
     
     
- subplot(2,3,1); 
-    surf(Xet,Yet,Zet,real(rhoeTot));    
+    ax1 = subplot(2,3,1); 
+    s1 = surf(Xet,Yet,Zet,real(rhoeTot));    
     axis equal
     shading flat
     xlabel('X')
@@ -85,8 +90,8 @@ pph=repmat(phi',1,length(theta));
     colorbar
     set(gca,'fontsize',14);
     
-         subplot(2,3,3); 
-    surf(Xe2,Ye2,Ze2,real(rhoe2));    
+    ax3 = subplot(2,3,3); 
+    s3 = surf(Xe2,Ye2,Ze2,real(rhoe2));    
     axis equal
     shading flat
     xlabel('X')
@@ -150,9 +155,24 @@ pph=repmat(phi',1,length(theta));
     colorbar
     set(gca,'fontsize',14);
     
-    
-    
- %%
+
+%% Duplicate a given subplot into an individual figure
+fig = figure;
+% axf = subplot(1,1,1);
+axf = copyobj(ax1,fig); %copy axes to figure
+sf = copyobj(s1,ax1); %copy line to axes
+% copyobj(s1,fig); %copy line to axes
+% set(hNew, 'pos', [0.23162 0.2233 0.72058 0.63107])
+format3DFigure
+axf.Visible = 'off';
+% hNew.SortMethod='ChildOrder';
+% l = findobj(gcf,'Type','Light'); l.delete;
+% cb = colorbar; cb.Position(1) = .75; 
+% cb.Ticks = [-.5 0 .5];
+% axf.XLabel.String=''; axf.YLabel.String=''; axf.ZLabel.String='';
+% axf.XTick=[]; axf.YTick=[]; axf.ZTick=[];
+
+%% Change surf colors
 
 NN=60;
 fin=[0,1,0];
@@ -167,6 +187,9 @@ col=[R; G; B];
 
 colormap(col')
 
+%% Export figure
+% printPDF('2019-08-09_TmVO4_multipoles')
+export_fig '2019-08-09_TmVO4_full_GS_wavefunction' -transparent
 
     
 
