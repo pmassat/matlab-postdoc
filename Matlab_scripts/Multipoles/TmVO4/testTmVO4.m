@@ -1,5 +1,5 @@
 %% Change working directory
-cd 'C:\Users\Pierre\Desktop\Postdoc\Software\Matlab\Matlab_scripts\Multipoles'
+% cd 'C:\Users\Pierre\Desktop\Postdoc\Software\Matlab\Matlab_scripts\Multipoles'
 
 %% Compute and plot multipoles
 clear all
@@ -20,8 +20,9 @@ pph=repmat(phi',1,length(theta));
     vec1=[   0   0.89 0 0   0 -0.42 0    0   0  0.19 0   0   0 ];
     vec2=vec1(end:-1:1);
     
-%     vec=vec1+exp(pi*1i*-0.5)*vec2;% For wavefunction in the orthorhombic phase
-    vec = vec1;% For wavefunction in the tetragonal phase
+    vec=vec1+exp(pi*1i*0.5)*vec2;% For wavefunction in the orthorhombic phase
+%     Change exp(pi*1i*0.5) to exp(pi*1i*-0.5) to toggle between two possible wavefunctions
+%     vec = vec1;% For wavefunction in the tetragonal phase
     vec=vec/norm(vec);
     label='Tm3+';
     
@@ -103,7 +104,7 @@ pph=repmat(phi',1,length(theta));
     camlight
     lighting phong
   %  axis off
-    colorbar
+    cb3 = colorbar;
     set(gca,'fontsize',14);
     
          subplot(2,3,4); 
@@ -122,7 +123,7 @@ pph=repmat(phi',1,length(theta));
     colorbar
     set(gca,'fontsize',14);
     
-         subplot(2,3,5); 
+    subplot(2,3,5); 
     surf(Xe6,Ye6,Ze6,real(rhoe6));    
     axis equal
     shading flat
@@ -139,7 +140,7 @@ pph=repmat(phi',1,length(theta));
     set(gca,'fontsize',14);
     
     
-             subplot(2,3,6); 
+    subplot(2,3,6); 
     surf(Xeb,Yeb,Zeb,real(rhoeb));    
     axis equal
     shading flat
@@ -158,19 +159,21 @@ pph=repmat(phi',1,length(theta));
 
 %% Duplicate a given subplot into an individual figure
 fig = figure;
+ax = ax3;
 % axf = subplot(1,1,1);
-axf = copyobj(ax1,fig); %copy axes to figure
-sf = copyobj(s1,ax1); %copy line to axes
-% copyobj(s1,fig); %copy line to axes
+% axf = copyobj(ax,fig); %copy axes to figure
+copies = copyobj([cb3,ax3],fig); cb = copies(1); axf = copies(2);
+sf = axf.Children(3);% allow control of plot, e.g. sf.Visible = 'off';
 % set(hNew, 'pos', [0.23162 0.2233 0.72058 0.63107])
 format3DFigure
-axf.Visible = 'off';
+cb.Visible = 'off';
 % hNew.SortMethod='ChildOrder';
 % l = findobj(gcf,'Type','Light'); l.delete;
-% cb = colorbar; cb.Position(1) = .75; 
-% cb.Ticks = [-.5 0 .5];
-% axf.XLabel.String=''; axf.YLabel.String=''; axf.ZLabel.String='';
-% axf.XTick=[]; axf.YTick=[]; axf.ZTick=[];
+% cb = colorbar; 
+% cb.Ticks = [-.4 0 .4]; cb.Location = 'south';% Orient colorbar horizontally by locating it at the bottom of the plot
+axf.XLabel.String=''; axf.YLabel.String=''; axf.ZLabel.String='';
+axf.XTick=[]; axf.YTick=[]; axf.ZTick=[];
+view(15,30);
 
 %% Change surf colors
 
@@ -189,7 +192,7 @@ colormap(col')
 
 %% Export figure
 % printPDF('2019-08-09_TmVO4_multipoles')
-export_fig '2019-08-09_TmVO4_full_GS_wavefunction' -transparent
+export_fig '2019-08-19_TmVO4_quadrupole_ortho2' -transparent
 
     
 
