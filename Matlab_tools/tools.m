@@ -8,6 +8,10 @@
 % diary off
 % diary on
 
+%% Generate array of...
+e = 1.2e-3*(1:2:9);%... arithmetic sequence
+e = 1.5e-3*2.^(0:4);%... geometric sequence
+
 %% Batch rename files in current folder
 % Get all files with relevant name pattern in current folder
 filesrn = dir('HH*');

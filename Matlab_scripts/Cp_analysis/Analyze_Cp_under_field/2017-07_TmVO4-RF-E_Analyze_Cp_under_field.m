@@ -3,11 +3,13 @@ sample = 'TmVO4-RF-E';
 filename = 'TmVO4_RF-E_2017-07-14.dat';
 cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2017-07_TmVO4_Cp_MCE\2017-07-20_Cp\2017-07-20_TmVO4_Cp_analysis'
 DATA=ImportTmVO4Cp(filename);% Use this data to plot color map of phase diagram
+
 %% Sample properties
 m = 0.25e-3;% mass of sample, in g
 M = 283.87;% molar mass of TmVO4, in g/mol
 R = 8.314;% gas constant, in J/K/mol
-Tc = 2.14;% Value of transition temperature in this sample
+Tc = 2.126;% Value of transition temperature in this sample
+
 %%
 Hc0 = 0.51;% value in Tesla units of the critical field at zero temperature
 % in the absence of demagnetizing factor
@@ -44,12 +46,14 @@ s=0.05;
 d1Gaussian = -exp(-x.^2/(2*s^2)).*x./sqrt(s^6*2*pi);
 d2Gaussian = exp(-x.^2/(2*s^2)).*(x.^2 - s^2)/sqrt(s^10*2*pi);
 d1Cp = conv2(Cp,d1Gaussian','same');
+
 %% Plot 3D scatter of derivative of Cp
 figure
 scatter3(H,T,-d1Cp,'.')
 xlim([0 hmax]);ylim([0 tmax]);
 xlabel('Field (Oe)');ylabel('Temperature (K)');
 zlabel('-dCp/dT (J/K/mol)')
+
 %% Fit a 3D surface to the data
 % [Hg,Tg] = meshgrid(unique(round(H,1)),unique(round(T,2)));% for use with griddata
 [Hg,Tg] = meshgrid(0:hstep:hmax,tmin:tstep:tmax);% for use with gridfit
@@ -188,8 +192,10 @@ hold on;
 fplt = fplot(@(h)h/atanh(h),[0 1.1],'Color','k','LineWidth',1);
 xlabel('$H / H_c(T=0)$'); ylabel('$T / T_D(H=0)$');
 zlabel('-dCp/dT (J/K$^2$/mol)');
+ylim([0.17 1.35]);
 % title(sprintf('n = %i',n));
-% h=colorbar('eastoutside');
+cb=colorbar('north'); cb.Ticks = 0:1000:2000;%make a horizontal colorbar at the top of the plot
+cb.Label.String = '$-dC_p/dT$ (J/K$^2$/mol)'; cb.Label.Interpreter = 'latex'; cb.TickLabelInterpreter = 'latex';
 
 %% Export d1Cp matrix to to a tab delimited file
 filename = '2019-07-29_TmVO4-RF-E_dCp-dT.txt';
@@ -224,32 +230,51 @@ legend([ebup,ebdown],'$H_c^{\mathrm{min}}$','$H_c^{\mathrm{max}}$','Location','n
 % From this, we can see that the experimental value of Hc is ~0.72T 
 % and hence correct for demag, knowing the value of critical field Hc0 (see beginning of code)
 M = ones(1,length(uh));
-Tc = ones(1,length(uh));
+Tcd1 = ones(1,length(uh));
 for i=1:length(uh)
     [M(i),I] = min(avgData(i).d1Cp);
-    Tc(i) = avgData(i).T(I);
+    Tcd1(i) = avgData(i).T(I);
 end
+
+%% Prepare MF fit of Cp vs Temperature at given field
+j=1;
+Tfit = avgData(j).T;
+Cpfit = avgData(j).Cp;
+CpfitErr = avgData(j).CpFullErr;
+wghts = 1./CpfitErr;
+Tmaxfit = 2.15;
+R = 8.314;
+
+%% Fit and plot
+[fitresult, gof] = fitCpmfvsTemp(Tfit,Cpfit,wghts,Tmaxfit);
+
+%% Fit Cp data at H=0 and extract value of longitudinal strain
+[fitresult, gof] = fitCpLFIM(Tfit,Cpfit/R,wghts*R,Tmaxfit)
+% Results for Tmaxfit = 2.142; Tc = 2.128  (2.124, 2.132); e = 0.001947  (0.00129, 0.002604);
+% Results for Tmaxfit = 2.15;% Tc = 2.126  (2.122, 2.129);% e = 0.001474 (0.001085, 0.001862);
 
 %% Plot averaged data at each field separately
 figure; hold on
-rng = [1 5 7 9 13]
-clr = cell(size(rng));
+rng = [1 5 7 9 13];
+clr = lines(length(rng));
 eb = cell(size(rng));
-for i=rng
-    fp = fplot(@(t)Cp_TFIM_offset_strain(t/2.14,uh(i)/(5.1e3),0),[0 3.2],'LineWidth',2);
+for i=1:length(rng)
+    fp = plot(Ttlf(2:end-1)*Tc,Cptlf(:,i));% requires computing Cptlf in 'F_S_Cp_TLFIM_compute.m'
+%     fp = fplot(@(t)Cp_TFIM_offset_strain(t/2.14,uh(i)/(5.1e3),0),[0 3.2],'LineWidth',2);
 %     fp = fplot(@(t)Cp_TFIM_offset_strain(t/2.125,uh(i)/(5.1e3),1.5e-3),[0 4],'LineWidth',2);
 % Fit parameters on data at H=0: Tc=2.125(3), e=1.5(4)e-3
 % Note: the values of amplitude coefficient and Tc extracted from fit 
 % in curve fitting tool using Cp_TFIM (no offset strain) are A=7.35 and Tc=2.142K
-    clr{rng==i} = get(fp,'Color');
+%     clr{rng==i} = get(fp,'Color');
 end
 for i=rng
     eb{rng==i} = errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,...
         '.','MarkerSize',18,'DisplayName',num2str(uh(i)/(Hc0*1e4),'%.2f'),...
-        'Color',clr{rng==i},'LineWidth',2);
+        'Color',clr(rng==i,:),'LineWidth',2);
 end
 xlabel('Temperature (K)'); ylabel('C$_p$/R');%ylabel('C$_p$ (JK$^{-1}$mol$^{-1}$)');
 % title('Heat capacity of TmVO4 at various fields')
+title([sprintf('h=H/Hc*%.3g, e=',factor) mat2str(e,2)])
 lgd = legend([eb{:}]); lgd.Title.String = '$H/H_c$';
 % legendCell = cellstr(num2str(uh, '%-d Oe')); legend(legendCell)
 ax = gca; ax.YMinorTick = 'on';% Add minor ticks on Y axis
@@ -258,16 +283,7 @@ hold off
 
 %% Export figure 
 % printPNG('2019-05-17_TmVO4-RF-E_Cp_vs_T_4H_+fits_No-strain')
-% printPDF('2019-07-22_TmVO4-RF-E_Cp_vs_T_5H_+fits')
-
-%% Prepare MF fit of Cp vs Temperature at given field
-j=14;
-Tfit = avgData(j).T;
-Cpfit = avgData(j).Cp;
-CpfitErr = avgData(j).CpFullErr;
-wghts = 1./CpfitErr;
-%% Fit and plot
-[fitresult, gof] = fitCpmfvsTemp(Tfit,Cpfit,wghts,2.142);
+% printPDF('2019-08-21_TmVO4-RF-E_Cp_vs_T_5H_theory_e-propto-h-cube')
 
 %% Prepare MF fit of Cp vs Temperature under field
 index = 15;
