@@ -27,7 +27,8 @@ for k=1:length(t)
         (sz(k)/2 + u*d0).*(dsz(k)-Er(u))./t(k)./cosh(Er(u)).^2);
 
     Cp(k) = 1/sqrt(pi)*integral(@(u)exp(-(u-da).^2).*Cpintegrand(u),-Inf,Inf,'ArrayValued',true);
-    % When Cp is divided by x, it compares data *per Tm ion*
+% When x is *NOT* at the numerator of Cp (i.e. Cp is divided by x), 
+% it is the heat capacity data *per Tm ion*; otherwise it is the raw Cp
     end
 %     if t(k)>=tc-dt
 %         Cp(k) = Cp(k) + fnrmtemp_sym(da,d0,t(k));

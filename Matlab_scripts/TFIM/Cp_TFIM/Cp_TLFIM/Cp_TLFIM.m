@@ -1,12 +1,10 @@
 function y = Cp_TLFIM(t,S)
 % t is the reduced temperature T/Tc
-% S = zeros(size(t));
-% for i=1:length(t)
-%     S = Entropy_TLFIM(T(i),h,e);
-% end
 T = t';% transpose temperature array into column vector
 dT = diff(T);
 diff1s = diff(S,1,1);% first order difference between rows of S
+
+% Note: this subsection would work even if p=1
 % [~,n,p] = size(S);
 % y = zeros(size(diff1s));
 % for jh = 1:n

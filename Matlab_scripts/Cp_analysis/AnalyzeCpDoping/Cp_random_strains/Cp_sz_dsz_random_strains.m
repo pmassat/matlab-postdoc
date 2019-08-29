@@ -25,7 +25,7 @@ for k=1:length(t)
     Cpintegrand = @(u) -(dsz(k)./2.*tanh(Er(u))+...
         (sz(k)/2 + u*d0).*(dsz(k)-Er(u))./t(k)./cosh(Er(u)).^2);
 
-    Cp(k) = 1/sqrt(pi)*integral(@(u)exp(-(u+da).^2).*Cpintegrand(u),-Inf,Inf,'ArrayValued',true);
+    Cp(k) = 1/sqrt(pi)*integral(@(u)exp(-(u-da).^2).*Cpintegrand(u),-Inf,Inf,'ArrayValued',true);
     % When Cp is divided by x, it compares data *per Tm ion*
 end
 

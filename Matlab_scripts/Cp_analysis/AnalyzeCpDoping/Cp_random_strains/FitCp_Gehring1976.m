@@ -1,5 +1,7 @@
 %% Import data
-% from 'C:\Users\Pierre\Desktop\Postdoc\Bibliographic_resources\Articles_CJTE\RVO4\TmVO4\TmVO4_heat_capacity\Gehring1976a_parts\Gehring1976a_fig2a.txt';
+cd 'C:\Users\Pierre\Desktop\Postdoc\Bibliographic_resources\Articles_CJTE\RVO4\TmVO4\TmVO4_heat_capacity\Gehring1976a_parts\';
+% Import data from 'Gehring1976a_fig2a.txt'
+%%
 data = Gehring1976afig2a;
 x = 0.9;
 Tc0 = 2.15;
@@ -40,13 +42,13 @@ ylabel('$\frac{\left<S^{z}\right>}{\left<S^{z}\right>_{x=1,T=0}}$');
 xlim([0 1]); ylim([0 1]);
 
 %% Arrays with size that allow for computation of dsz 
-sz = sz1((ta1<=tcpaper-1e-3));
+szc = sz1((ta1<=tcpaper-1e-3));
 dsz = repmat(ta_paper,1);
 
 %% Compute dsz 
 for k=1:length(dsz)
     try
-    dsz(k) = order_parameter_derivative_random_strains(d0paper,ta_paper(k),sz(k));
+    dsz(k) = order_parameter_derivative_random_strains(d0paper,ta_paper(k),szc(k));
     catch
         disp(k)
     end
@@ -68,13 +70,13 @@ Cpm_onset = Cp_sz_dsz_random_strains(d0_onset,ta_onset,x);
 %%
 Cpm_test = Cp_sz_dsz_random_strains(d0_test,ta_test,x);
 %%
-e = 1e-3;
+e3 = 1e-3;
 tafull = linspace(3e-3,2,1000);
 % A = 2.5;% amplitude of the Schottky distribution
-Cpma2 = Cp_full_random_strains(d0paper,e,tafull);
+Cpma2 = Cp_full_random_strains(d0paper,e3,tafull);
 %%
-e3 = 1e-2;
-Cpma3 = Cp_full_random_strains(d0paper,e3,tafull);
+e2 = 1e-2;
+Cpma3 = Cp_full_random_strains(d0paper,e2,tafull);
 
 %% Plot Cpm
 Tplot = tafull*x*Tc0;
@@ -96,7 +98,27 @@ xlim([0 3]); ylim([0 1.4]);
 dataT = data.T;
 dataCp = data.Cp;
 
-%% Compute Cp from magnetic dipole interactions
+%% Compute correction to Cp(T>Tc) from magnetic dipole interactions
+% Need to multiply final result by C_0/Tc
+C_0 = 0.088;% 1/T^2 coefficient, see paper
+d0 = 10.^-(1:3);
+ea = 1e-3;
+tacp = tafull(2:end-1);
+szc = zeros(size(tacp));
+for j=1:length(tacp)
+szc(j) = OP_TFIM(tacp(j),0,ea);
+end
+deltaCp = C_0/Tc0*Cp_magDipRandFields(tafull,d0);
+
+%% Plot deltaCp
+figure; hold on
+for k=1:length(d0)
+% plot(tacp',szc','DisplayName',sprintf('d0=%.2g',d0(k)));
+plot(tacp',(1-szc').*deltaCp(:,k),'DisplayName',sprintf('d0=%.2g',d0(k)));
+end
+legend('show');
+
+%% Failed functional computation of correction to Cp(T>Tc) from magnetic dipole interactions
 % Gehring et al. 1976, equation 7
 syms t
 M = 1/(t*cosh(1/t)^2)+tanh(1/t);
@@ -114,7 +136,7 @@ g2 = @(t,u) - 6*d0paper*(u*d0paper)^4/(t^5*cosh(u*d0paper/t)^4) -...
 % it into 4 distinct terms, then replace all occurrences of 't' by
 % t/(u*d0), then dividing the whole expression by u as the full
 % integrand of equantion 7 of Gerhing et al 1976 is 1/u*M
-C_0 = 0.088;% 1/T^2 coefficient, see paper
+
 %%
 Cpmd = @(t) t*x/(4*sqrt(pi))*C_0/Tc0*integral(@(u)exp(-u.^2).*g2(t,u),-Inf,Inf,'ArrayValued',true);
 

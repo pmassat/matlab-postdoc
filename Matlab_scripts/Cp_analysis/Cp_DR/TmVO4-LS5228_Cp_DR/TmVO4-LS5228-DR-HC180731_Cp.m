@@ -104,6 +104,10 @@ for i = 1:L
     avgData(i) = averageCp(6e-3,srtd{i}.T,srtd{i}.Cpmol,srtd{i}.CpmolErr);
 end
 
+%% Prepare plot of theoretical curve 
+Tc = 2.193;%  (2.192, 2.194) value of transition temperature obtained from fit using Curve Fitting Tool
+e =  0.000643;%  (0.000583, 0.000703) value of longitudinal field obtained from fit using Curve Fitting Tool
+
 %% Compute splitting of GS doublet vs temperature
 tvec = linspace(1e-3,4,2000);
 sz = zeros(size(tvec));
@@ -128,17 +132,22 @@ plot(tvec,-sz,'Color',lines(1))
 %     'String',{'$E_{g}$'}, 'LineStyle','-','EdgeColor','none',...
 %     'BackgroundColor','none','Color','k');% add annotation
 
-%% Prepare plot of theoretical curve 
-Tc = 2.193;%  (2.192, 2.194) value of transition temperature obtained from fit using Curve Fitting Tool
-e =  0.000643;%  (0.000583, 0.000703) value of longitudinal field obtained from fit using Curve Fitting Tool
+%% Compute theoretical heat capacity in LFIM
 Cptheo = Cp_LFIM(tvec/Tc,e);
+
+%% Compute theoretical including distribution of random strains
+d0DR = .3;
+ea = 1e-2;
+tadr = linspace(3e-3,2,500);
+CpmaDR = Cp_full_random_strains(d0DR,ea,tadr);
 
 %% Plot averaged data
 R = 8.314;
-% figure; 
-ax2 = subplot(5,1,[3:5]); 
-fp = plot(tvec,Cptheo,'-r');
+figure; 
+% ax2 = subplot(5,1,[3:5]); 
+fp = plot(tvec,Cptheo,'-r','DisplayName',sprintf('LFIM: e=%.2g',e));
 hold on
+fpr = plot(tadr*Tc,CpmaDR,'-g','DisplayName',sprintf('Rand. strains: d$_0$/T$_c$=%.2g, e$_a$=%.2g',d0DR,ea));
 errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.b',...
     'MarkerSize',18,'LineWidth',1)
 xlabel(xlblTemp); ylabel('$C_p/R$');
@@ -149,7 +158,7 @@ ylim([0 1.55])
 % annttl.FontSize = ax.XAxis.Label.FontSize;
 grid on
 % title(ttlCpY);
-% lgd = legend('show');
+lgd = legend('show');
 
 %% Figure formatting when combining plots
 ax1.YLabel.Position(1) = ax2.YLabel.Position(1);
