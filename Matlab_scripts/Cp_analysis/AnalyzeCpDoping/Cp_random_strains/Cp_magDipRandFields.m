@@ -1,9 +1,9 @@
 function y = Cp_magDipRandFields(t,d0)
-% t is the reduced temperature T/Tc
 % High temperature correction to the free energy F from magnetic dipole
 % interactions in the mean-field Ising model including random fields
 % See equation (7) of paper by Gehring et al. (1976)
-T = t';% transpose temperature array into column vector
+% t is the reduced temperature T/Tc
+T = t;% transpose temperature array into column vector
 F = zeros(length(T),length(d0));
 for j1=1:length(F)
     for k=1:length(d0)
@@ -29,6 +29,7 @@ Tcp = T(2:end-1);
 for j3 = 1:m% loop over all columns of S, which has the same number of columns as F
     y(Tcp<1,j3) = 0;
     y(Tcp>=1,j3) = Tcp(Tcp>=1).*diff1s(Tcp>=1,j3)./dT(Tcp>=1);% T*dS/dT = Cp
+%     y(:,j3) = Tcp.*diff1s(:,j3)./dT(2:end);% T*dS/dT = Cp
 end
 
 end

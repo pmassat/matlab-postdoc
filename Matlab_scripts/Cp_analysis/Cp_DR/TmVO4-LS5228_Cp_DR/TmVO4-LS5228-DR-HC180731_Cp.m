@@ -3,7 +3,7 @@
 %% Analyze heat capacity from DR
 % This routine is intended at anaLzing Cp data acquired with our DR used in 
 % the Dynacool PPMS of the Lee lab
-cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2018-08_TmVO4-LS5228\TmVO4_TFIM_article1_fig1'
+cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2018-08_TmVO4-LS5228\'
 
 %% To do: 
 % * Error bars:
@@ -135,21 +135,31 @@ plot(tvec,-sz,'Color',lines(1))
 %% Compute theoretical heat capacity in LFIM
 Cptheo = Cp_LFIM(tvec/Tc,e);
 
-%% Compute theoretical including distribution of random strains
-d0DR = .3;
-ea = 1e-2;
-tadr = linspace(3e-3,2,500);
-CpmaDR = Cp_full_random_strains(d0DR,ea,tadr);
+%% Cp LFIM 2
+e2 = 1e-2;
+Cpt2 = Cp_LFIM(tvec/Tc,e2);
+
+%% Compute Cp correction due to magnetic dipole interactions
+C_0 = 0.088;% 1/T^2 coefficient, see paper
+d0dr = .3;
+szcp = sz(2:end-1);
+% tadr = linspace(3e-3,2,500);
+deltaCpdr = (1-szcp'*2/2.95).*C_0/Tc.*Cp_magDipRandFields(tvec'/Tc,d0dr);
+
+%% Cp in random strains
+Tcrs = 2.3;
+Cpma = Cp_full_random_strains(d0dr,6*e,tvec/Tcrs);
 
 %% Plot averaged data
 R = 8.314;
 figure; 
 % ax2 = subplot(5,1,[3:5]); 
-fp = plot(tvec,Cptheo,'-r','DisplayName',sprintf('LFIM: e=%.2g',e));
+% fp = plot(tvec,Cptheo,'-r','DisplayName',sprintf('MF: e=%.2g',e));
+fp = plot(avgData(i).T,Cptheodat,'-r','DisplayName',sprintf('MF: e=%.2g',e));
 hold on
-fpr = plot(tadr*Tc,CpmaDR,'-g','DisplayName',sprintf('Rand. strains: d$_0$/T$_c$=%.2g, e$_a$=%.2g',d0DR,ea));
+fpr = plot(tvec,Cpma,'-g','DisplayName',['Rand. strains:' newline '${\Delta e}/T_c$=' sprintf('%.2g',d0dr)]);
 errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.b',...
-    'MarkerSize',18,'LineWidth',1)
+    'MarkerSize',18,'LineWidth',1,'DisplayName','Experiment')
 xlabel(xlblTemp); ylabel('$C_p/R$');
 ylim([0 1.55])
 % annttl = annotation('textbox',[0.2 0.75 0.1 0.1],'interpreter','latex',...
@@ -157,8 +167,16 @@ ylim([0 1.55])
 %     'BackgroundColor','none','Color','k');% add annotation
 % annttl.FontSize = ax.XAxis.Label.FontSize;
 grid on
-% title(ttlCpY);
+title(sprintf('$T_c=$ %.2g K',Tcrs));% title(ttlCpY);
 lgd = legend('show');
+
+%% Export figure
+formatFigure;
+% printPDF('2019-08-29_TmVO4-LS5228-DR-HC1807_Cpres_mag-dip')
+
+%% Subtract Cptheo from experimental data to analyze the residual Cp
+Cptheodat = Cp_LFIM(avgData(i).T/Tc,e);% theoretical Cp computed at same temperatures as data
+avgData(i).Cpres = avgData(i).Cp - Cptheodat*R;% Residual Cp after subtraction of the fit
 
 %% Figure formatting when combining plots
 ax1.YLabel.Position(1) = ax2.YLabel.Position(1);
@@ -173,10 +191,27 @@ fitT = avgData(i).T;
 fitCp = avgData(i).Cp/R;
 fitCpErr = avgData(i).CpFullErr/R;
 fitwghts = 1./fitCpErr;
+fitCpres = avgData(i).Cpres/R;
 
 %%
 maxTfit = 2.23;
 [fitresult, gof] = fitCpLFIM(fitT,fitCp,fitwghts,maxTfit);
+
+%% Mag dip correction to Cp for comparison with Cpres
+d0res = .01;
+Cpmagres = C_0/Tc.*Cp_magDipRandFields(tvec'/Tc,d0res);
+
+%% Plot residual Cp and potential fit
+figure
+errorbar(avgData(i).T,avgData(i).Cpres/R,avgData(i).CpFullErr/R,'.b',...
+    'MarkerSize',18,'LineWidth',1,'DisplayName','Residual $C_p$')
+hold on
+fpr = plot(tvec(2:end-1),Cpmagres','-r','DisplayName',['Mag. dip.' newline '${\Delta e}/T_c=$ ' sprintf('%.2g',d0res)]);
+xlabel(xlblTemp); ylabel('$\Delta C_p/R$');
+grid on
+title({'Residual $C_p$ data +' 'theoretical correction from magnetic dipoles'});% title(ttlCpY);
+lgd = legend('show');
+
 
 %% Print figure to PNG file
 % formatFigure

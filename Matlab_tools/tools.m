@@ -34,22 +34,11 @@ cell2mat( arrayfun(@(c) c.x(2,:), s(1:length(s)).', 'Uniform', 0) )
 % Note: on the Matlab Answers webpage, the previous line of code is missing the 's' before in "s(1:length(s)).'"
 % Output: ans = [4 5 6; 14 15 16]
 
-%% Count the number of elements in a field 'f1' of a structure
-% https://www.mathworks.com/matlabcentral/answers/841-how-to-find-number-of-arrays-in-a-structure-filed
-% Also implemented in 'ENS_peak_fit_ICpV.mlx'
-function N1 = fieldCount(inputStruct)
-N1 = 0;
-for i = 1: numel(inputStruct)
-  if(~isempty(inputStruct(i).f1)))
-      N1 = N1 + 1;
-  end
-end
-
 %% Check if a variable exists in a table column
 % https://www.mathworks.com/matlabcentral/answers/313776-how-to-check-whether-a-column-exist-in-a-table
-if any(strcmp('Variable',(tableName).Properties.VariableNames));% if there is a field called 'Variable' in table(tableName)
-    % do whatever
-end
+% if any(strcmp('Variable',(tableName).Properties.VariableNames));% if there is a field called 'Variable' in table(tableName)
+%     % do whatever
+% end
 
 %% Surface plot and colorbar handling
 % see 'ENS_peak_fit_ICpV.m'
@@ -107,6 +96,11 @@ ax = axes('LineStyleOrder',{'-',':','--','-.'});%
 %% Find light object
 l = findobj(gcf,'Type','Light');
 
+%% Multi-line string
+% Use command "newline"
+['two line' newline 'test']
+
+%%
 
 
 
@@ -115,3 +109,14 @@ l = findobj(gcf,'Type','Light');
 
 
 
+%% Count the number of elements in a field 'f1' of a structure
+% https://www.mathworks.com/matlabcentral/answers/841-how-to-find-number-of-arrays-in-a-structure-filed
+% Also implemented in 'ENS_peak_fit_ICpV.mlx'
+function N1 = fieldCount(inputStruct)
+N1 = 0;
+for i = 1: numel(inputStruct)
+  if(~isempty(inputStruct(i).f1))
+      N1 = N1 + 1;
+  end
+end
+end
