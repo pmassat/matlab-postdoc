@@ -139,23 +139,28 @@ Cptheo = Cp_LFIM(tvec/Tc,e);
 e2 = 1e-2;
 Cpt2 = Cp_LFIM(tvec/Tc,e2);
 
+%% Subtract Cptheo from experimental data to analyze the residual Cp
+R = 8.314;
+Cptheodat = Cp_LFIM(avgData(i).T/Tc,e);% theoretical Cp computed at same temperatures as data
+avgData(i).Cpres = avgData(i).Cp - Cptheodat*R;% Residual Cp after subtraction of the fit
+
 %% Compute Cp correction due to magnetic dipole interactions
 C_0 = 0.088;% 1/T^2 coefficient, see paper
-d0dr = .3;
+d0md = 0.01;
 szcp = sz(2:end-1);
 % tadr = linspace(3e-3,2,500);
-deltaCpdr = (1-szcp'*2/2.95).*C_0/Tc.*Cp_magDipRandFields(tvec'/Tc,d0dr);
+deltaCpdr = (1-szcp'*2/2.95).*C_0/Tc.*Cp_magDipRandFields(tvec'/Tc,d0md);
 
 %% Cp in random strains
+d0dr = .3;
 Tcrs = 2.3;
 Cpma = Cp_full_random_strains(d0dr,6*e,tvec/Tcrs);
 
-%% Plot averaged data
-R = 8.314;
+%% Plot averaged data + fit including random strains
 figure; 
 % ax2 = subplot(5,1,[3:5]); 
-% fp = plot(tvec,Cptheo,'-r','DisplayName',sprintf('MF: e=%.2g',e));
-fp = plot(avgData(i).T,Cptheodat,'-r','DisplayName',sprintf('MF: e=%.2g',e));
+fp = plot(tvec,Cptheo,'-r','DisplayName',sprintf('MF: e=%.2g',e));
+% fp = plot(avgData(i).T,Cptheodat,'-r','DisplayName',sprintf('MF: e=%.2g',e));
 hold on
 fpr = plot(tvec,Cpma,'-g','DisplayName',['Rand. strains:' newline '${\Delta e}/T_c$=' sprintf('%.2g',d0dr)]);
 errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.b',...
@@ -170,13 +175,24 @@ grid on
 title(sprintf('$T_c=$ %.2g K',Tcrs));% title(ttlCpY);
 lgd = legend('show');
 
+%% Plot averaged data + theoretical correction from magnetic dipole interactions
+figure; 
+fp = plot(tvec,Cptheo,'-r','DisplayName',sprintf('MF: $e=$ %.2g',e));
+hold on
+fpr = plot(tvec(2:end-1),deltaCpdr','-g','DisplayName',['Mag. dip.:' newline '${\Delta e}/T_c$=' sprintf('%.2g',d0md)]);
+fpt = plot(tvec(2:end-1),Cptheo(2:end-1)+deltaCpdr','-m','DisplayName','MF + mag. dip.');
+errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.b',...
+    'MarkerSize',18,'LineWidth',1,'DisplayName','Experiment')
+xlabel(xlblTemp); ylabel('$C_p/R$');
+ylim([0 1.55])
+grid on
+title(['TmVO$_4$ heat capacity: mean-field fit' newline '+ correction from magnetic dipoles']);% title(ttlCpY);
+lgd = legend('show');
+
 %% Export figure
 formatFigure;
-% printPDF('2019-08-29_TmVO4-LS5228-DR-HC1807_Cpres_mag-dip')
-
-%% Subtract Cptheo from experimental data to analyze the residual Cp
-Cptheodat = Cp_LFIM(avgData(i).T/Tc,e);% theoretical Cp computed at same temperatures as data
-avgData(i).Cpres = avgData(i).Cp - Cptheodat*R;% Residual Cp after subtraction of the fit
+% printPNG('2019-08-29_TmVO4-LS5228-DR-HC1807_Cp_random-strains-correction_fails')
+% printPNG('2019-08-29_TmVO4-LS5228-DR-HC1807_Cp_mag-dip-correction_fails')
 
 %% Figure formatting when combining plots
 ax1.YLabel.Position(1) = ax2.YLabel.Position(1);
@@ -198,23 +214,29 @@ maxTfit = 2.23;
 [fitresult, gof] = fitCpLFIM(fitT,fitCp,fitwghts,maxTfit);
 
 %% Mag dip correction to Cp for comparison with Cpres
-d0res = .01;
-Cpmagres = C_0/Tc.*Cp_magDipRandFields(tvec'/Tc,d0res);
+Cpmagres = C_0/Tc.*Cp_magDipRandFields(tvec'/Tc,d0md);
 
 %% Plot residual Cp and potential fit
+% Power law a*T^b fit parameters for residual Cp above T_D
+% a = 22.58;%  (-6.487, 51.65); b = -6.062;%  (-7.608, -4.516);% When fitting all data points above T_D
+a = 0.9996;%  (0.203, 1.796)
+b = -3.035;%  (-3.795, -2.275);% When fitting only the highest three data points
 figure
 errorbar(avgData(i).T,avgData(i).Cpres/R,avgData(i).CpFullErr/R,'.b',...
     'MarkerSize',18,'LineWidth',1,'DisplayName','Residual $C_p$')
 hold on
-fpr = plot(tvec(2:end-1),Cpmagres','-r','DisplayName',['Mag. dip.' newline '${\Delta e}/T_c=$ ' sprintf('%.2g',d0res)]);
+fpr = plot(tvec(2:end-1),Cpmagres','-r','DisplayName',['Mag. dip.' newline '${\Delta e}/T_c=$ ' sprintf('%.2g',d0md)]);
+fpwr = fplot(@(t) a*t^b, [0 4],'-g','LineWidth',2,...
+    'DisplayName',[sprintf('$T^{%.2g}$ fit',b)]);
 xlabel(xlblTemp); ylabel('$\Delta C_p/R$');
 grid on
 title({'Residual $C_p$ data +' 'theoretical correction from magnetic dipoles'});% title(ttlCpY);
 lgd = legend('show');
-
+ylim([0 .2])
 
 %% Print figure to PNG file
-% formatFigure
+formatFigure;
+% printPNG('2019-08-29_TmVO4-LS5228-DR-HC1807_Cpres_mag-dip')
 % printPNG('2019-05-28_YTmVO4_Cp_vs_T_0-p11-p15-p22')
 % printSVG('2019-08-06_TmVO4-LS5228-DR-HC180731_Cp+fit')
 
