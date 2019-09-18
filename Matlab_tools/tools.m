@@ -100,7 +100,14 @@ l = findobj(gcf,'Type','Light');
 % Use command "newline"
 ['two line' newline 'test']
 
-%%
+%% Sequence "derivative" 
+% Such that the "derivative" is calculated at the same point as in the
+% original dataset
+diffT = diff(T);
+dT = zeros(size(T));
+dT(2:end-1) = (diffT(2:end)+diffT(1:end-1))/2;
+dT(1) = diffT(1)/2; dT(end) = diffT(end)/2;
+
 
 
 
