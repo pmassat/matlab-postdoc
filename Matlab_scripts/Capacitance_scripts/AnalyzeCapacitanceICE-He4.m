@@ -20,47 +20,64 @@ Data.diffT = zeros(size(Data.T_K));
 Data.diffT(2:end-1) = (diffT(2:end)+diffT(1:end-1))/2;
 Data.diffT(1) = diffT(1)/2; Data.diffT(end) = diffT(end)/2;
 
+% Create table column containing differences of time column
+difftime = diff(Data.time_s);
+Data.difftime = zeros(size(Data.time_s));
+Data.difftime(2:end-1) = (difftime(2:end)+difftime(1:end-1))/2;
+Data.difftime(1) = difftime(1)/2; Data.difftime(end) = difftime(end)/2;
+
 % Create table column containing differences of capacitance column
 diffC = diff(Data.C_pF);
 Data.diffC = zeros(size(Data.C_pF));
 Data.diffC(2:end-1) = (diffC(2:end)+diffC(1:end-1))/2;
 Data.diffC(1) = diffC(1)/2; Data.diffC(end) = diffC(end)/2;
 
+% Compute dT/dtime
+Data.dTdtime = Data.diffT./Data.difftime;
+
 % Compute dC/dT
 Data.dCdT = Data.diffC./Data.diffT;
 
 %% Separate temperature up- and downsweeps
 % Using boolean filter
-FilterTup = Data.dT > 1e-3;% logical array, the elements of which equal 1 when temperature is swept up
-FilterTdown = Data.dT < -1e-3;% same when temperature is swept down
+threshold = 1e-3;
+FilterTup = Data.diffT > threshold;% logical array, the elements of which equal 1 when temperature is swept up
+FilterTdown = Data.diffT < -threshold;% same when temperature is swept down
 
 %% Plot capacitance data for temperature upsweeps
 figure
 plot(Data.T_K(FilterTup),Data.C_pF(FilterTup),'.','MarkerSize',12)
 xlabel('$T$ (K)'); ylabel('$C$ (pF)');
+title('Capacitance vs Temperature swept up');
 
 %% Split up- and downsweeps into individual arrays
 dFup = diff(FilterTup);% Array where elements are non-zero only when a new upsweep starts or ends
 dFdown = diff(FilterTdown);% Same for downsweep
 upStart = find(dFup>0);% dFup=1 when an upsweep starts
 upEnd = find(dFup<0);% dFup=-1 when an upsweep ends
-downStart = find(dFdown>0); downEnd = find(dFdown<0);% Same for downsweeps
+dUp = upEnd-upStart;% number of datapoints in each upsweep
+upSel1 = upStart(dUp>100); upSel2 = upEnd(dUp>100);% only keep datasets with more than 100 data points
+downStart = find(dFdown>0); downEnd = find(dFdown<0); dDown = downEnd-downStart;% Same for downsweeps
+downSel1 = downStart(dDown>100); downSel2 = downEnd(dDown>100);% only keep datasets with more than 100 data points
 sgm = 1;
-for i=1:length(upStart)
-    up(i).T = Data.T_K(upStart(i):upEnd(i));
-    up(i).diffT = Data.diffT(upStart(i):upEnd(i));
-    up(i).C = Data.C_pF(upStart(i):upEnd(i));
-    up(i).dCdT = Data.dCdT(upStart(i):upEnd(i));
-    [up(i).gC,up(i).gdC,~] = gConvolve(Data.C_pF(upStart(i):upEnd(i)),sgm);
-    [up(i).gT,up(i).gdT,~] = gConvolve(Data.T_K(upStart(i):upEnd(i)),sgm);
+for i=1:length(upSel1)
+    seqUp = upSel1(i):upSel2(i);
+    up(i).T = Data.T_K(seqUp);
+    up(i).diffT = Data.diffT(seqUp);
+    up(i).C = Data.C_pF(seqUp);
+    up(i).dCdT = Data.dCdT(seqUp);
+    [up(i).gC,up(i).gdC,~] = gConvolve(Data.C_pF(seqUp),sgm);
+    [up(i).gT,up(i).gdT,~] = gConvolve(Data.T_K(seqUp),sgm);
 end
 
-for i=1:length(downStart)
-    down(i).T = Data.T_K(downStart(i):downEnd(i));
-    down(i).C = Data.C_pF(downStart(i):downEnd(i));
-    down(i).dCdT = Data.dCdT(downStart(i):downEnd(i));
-    [down(i).gC,down(i).gdC,~] = gConvolve(Data.C_pF(downStart(i):downEnd(i)),sgm);
-    [down(i).gT,down(i).gdT,~] = gConvolve(Data.T_K(downStart(i):downEnd(i)),sgm);
+for i=1:length(downSel1)
+    seqDown = downSel1(i):downSel2(i);
+    down(i).T = Data.T_K(seqDown);
+    down(i).diffT = Data.diffT(seqDown);
+    down(i).C = Data.C_pF(seqDown);
+    down(i).dCdT = Data.dCdT(seqDown);
+    [down(i).gC,down(i).gdC,~] = gConvolve(Data.C_pF(seqDown),sgm);
+    [down(i).gT,down(i).gdT,~] = gConvolve(Data.T_K(seqDown),sgm);
 end
 
 %% Plot capacitance data for separate temperature upsweeps
@@ -93,7 +110,7 @@ lgd = legend('show');
 ylim(Cbounds);
 
 %% Compare raw and smoothed derivative
-i=1;
+dCbounds = [-.02 .02];
 figure; hold on
 plot(up(i).T,up(i).dCdT,'-','MarkerSize',12,'DisplayName','Raw')
 plot(up(i).T,up(i).gdC./up(i).diffT,'-','MarkerSize',12,'DisplayName',['Smoothed $\sigma=$' sprintf('%g',sgm)])
@@ -101,7 +118,7 @@ plot(up(i).T,up(i).gdC./up(i).gdT,'-','MarkerSize',12,'DisplayName',['Smoothed $
 xlabel('$T$ (K)'); ylabel('$dC/dT$ (pF/K)');
 title('Effect of smoothing on temperature derivative');
 lgd = legend('show');
-ylim(Cbounds);
+ylim(dCbounds);
 
 %% Plot smoothed capacitance vs temperature
 figure; hold on
@@ -109,7 +126,7 @@ for i=1:length(up)
 plot(up(i).T,up(i).gC,'.','MarkerSize',12,'DisplayName',sprintf('%i',i))
 end
 xlabel('$T$ (K)'); ylabel('$C$ (pF)');
-title('Capacitance vs Temperature swept up');
+title('Smoothed $C$ vs $T$ swept up');
 lgd = legend('show'); lgd.Title.String = 'Run \#';
 ylim(Cbounds);
 
@@ -119,7 +136,7 @@ for i=1:length(down)
 plot(down(i).T,down(i).gC,'.','MarkerSize',12,'DisplayName',sprintf('%i',i))
 end
 xlabel('$T$ (K)'); ylabel('$C$ (pF)');
-title('Capacitance vs Temperature swept down');
+title('Smoothed $C$ vs $T$ swept down');
 lgd = legend('show'); lgd.Title.String = 'Run \#';
 ylim(Cbounds);
 
@@ -130,7 +147,7 @@ for i=1:length(up)
 plot(up(i).T,up(i).gdC./up(i).gdT,'.-','MarkerSize',12,'DisplayName',sprintf('%i',i))
 end
 xlabel('$T$ (K)'); ylabel('$C$ (pF)');
-title('$dC/dT$ vs Temperature swept up');
+title('Smoothed $dC/dT$ vs $T$ swept up');
 lgd = legend('show'); lgd.Title.String = 'Run \#';
 ylim(d1Cbounds);
 
@@ -140,7 +157,7 @@ for i=1:length(down)
 plot(down(i).T,down(i).gdC./down(i).gdT,'.-','MarkerSize',12,'DisplayName',sprintf('%i',i))
 end
 xlabel('$T$ (K)'); ylabel('$C$ (pF)');
-title('$dC/dT$ vs Temperature swept down');
+title('Smoothed $dC/dT$ vs $T$ swept down');
 lgd = legend('show'); lgd.Title.String = 'Run \#';
 ylim(d1Cbounds);
 
