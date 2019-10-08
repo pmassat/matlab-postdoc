@@ -36,12 +36,12 @@ title('R-H MCE traces')
 
 %% T-H MCE traces
 % Convert Bridge 2 resistance into temperature by using the sfit generated from 
-% the file 'DR_platform_therm_cal.mlx'
+% the file 'DR_platform_therm_cal.mlx' and stored in 'DR_thermometer_TvsHR_fit.mat'
 % 
 % Then plot platform thermometer temperature and bridge 2 resistance temperature 
 % together to check that the latter shows the MCE effect but not the former.
 
-Tb2 = stf(Hmce,Rb2);
+Tb2 = stf(Hmce,Rb2);% stf is the sfit variable created when loading 'DR_thermometer_TvsHR_fit.mat'
 figure
 plot(t,Tmce,'DisplayName','Thermometer')
 hold on
