@@ -105,8 +105,8 @@ for i = 1:L
 end
 
 %% Prepare plot of theoretical curve 
-Tc = 2.193;%  (2.192, 2.194) value of transition temperature obtained from fit using Curve Fitting Tool
-e =  0.000643;%  (0.000583, 0.000703) value of longitudinal field obtained from fit using Curve Fitting Tool
+Tc = 2.193;%  (2.192, 2.194) value of transition temperature obtained from fit with Cp_LFIM function in Curve Fitting Tool
+e =  0.000643;%  (0.000583, 0.000703) value of longitudinal field obtained from fit with Cp_LFIM function Curve Fitting Tool
 
 %% Compute splitting of GS doublet vs temperature
 tvec = linspace(1e-3,4,2000);
