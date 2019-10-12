@@ -107,20 +107,63 @@ end
 %% Prepare plot of theoretical curve 
 Tc = 2.193;%  (2.192, 2.194) value of transition temperature obtained from fit with Cp_LFIM function in Curve Fitting Tool
 e =  0.000643;%  (0.000583, 0.000703) value of longitudinal field obtained from fit with Cp_LFIM function Curve Fitting Tool
-
-%% Compute splitting of GS doublet vs temperature
 tvec = linspace(1e-3,4,2000);
+
+%% Compute theoretical heat capacity in LFIM
+Cptheo = Cp_LFIM(tvec/Tc,e);
+
+%% Subtract Cptheo from experimental data to analyze the residual Cp
+R = 8.314;
+Cptheodat = Cp_LFIM(avgData(i).T/Tc,e);% theoretical Cp computed at same temperatures as data
+avgData(i).Cpres = avgData(i).Cp - Cptheodat*R;% Residual Cp after subtraction of the fit
+
+%% Prepare fit of Cp vs Temperature 
+% Use these variables in Curve fitting tool
+fitT = avgData(i).T;
+fitCp = avgData(i).Cp/R;
+fitCpErr = avgData(i).CpFullErr/R;
+fitwghts = 1./fitCpErr;
+fitCpres = avgData(i).Cpres/R;
+
+%%
+maxTfit = 2.23;
+[fitresult, gof] = fitCpLFIM(fitT,fitCp,fitwghts,maxTfit);
+
+%% Plot residual Cp and potential fit
+% Power law a*T^b fit parameters for residual Cp above T_D
+% a = 22.58;%  (-6.487, 51.65); b = -6.062;%  (-7.608, -4.516);% When fitting all data points above T_D
+a = 0.9996;%  (0.203, 1.796)
+b = -3.035;%  (-3.795, -2.275);% When fitting only the highest three data points
+figure
+errorbar(avgData(i).T,avgData(i).Cpres/R,avgData(i).CpFullErr/R,'.b',...
+    'MarkerSize',18,'LineWidth',1,'DisplayName','Residual $C_p$')
+hold on
+% fpr = plot(tvec(2:end-1),Cpmagres','-r','DisplayName',['Mag. dip.' newline '${\Delta e}/T_c=$ ' sprintf('%.2g',d0md)]);
+fpwr = fplot(@(t) a*t^b, [0 4],'-g','LineWidth',2,...
+    'DisplayName',[sprintf('$T^{%.2g}$ fit',b)]);
+xlabel(xlblTemp); ylabel('$\Delta C_p/R$');
+grid on
+title({'Residual $C_p$ data +' 'theoretical correction from magnetic dipoles'});% title(ttlCpY);
+lgd = legend('show');
+ylim([0 .2])
+
+
+%% % % Plot figure % % % 
+%% Compute splitting of GS doublet vs temperature
+% For figure 1 of paper 1
 sz = zeros(size(tvec));
 for j=1:length(tvec)
 sz(j) = 2.95/2*OP_TFIM(tvec(j)/Tc,0,e);%2.95 cm-1 is the total splitting of the GS doublet, see e.g. Melcher1976, fig.2(a)
 end
 
-%% Prepare tight subplot
+%% Prepare tight subplot for combining plots in single figure
+% For figure 1 of paper 1
 subplot = @(m,n,p) subtightplot (m, n, p, [0.0 0.0], [0.1 0.02], [0.13 0.02]);
 figure; formatFigure([6 7]);
 ax = gca; ax.delete
 
 %% Plot splitting vs T
+% Top of figure 1 of paper 1
 ax1 = subplot(5,1,[1:2]); 
 plot(tvec,sz)
 hold on
@@ -132,17 +175,42 @@ plot(tvec,-sz,'Color',lines(1))
 %     'String',{'$E_{g}$'}, 'LineStyle','-','EdgeColor','none',...
 %     'BackgroundColor','none','Color','k');% add annotation
 
-%% Compute theoretical heat capacity in LFIM
-Cptheo = Cp_LFIM(tvec/Tc,e);
+%% Figure formatting when combining plots
+ax1.YLabel.Position(1) = ax2.YLabel.Position(1);
+anngap.FontSize = ax1.XAxis.Label.FontSize;
+ax1.XTickLabel={};
+ax1.YTick = [];
+ax2.XLabel.Position(2) = -.15;
 
-%% Cp LFIM 2
+%% Print figure to PNG file
+formatFigure;
+% printPNG('2019-08-29_TmVO4-LS5228-DR-HC1807_Cp_random-strains-correction_fails')
+% printPNG('2019-08-29_TmVO4-LS5228-DR-HC1807_Cp_mag-dip-correction_fails')
+% printPNG('2019-08-29_TmVO4-LS5228-DR-HC1807_Cpres_mag-dip')
+% printPNG('2019-05-28_YTmVO4_Cp_vs_T_0-p11-p15-p22')
+% printSVG('2019-08-06_TmVO4-LS5228-DR-HC180731_Cp+fit')
+
+%% Export averaged Cp data to text file
+% savepath = 'C:\Users\Pierre\Desktop\Postdoc\YTmVO4\YTmVO4_HeatCapacity\YTmVO4_Cp_anaLsis\2018-10-17_YTmVO4_averaged_Cp\';
+% for i=L-3:L
+%     dpg(i);
+%     expstr(i) = fullfile(savepath, ['AnaLzeCpDRdoping_2018-11-30_YTmVO4_x=',num2str(dpg(i)),'.txt']);
+%     fid = fopen(expstr(i), 'wt');
+%     fprintf(fid, '%s\n', ['Exported from AnaLzeCpDRdoping_2018-10-10_YTmVO4_VTmAsO4.mlx on ',date]);  % header
+%     fclose(fid);
+%     dlmwrite(expstr(i),cat(2,avgData(i).T',avgData(i).Cp',avgData(i).stdCp'),'-append','delimiter','\t')
+% end
+% 
+
+
+
+
+
+%% % % % % % % % Failed attempts at fitting tail of Cp data at T>Tc % % % % % % % % % % 
+
+%% Cp LFIM with arbitrary value of longitudinal field
 e2 = 1e-2;
 Cpt2 = Cp_LFIM(tvec/Tc,e2);
-
-%% Subtract Cptheo from experimental data to analyze the residual Cp
-R = 8.314;
-Cptheodat = Cp_LFIM(avgData(i).T/Tc,e);% theoretical Cp computed at same temperatures as data
-avgData(i).Cpres = avgData(i).Cp - Cptheodat*R;% Residual Cp after subtraction of the fit
 
 %% Compute Cp correction due to magnetic dipole interactions
 C_0 = 0.088;% 1/T^2 coefficient, see paper
@@ -189,65 +257,6 @@ grid on
 title(['TmVO$_4$ heat capacity: mean-field fit' newline '+ correction from magnetic dipoles']);% title(ttlCpY);
 lgd = legend('show');
 
-%% Export figure
-formatFigure;
-% printPNG('2019-08-29_TmVO4-LS5228-DR-HC1807_Cp_random-strains-correction_fails')
-% printPNG('2019-08-29_TmVO4-LS5228-DR-HC1807_Cp_mag-dip-correction_fails')
-
-%% Figure formatting when combining plots
-ax1.YLabel.Position(1) = ax2.YLabel.Position(1);
-anngap.FontSize = ax1.XAxis.Label.FontSize;
-ax1.XTickLabel={};
-ax1.YTick = [];
-ax2.XLabel.Position(2) = -.15;
-
-%% Prepare fit of Cp vs Temperature 
-% Use these variables in Curve fitting tool
-fitT = avgData(i).T;
-fitCp = avgData(i).Cp/R;
-fitCpErr = avgData(i).CpFullErr/R;
-fitwghts = 1./fitCpErr;
-fitCpres = avgData(i).Cpres/R;
-
-%%
-maxTfit = 2.23;
-[fitresult, gof] = fitCpLFIM(fitT,fitCp,fitwghts,maxTfit);
-
 %% Mag dip correction to Cp for comparison with Cpres
 Cpmagres = C_0/Tc.*Cp_magDipRandFields(tvec'/Tc,d0md);
 
-%% Plot residual Cp and potential fit
-% Power law a*T^b fit parameters for residual Cp above T_D
-% a = 22.58;%  (-6.487, 51.65); b = -6.062;%  (-7.608, -4.516);% When fitting all data points above T_D
-a = 0.9996;%  (0.203, 1.796)
-b = -3.035;%  (-3.795, -2.275);% When fitting only the highest three data points
-figure
-errorbar(avgData(i).T,avgData(i).Cpres/R,avgData(i).CpFullErr/R,'.b',...
-    'MarkerSize',18,'LineWidth',1,'DisplayName','Residual $C_p$')
-hold on
-fpr = plot(tvec(2:end-1),Cpmagres','-r','DisplayName',['Mag. dip.' newline '${\Delta e}/T_c=$ ' sprintf('%.2g',d0md)]);
-fpwr = fplot(@(t) a*t^b, [0 4],'-g','LineWidth',2,...
-    'DisplayName',[sprintf('$T^{%.2g}$ fit',b)]);
-xlabel(xlblTemp); ylabel('$\Delta C_p/R$');
-grid on
-title({'Residual $C_p$ data +' 'theoretical correction from magnetic dipoles'});% title(ttlCpY);
-lgd = legend('show');
-ylim([0 .2])
-
-%% Print figure to PNG file
-formatFigure;
-% printPNG('2019-08-29_TmVO4-LS5228-DR-HC1807_Cpres_mag-dip')
-% printPNG('2019-05-28_YTmVO4_Cp_vs_T_0-p11-p15-p22')
-% printSVG('2019-08-06_TmVO4-LS5228-DR-HC180731_Cp+fit')
-
-%% Export averaged Cp data to text file
-% savepath = 'C:\Users\Pierre\Desktop\Postdoc\YTmVO4\YTmVO4_HeatCapacity\YTmVO4_Cp_anaLsis\2018-10-17_YTmVO4_averaged_Cp\';
-% for i=L-3:L
-%     dpg(i);
-%     expstr(i) = fullfile(savepath, ['AnaLzeCpDRdoping_2018-11-30_YTmVO4_x=',num2str(dpg(i)),'.txt']);
-%     fid = fopen(expstr(i), 'wt');
-%     fprintf(fid, '%s\n', ['Exported from AnaLzeCpDRdoping_2018-10-10_YTmVO4_VTmAsO4.mlx on ',date]);  % header
-%     fclose(fid);
-%     dlmwrite(expstr(i),cat(2,avgData(i).T',avgData(i).Cp',avgData(i).stdCp'),'-append','delimiter','\t')
-% end
-% 

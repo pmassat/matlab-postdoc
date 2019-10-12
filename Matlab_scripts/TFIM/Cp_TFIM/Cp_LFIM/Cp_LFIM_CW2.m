@@ -1,4 +1,4 @@
- function y = Cp_LFIM_CW(t,e,t0,c)
+ function y = Cp_LFIM_CW2(t,e,t0,c)
 % t is the reduced temperature T/Tc
 y = zeros(size(t));
 tc =1;% tc used to distinguish two cases: T/Tc<1 and >1
