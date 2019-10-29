@@ -1,3 +1,9 @@
+%% File info
+% Main script for computation of multipoles in TmVO4.
+% Derived from 'testTmVO4'.
+% All scripts originally written by Nicolas Gauthier from Shen group and
+% shared with me in August 2019.
+
 %% Change working directory
 cd 'C:\Users\Pierre\Desktop\Postdoc\Software\Matlab\Matlab_scripts\Multipoles'
 
@@ -17,7 +23,7 @@ pph=repmat(phi',1,length(theta));
     ff=1;
     
     % %      6   5    4 3   2   1   0    1   2   3   4   5   6 
-    vec1=[   0   0.89 0 0   0 -0.42 0    0   0  0.19 0   0   0 ];
+    vec1=[   0   0.89 0 0   0 -0.42 0    0   0  0.19 0   0   0 ];%
     vec2=vec1(end:-1:1);
     
     vec=vec1+exp(pi*1i*0.5)*vec2;% For wavefunction in the orthorhombic phase
@@ -41,7 +47,7 @@ pph=repmat(phi',1,length(theta));
     Ye0=abs(rhoe0).*sin(pph).*sin(tth);
     Ze0=abs(rhoe0).*cos(pph);
     
-        Xeb=abs(rhoeb).*sin(pph).*cos(tth);
+    Xeb=abs(rhoeb).*sin(pph).*cos(tth);
     Yeb=abs(rhoeb).*sin(pph).*sin(tth);
     Zeb=abs(rhoeb).*cos(pph);
     
@@ -71,7 +77,7 @@ pph=repmat(phi',1,length(theta));
     camlight
     lighting phong
  %   axis off
-    colorbar
+    plt(1).cb = colorbar;
     set(gca,'fontsize',14);
     
     
@@ -160,21 +166,27 @@ pph=repmat(phi',1,length(theta));
 %% Duplicate a given subplot into an individual figure
 fig = figure;
 idx = 1;
-ax = plt(3).ax;
+ax = plt(idx).ax;
 % axf = subplot(1,1,1);
 % axf = copyobj(ax,fig); %copy axes to figure
-copies = copyobj([plt(3).cb,plt(3).ax],fig); cb = copies(1); axf = copies(2);
-sf = axf.Children(3);% allow control of plot, e.g. sf.Visible = 'off';
+copies = copyobj([plt(idx).cb,plt(idx).ax],fig); 
+cb = copies(1); axf = copies(2);
+sf = axf.Children(idx);% allow control of plot, e.g. sf.Visible = 'off';
 % set(hNew, 'pos', [0.23162 0.2233 0.72058 0.63107])
-format3DFigure
-cb.Visible = 'off';
+formatFigure
+cb.Visible = 'on';
 % hNew.SortMethod='ChildOrder';
 % l = findobj(gcf,'Type','Light'); l.delete;
 % cb = colorbar; 
 % cb.Ticks = [-.4 0 .4]; cb.Location = 'south';% Orient colorbar horizontally by locating it at the bottom of the plot
-axf.XLabel.String=''; axf.YLabel.String=''; axf.ZLabel.String='';
-axf.XTick=[]; axf.YTick=[]; axf.ZTick=[];
-view(15,30);
+% axf.XLabel.String=''; axf.YLabel.String=''; axf.ZLabel.String='';
+% axf.XTick=[]; axf.YTick=[]; axf.ZTick=[];
+view(2);
+
+%% Figure Post-processing 
+lgt = findobj(gcf,'Type','Light');% find light objects
+lgt(:).delete;% delete all light objects
+lgt = camlight('headlight'); lgt = camlight('headlight');% light figure twice with headlight (no obvious difference when using 'infinite' option)
 
 %% Change surf colors
 
@@ -193,7 +205,8 @@ colormap(col')
 
 %% Export figure
 % printPDF('2019-08-09_TmVO4_multipoles')
-export_fig '2019-08-19_TmVO4_quadrupole_ortho2' -transparent
+export_fig '2019-10-28_TmVO4_full_electronic_density' -transparent -r150
+% export figure in png format with transparent background and resolution 150 dpi
 
     
 

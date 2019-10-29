@@ -1,0 +1,16 @@
+************************************************************************************************
+References used/useful for computation of electronic density of multipoles in TmXO4 (X = As,P,V)
+************************************************************************************************
+
+References for crystal field parameters and wavefunctions of TmXO4
+------------------------------------------------------------------
+* Hodges 1982 p.2 (TmAsO4)
+
+* Hodges 1983 p.5 (TmVO4 & TmPO4)
+
+* Bingham et al. 1984, table 1 p. 7 (CEF parameters of TmVO4 & TmAsO4) & p.8 (TmAsO4 wavefunction)
+
+
+Theory article used as reference for writing the code that computes the electronic density of multipoles
+--------------------------------------------------------------------------------------------------------
+* Kusunose 2008
