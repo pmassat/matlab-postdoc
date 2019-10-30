@@ -23,12 +23,12 @@ pph=repmat(phi',1,length(theta));
     ff=1;
     
     % %      6   5    4 3   2   1   0    1   2   3   4   5   6 
-    vec1=[   0   0.89 0 0   0 -0.42 0    0   0  0.19 0   0   0 ];%
+    vec1=[   0   0.89 0 0   0 -0.42 0    0   0  0.19 0   0   0 ];% From Hodges et al. 1983, p.5
     vec2=vec1(end:-1:1);
     
-    vec=vec1+exp(pi*1i*0.5)*vec2;% For wavefunction in the orthorhombic phase
-%     Change exp(pi*1i*0.5) to exp(pi*1i*-0.5) to toggle between two possible wavefunctions
-%     vec = vec1;% For wavefunction in the tetragonal phase
+%     vec=vec1+exp(pi*1i*-0.5)*vec2;% For wavefunction in the orthorhombic phase
+% %     Change exp(pi*1i*0.5) to exp(pi*1i*-0.5) to toggle between two possible wavefunctions
+    vec = vec1;% For wavefunction in the tetragonal phase
     vec=vec/norm(vec);
     label='Tm3+';
     
@@ -171,22 +171,33 @@ ax = plt(idx).ax;
 % axf = copyobj(ax,fig); %copy axes to figure
 copies = copyobj([plt(idx).cb,plt(idx).ax],fig); 
 cb = copies(1); axf = copies(2);
-sf = axf.Children(idx);% allow control of plot, e.g. sf.Visible = 'off';
+sf = axf.Children(end);% allow control of plot, e.g. sf.Visible = 'off';
+sf.DiffuseStrength = 1;% Intensity of the diffuse component of the light reflected from the object. 
+sf.AmbientStrength = .5;% Intensity of the ambient component of the light reflected from the object. 
+sf.SpecularStrength = .75;% Intensity of the specular component of the light reflected from the object. 
 % set(hNew, 'pos', [0.23162 0.2233 0.72058 0.63107])
-formatFigure
-cb.Visible = 'on';
+sf.Visible = 'off';% cb.Visible = 'off';
 % hNew.SortMethod='ChildOrder';
 % l = findobj(gcf,'Type','Light'); l.delete;
-% cb = colorbar; 
-% cb.Ticks = [-.4 0 .4]; cb.Location = 'south';% Orient colorbar horizontally by locating it at the bottom of the plot
+axf.XTick=[]; axf.YTick=[]; axf.ZTick=[];
 % axf.XLabel.String=''; axf.YLabel.String=''; axf.ZLabel.String='';
-% axf.XTick=[]; axf.YTick=[]; axf.ZTick=[];
+axf.FontSize = 48;% Increase fontsize, especially for axis labels
 view(2);
+
+% % % colorbar options % % % 
+% cb.Location = 'south'; % Orient colorbar horizontally by locating it at the bottom of the plot
+% cb.Position(1) = 0; cb.Position(3:4) = [1 .1];% Set position and shape of colorbar
+% cb.Ticks = [11.5 12 12.5]; cb.TickLength = .02; cb.TickLabelInterpreter = 'latex';% modify ticks display
+% cb.Label.String = '$\rho$ (a.u.)'; cb.Label.Interpreter = 'latex'; cb.FontSize = 24;% format colorbar label
+
+formatFigure;
 
 %% Figure Post-processing 
 lgt = findobj(gcf,'Type','Light');% find light objects
 lgt(:).delete;% delete all light objects
-lgt = camlight('headlight'); lgt = camlight('headlight');% light figure twice with headlight (no obvious difference when using 'infinite' option)
+lgt_origin = 'headlight';% Origin of camlight
+camlight(lgt_origin);% light figure twice with headlight (no obvious difference when using 'infinite' option)
+formatFigure;
 
 %% Change surf colors
 
@@ -205,7 +216,7 @@ colormap(col')
 
 %% Export figure
 % printPDF('2019-08-09_TmVO4_multipoles')
-export_fig '2019-10-28_TmVO4_full_electronic_density' -transparent -r150
+export_fig '2019-10-29_TmVO4_full_electronic_density_cb' -transparent -r150
 % export figure in png format with transparent background and resolution 150 dpi
 
     

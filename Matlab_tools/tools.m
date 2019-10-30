@@ -108,8 +108,10 @@ dT = zeros(size(T));
 dT(2:end-1) = (diffT(2:end)+diffT(1:end-1))/2;
 dT(1) = diffT(1)/2; dT(end) = diffT(end)/2;
 
-
-
+%% Lighting properties 
+% https://www.mathworks.com/help/matlab/creating_plots/lighting-overview.html
+% Light intensity set by the following properties of surface and patch objects:
+% AmbientStrength, DiffuseStrength, SpecularStrength
 
 
 

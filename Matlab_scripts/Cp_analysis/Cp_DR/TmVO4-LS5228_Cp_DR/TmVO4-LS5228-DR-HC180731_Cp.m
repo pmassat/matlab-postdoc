@@ -129,23 +129,29 @@ fitCpres = avgData(i).Cpres/R;
 maxTfit = 2.23;
 [fitresult, gof] = fitCpLFIM(fitT,fitCp,fitwghts,maxTfit);
 
-%% Plot residual Cp and potential fit
-% Power law a*T^b fit parameters for residual Cp above T_D
-% a = 22.58;%  (-6.487, 51.65); b = -6.062;%  (-7.608, -4.516);% When fitting all data points above T_D
-a = 0.9996;%  (0.203, 1.796)
-b = -3.035;%  (-3.795, -2.275);% When fitting only the highest three data points
-figure
-errorbar(avgData(i).T,avgData(i).Cpres/R,avgData(i).CpFullErr/R,'.b',...
-    'MarkerSize',18,'LineWidth',1,'DisplayName','Residual $C_p$')
+%% Plot averaged data + fit including nematic fluctuations
+figure; 
+% coefficients of fit of residual Cp, obtained in Curve Fitting Tool with Adjusted R-square of 0.9927
+c1 =     0.02607  %(0.01489, 0.03725)
+c2 =    0.004759  %(0.003322, 0.006196)
+% ax2 = subplot(5,1,[3:5]); 
+fp = plot(tvec,Cptheo,'-r','DisplayName',sprintf('MF: e=%.2g',e));
+% fp = plot(avgData(i).T,Cptheodat,'-r','DisplayName',sprintf('MF: e=%.2g',e));
 hold on
-% fpr = plot(tvec(2:end-1),Cpmagres','-r','DisplayName',['Mag. dip.' newline '${\Delta e}/T_c=$ ' sprintf('%.2g',d0md)]);
-fpwr = fplot(@(t) a*t^b, [0 4],'-g','LineWidth',2,...
-    'DisplayName',[sprintf('$T^{%.2g}$ fit',b)]);
-xlabel(xlblTemp); ylabel('$\Delta C_p/R$');
+errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.b',...
+    'MarkerSize',18,'LineWidth',1,'DisplayName','Experiment')
+xlabel(xlblTemp); ylabel('$C_p/R$');
+ylim([0 1.55])
+% annttl = annotation('textbox',[0.2 0.75 0.1 0.1],'interpreter','latex',...
+%     'String',{'TmVO$_{4}$'}, 'LineStyle','-','EdgeColor','none',...
+%     'BackgroundColor','none','Color','k');% add annotation
+% annttl.FontSize = ax.XAxis.Label.FontSize;
 grid on
-title({'Residual $C_p$ data +' 'theoretical correction from magnetic dipoles'});% title(ttlCpY);
+title(sprintf('$T_c=$ %.2g K',Tcrs));% title(ttlCpY);
 lgd = legend('show');
-ylim([0 .2])
+
+
+
 
 
 %% % % Plot figure % % % 
@@ -207,6 +213,24 @@ formatFigure;
 
 
 %% % % % % % % % Failed attempts at fitting tail of Cp data at T>Tc % % % % % % % % % % 
+
+%% Plot residual Cp and power law fit
+% Power law a*T^b fit parameters for residual Cp above T_D
+% a = 22.58;%  (-6.487, 51.65); b = -6.062;%  (-7.608, -4.516);% When fitting all data points above T_D
+a = 0.9996;%  (0.203, 1.796)
+b = -3.035;%  (-3.795, -2.275);% When fitting only the highest three data points
+figure
+errorbar(avgData(i).T,avgData(i).Cpres/R,avgData(i).CpFullErr/R,'.b',...
+    'MarkerSize',18,'LineWidth',1,'DisplayName','Residual $C_p$')
+hold on
+% fpr = plot(tvec(2:end-1),Cpmagres','-r','DisplayName',['Mag. dip.' newline '${\Delta e}/T_c=$ ' sprintf('%.2g',d0md)]);
+fpwr = fplot(@(t) a*t^b, [0 4],'-g','LineWidth',2,...
+    'DisplayName',[sprintf('$T^{%.2g}$ fit',b)]);
+xlabel(xlblTemp); ylabel('$\Delta C_p/R$');
+grid on
+title({'Residual $C_p$ data +' 'theoretical correction from magnetic dipoles'});% title(ttlCpY);
+lgd = legend('show');
+ylim([0 .2])
 
 %% Cp LFIM with arbitrary value of longitudinal field
 e2 = 1e-2;
