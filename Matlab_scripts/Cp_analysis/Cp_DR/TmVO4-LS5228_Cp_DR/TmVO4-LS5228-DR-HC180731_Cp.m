@@ -100,8 +100,7 @@ end
 srtd = srtd';
 
 %% Compute average of data points taken
-for i = 1:L
-    avgData(i) = averageCp(6e-3,srtd{i}.T,srtd{i}.Cpmol,srtd{i}.CpmolErr);
+for i = 1:L    avgData(i) = averageCp(6e-3,srtd{i}.T,srtd{i}.Cpmol,srtd{i}.CpmolErr);
 end
 
 %% Prepare plot of theoretical curve 

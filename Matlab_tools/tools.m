@@ -13,12 +13,20 @@ e = 1.2e-3*(1:2:9);%... arithmetic sequence
 e = 1.5e-3*2.^(0:4);%... geometric sequence
 
 %% Batch rename files in current folder
-% Get all files with relevant name pattern in current folder
-filesrn = dir('HH*');
-% Loop through each
-for id = 1:length(filesrn)
-%     and rename them
-      movefile(filesrn(id).name, strcat(filesrn(id).name,".txt"));
+filesrn = dir('Dixon1980 (*).JPG');% Get all files with relevant name pattern in current folder
+for id = 1:length(filesrn)% Loop through each item of the file structure filesrn
+%     movefile(filesrn(id).name, strcat(filesrn(id).name,".txt"));% add string at the end of filename
+    movefile(filesrn(id).name,regexprep(filesrn(id).name,' \((\d+)\)','_$1'));
+    % replace Windows batch naming system (i.e. 'filename (filenumber).extension') with
+    % underscore file numbering, i.e. 'filename_filenumber.extension'.
+% Details of regular expression: 
+% * the initial space identifies the space in the Windows filename
+% * '\(' is the string that identifies a bracket character (same for '\)')
+% * '\d+' identifies  a sequence of one or more digits inside the brakets
+% * the extra pair of brackets identifies the sequence of digits as a token
+%   that is then used in the replacing expression using the string '$1',
+%   which guarantees that the final filename will have the same file number
+%   as the initial one.
 end
 %% Exctract field from multi-dimensional structure to a matrix
 % <https://www.mathworks.com/matlabcentral/answers/268762-multi-struct-to-matrix 
