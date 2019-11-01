@@ -9,10 +9,10 @@ cd C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2019-05-08_TmVO4-LS
 data(4).tbl = Import_Cp_avg('2019-05-08_TmVO4-LS5210-NMR1905-1-HC1_avg.txt');
 
 %% Define variables for CFT (Curve Fitting Tool)
-R = 8.314;% gas constant
+R = 8.314;% gas constant, in J/mol/K
 for i=1:4
 % Important note: the following syntax is #1 in the list of things that one
-% should not do in Matlab, HOWEVER I do not see any other iterative way of
+% should NOT do in Matlab, HOWEVER I do not see any other iterative way of
 % creating variables that can be accessed in the CFT.
 eval(['fitT' num2str(i) '= data('  num2str(i) ').tbl.T']);
 eval(['fitCp' num2str(i) '= data('  num2str(i) ').tbl.Cp /R']);

@@ -14,12 +14,11 @@ Data = ImportCpDR('2018-07-31_TmVO4-LS5228-DR-HC180731.dat');
 % Data0 = importCpSharedPPMS_('20180322_TmVO4-LS5228-MP3-Plt-HC1803_Cp.dat');
 %% Concatenate them in a cell array
 split = {Data};
-L = length(split);
 
 %% Rename variables
 isTableCol = @(t, thisCol) ismember(thisCol, t.Properties.VariableNames);
 % function to test if a column exists in a table
-for i=1:L% for doped samples measured in DR
+for i=1% for doped samples measured in DR
     if isTableCol(split{i},'SampleTempKelvin')
         split{i}.Properties.VariableNames{'SampleTempKelvin'} = 'T';% rename the temperature column
     end
@@ -56,34 +55,10 @@ ylblCp = 'C$_p$ (J$\cdot$mol$^{-1}\cdot$K$^{-1}$)';
 ttlCpY = 'Heat capacity of Tm$_{1-x}$Y$_x$VO$_4$';
 
 %% Compute molar heat capacity
-M = [283.87326% Molar mass of each sample, in g/mol
-275.3902538
-271.869006
-269.4681552
-266.3470492
-266.2670208
-264.6664536
-258.6643266];
-m = 1e-3*[0.38% mass in g of the sample on which each dataset was measured
-0.13
-0.24
-0.045
-0.25
-0.59
-0.76
-0.14];
-dpg = [0% Y content for each dataset, after interpolation of uprobe 
-% results; see 'YTmVO4_phase_diagram.m'
-0.106
-0.164
-0.196
-0.219
-0.237
-0.264
-0.315];
-% split{1}.Cpmol = split{1}.Cp *1e-3;% molar heat capacity, in J/mol/K,
-% starting from a heat capacity in mJ/mol/K as is measured in the shared PPMS
-for i=1:L
+M = 283.87326;% Molar mass of each sample, in g/mol
+m = 1e-3*0.38;% mass in g of the sample on which each dataset was measured
+dpg = 0;
+for i=1
     split{i}.Cpmol = split{i}.Cp *1e-6*M(i)/(m(i)*(1-dpg(i)));% molar heat capacity, in J/mol/K
     split{i}.CpmolErr = split{i}.CpErr *1e-6*M(i)/(m(i)*(1-dpg(i)));% molar heat capacity, in J/mol/K
     % starting from a heat capacity measured in microJoules per Kelvin, as is measured in the DR
@@ -100,33 +75,46 @@ end
 srtd = srtd';
 
 %% Compute average of data points taken
-for i = 1:L    avgData(i) = averageCp(6e-3,srtd{i}.T,srtd{i}.Cpmol,srtd{i}.CpmolErr);
+clear avgData
+R = 8.314;% gas constant in J/mol/K
+Tp = 26;% Temperature scale of phonons contribution to Cp in TmVO4, in K
+for i = 1
+    avgData(i) = averageCp(6e-3,srtd{i}.T,srtd{i}.Cpmol,srtd{i}.CpmolErr);
+    avgData.CpFull = avgData.Cp;
+    avgData.Cp = avgData.CpFull - R*(avgData.T/Tp).^3;
+    avgData.Cpr = avgData.Cp/R;
+    avgData.CprErr = avgData.CpFullErr/R;
 end
 
+%% Plot averaged data 
+figure
+plot(avgData.T,avgData.CpFull,'.','DisplayName','$C_p^{\mathrm{full}}$')
+hold on
+plot(avgData.T,R*(avgData.T/Tp).^3,'.','DisplayName','$C_p^{\mathrm{phonons}}$')
+plot(avgData.T,avgData.Cp,'.','DisplayName','$C_p^{\mathrm{full}}-C_p^{\mathrm{phonons}}$')
+legend('show')
+title('TmVO$_4$ heat capacity')
+xlabel(xlblTemp); ylabel('$C_p$ (J/K/mol)');
+
 %% Prepare plot of theoretical curve 
-Tc = 2.193;%  (2.192, 2.194) value of transition temperature obtained from fit with Cp_LFIM function in Curve Fitting Tool
-e =  0.000643;%  (0.000583, 0.000703) value of longitudinal field obtained from fit with Cp_LFIM function Curve Fitting Tool
+Tc = 2.19;%  Value of transition temperature obtained from fit with Cp_LFIM_NF function in Curve Fitting Tool
+e =  5e-4;%  Value of longitudinal field obtained from fit with Cp_LFIM_NF function in Curve Fitting Tool
 tvec = linspace(1e-3,4,2000);
 
 %% Compute theoretical heat capacity in LFIM
 Cptheo = Cp_LFIM(tvec/Tc,e);
 
 %% Subtract Cptheo from experimental data to analyze the residual Cp
-R = 8.314;
 Cptheodat = Cp_LFIM(avgData(i).T/Tc,e);% theoretical Cp computed at same temperatures as data
 avgData(i).Cpres = avgData(i).Cp - Cptheodat*R;% Residual Cp after subtraction of the fit
 
 %% Prepare fit of Cp vs Temperature 
 % Use these variables in Curve fitting tool
 fitT = avgData(i).T;
-fitCp = avgData(i).Cp/R;
-fitCpErr = avgData(i).CpFullErr/R;
+fitCp = avgData(i).Cpr;
+fitCpErr = avgData(i).CprErr;
 fitwghts = 1./fitCpErr;
 fitCpres = avgData(i).Cpres/R;
-
-%%
-maxTfit = 2.23;
-[fitresult, gof] = fitCpLFIM(fitT,fitCp,fitwghts,maxTfit);
 
 %% Plot averaged data + fit including nematic fluctuations
 figure; 
@@ -212,6 +200,10 @@ formatFigure;
 
 
 %% % % % % % % % Failed attempts at fitting tail of Cp data at T>Tc % % % % % % % % % % 
+
+%% Fit at low temperatures
+maxTfit = 2.23;
+[fitresult, gof] = fitCpLFIM(fitT,fitCp,fitwghts,maxTfit);
 
 %% Plot residual Cp and power law fit
 % Power law a*T^b fit parameters for residual Cp above T_D
