@@ -24,7 +24,11 @@ pph=repmat(phi',1,length(theta));
     
     % %      6   5    4 3   2   1   0    1   2   3   4   5   6 
     vec1=[   0   0.89 0 0   0 -0.42 0    0   0  0.19 0   0   0 ];% From Hodges et al. 1983, p.5
-    vec2=vec1(end:-1:1);
+    vec2=vec1(end:-1:1);% vec1 and vec2 are eigenvectors of Jz and hence Jz^2
+% One can show that eigenvectors of O_2^2 = Jx^2 - Jy^2 = J+^2 + J-^2 are
+% vec1 +- vec2 (with appropriate normalization)
+% and eigenvectors of Pxy = JxJy + JyJx = -i/4.(J+^2 - J-^2) are 
+% vec1 +- i.vec2 (with appropriate normalization)
     
 %     vec=vec1+exp(pi*1i*-0.5)*vec2;% For wavefunction in the orthorhombic phase
 % %     Change exp(pi*1i*0.5) to exp(pi*1i*-0.5) to toggle between two possible wavefunctions
@@ -176,7 +180,7 @@ sf.DiffuseStrength = 1;% Intensity of the diffuse component of the light reflect
 sf.AmbientStrength = .5;% Intensity of the ambient component of the light reflected from the object. 
 sf.SpecularStrength = .75;% Intensity of the specular component of the light reflected from the object. 
 % set(hNew, 'pos', [0.23162 0.2233 0.72058 0.63107])
-sf.Visible = 'off';% cb.Visible = 'off';
+cb.Visible = 'off';% sf.Visible = 'off';
 % hNew.SortMethod='ChildOrder';
 % l = findobj(gcf,'Type','Light'); l.delete;
 axf.XTick=[]; axf.YTick=[]; axf.ZTick=[];
