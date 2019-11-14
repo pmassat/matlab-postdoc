@@ -4,4 +4,4 @@ function s = OP_TFIM(t,h,e)
     fun = @(x) x-(x+e)./gamma(x)*tanh(gamma(x)./t);
 %     fun = @(x) sqrt(x^2)-tanh((x+e)./(t));
     s = fsolve(fun,1,options);
-end
+end 
