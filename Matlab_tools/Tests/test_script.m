@@ -8,4 +8,6 @@
 %     plot(ax,1+10*i:10+10*i,rand(1,10))
 % end
 
-mfilename 
+fileID = fopen('fexp.m','w');
+fprintf(fileID,str);
+fclose(fileID);

@@ -8,6 +8,15 @@
 % diary off
 % diary on
 
+%% Read file and replace regular expression
+test1 = fileread('filename.m');% Read file and store its content as string into variable test1
+str = regexprep(test1,'[\\\n\r]+','\n');% Replace all strings with a '\' sign followed by newlines with a single newline
+
+%% Save string to file
+fileID = fopen('fexp.m','w');
+fprintf(fileID,str);
+fclose(fileID);
+
 %% Generate array of...
 e = 1.2e-3*(1:2:9);%... arithmetic sequence
 e = 1.5e-3*2.^(0:4);%... geometric sequence
