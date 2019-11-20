@@ -40,19 +40,19 @@ for i=1% for doped samples measured in DR
 end
 
 %% Remove NaN rows
-for i=1:L
+for i=1
     split{i}(any(isnan(split{i}.T), 2), :) = [];% Remove rows where T is NaN
 end
 
 %% Keep only data under zero magnetic field
-for i=1:L%for all datasets
+for i=1%for all datasets
     split{i} = split{i}(round(split{i}.H,-1)==0,:);% keep only data at zero field
 end
 
 %% Parameters for plotting heat capacity
 xlblTemp = 'Temperature (K)';
 ylblCp = 'C$_p$ (J$\cdot$mol$^{-1}\cdot$K$^{-1}$)';
-ttlCpY = 'Heat capacity of Tm$_{1-x}$Y$_x$VO$_4$';
+ttlCp = 'Heat capacity of TmVO$_4$';
 
 %% Compute molar heat capacity
 M = 283.87326;% Molar mass of each sample, in g/mol
@@ -67,7 +67,7 @@ end
 
 %% Sort each dataset by increasing value of temperature
 srtd = repmat(split,1);
-for i=1:L
+for i=1
     srtd{i} = sortrows(split{i},{'T'});
 %     [split{i}.T,wo] = sort(split{i}.T);
 %     split{i}.Cp = split{i}.Cp(wo);
@@ -98,14 +98,17 @@ xlabel(xlblTemp); ylabel('$C_p$ (J/K/mol)');
 
 %% Prepare plot of theoretical curve 
 Tc = 2.19;%  Value of transition temperature obtained from fit with Cp_LFIM_NF function in Curve Fitting Tool
-e =  5e-4;%  Value of longitudinal field obtained from fit with Cp_LFIM_NF function in Curve Fitting Tool
+s =  5e-4;%  Value of longitudinal field obtained from fit with Cp_LFIM_NF function in Curve Fitting Tool
 tvec = linspace(1e-3,4,2000);
 
+%% Compute pure mean-field heat capacity
+Cptheo0 = Cp_LFIM(tvec/Tc,0);
+
 %% Compute theoretical heat capacity in LFIM
-Cptheo = Cp_LFIM(tvec/Tc,e);
+Cptheo = Cp_LFIM(tvec/Tc,s);
 
 %% Subtract Cptheo from experimental data to analyze the residual Cp
-Cptheodat = Cp_LFIM(avgData(i).T/Tc,e);% theoretical Cp computed at same temperatures as data
+Cptheodat = Cp_LFIM(avgData(i).T/Tc,s);% theoretical Cp computed at same temperatures as data
 avgData(i).Cpres = avgData(i).Cp - Cptheodat*R;% Residual Cp after subtraction of the fit
 
 %% Prepare fit of Cp vs Temperature 
@@ -119,22 +122,23 @@ fitCpres = avgData(i).Cpres/R;
 %% Plot averaged data + fit including nematic fluctuations
 figure; 
 % coefficients of fit of residual Cp, obtained in Curve Fitting Tool with Adjusted R-square of 0.9927
-c1 =     0.02607  %(0.01489, 0.03725)
-c2 =    0.004759  %(0.003322, 0.006196)
+c1 =     0.02607;  %(0.01489, 0.03725)
+c2 =    0.004759;  %(0.003322, 0.006196)
 % ax2 = subplot(5,1,[3:5]); 
-fp = plot(tvec,Cptheo,'-r','DisplayName',sprintf('MF: e=%.2g',e));
+% fp = plot(tvec,Cptheo0,'-r','DisplayName','Mean-field');
+fp = plot(tvec,Cptheo,'-r','DisplayName',['$\sigma_{66}=$' sprintf(' %.1e',s)]);
 % fp = plot(avgData(i).T,Cptheodat,'-r','DisplayName',sprintf('MF: e=%.2g',e));
 hold on
 errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.b',...
-    'MarkerSize',18,'LineWidth',1,'DisplayName','Experiment')
+    'MarkerSize',18,'LineWidth',1,'DisplayName','Data')
 xlabel(xlblTemp); ylabel('$C_p/R$');
 ylim([0 1.55])
-% annttl = annotation('textbox',[0.2 0.75 0.1 0.1],'interpreter','latex',...
-%     'String',{'TmVO$_{4}$'}, 'LineStyle','-','EdgeColor','none',...
-%     'BackgroundColor','none','Color','k');% add annotation
+annttl = annotation('textbox',[0.2 0.75 0.1 0.1],'interpreter','latex',...
+    'String',{'TmVO$_{4}$'}, 'LineStyle','-','EdgeColor','none',...
+    'BackgroundColor','none','Color','k');% add annotation
 % annttl.FontSize = ax.XAxis.Label.FontSize;
 grid on
-title(sprintf('$T_c=$ %.2g K',Tcrs));% title(ttlCpY);
+% title(ttlCp);
 lgd = legend('show');
 
 
@@ -146,7 +150,7 @@ lgd = legend('show');
 % For figure 1 of paper 1
 sz = zeros(size(tvec));
 for j=1:length(tvec)
-sz(j) = 2.95/2*OP_TFIM(tvec(j)/Tc,0,e);%2.95 cm-1 is the total splitting of the GS doublet, see e.g. Melcher1976, fig.2(a)
+sz(j) = 2.95/2*OP_TFIM(tvec(j)/Tc,0,s);%2.95 cm-1 is the total splitting of the GS doublet, see e.g. Melcher1976, fig.2(a)
 end
 
 %% Prepare tight subplot for combining plots in single figure
@@ -176,12 +180,11 @@ ax1.YTick = [];
 ax2.XLabel.Position(2) = -.15;
 
 %% Print figure to PNG file
-formatFigure;
-% printPNG('2019-08-29_TmVO4-LS5228-DR-HC1807_Cp_random-strains-correction_fails')
-% printPNG('2019-08-29_TmVO4-LS5228-DR-HC1807_Cp_mag-dip-correction_fails')
-% printPNG('2019-08-29_TmVO4-LS5228-DR-HC1807_Cpres_mag-dip')
-% printPNG('2019-05-28_YTmVO4_Cp_vs_T_0-p11-p15-p22')
+% formatFigure;
 % printSVG('2019-08-06_TmVO4-LS5228-DR-HC180731_Cp+fit')
+% printPNG('2019-11-19_TmVO4_MFIM_Cp')
+% printPNG('2019-11-19_TmVO4_Cp_data+MF')
+printPNG('2019-11-19_TmVO4_Cp_data+stress')
 
 %% Export averaged Cp data to text file
 % savepath = 'C:\Users\Pierre\Desktop\Postdoc\YTmVO4\YTmVO4_HeatCapacity\YTmVO4_Cp_anaLsis\2018-10-17_YTmVO4_averaged_Cp\';
@@ -219,7 +222,7 @@ fpwr = fplot(@(t) a*t^b, [0 4],'-g','LineWidth',2,...
     'DisplayName',[sprintf('$T^{%.2g}$ fit',b)]);
 xlabel(xlblTemp); ylabel('$\Delta C_p/R$');
 grid on
-title({'Residual $C_p$ data +' 'theoretical correction from magnetic dipoles'});% title(ttlCpY);
+title({'Residual $C_p$ data +' 'theoretical correction from magnetic dipoles'});% title(ttlCp);
 lgd = legend('show');
 ylim([0 .2])
 
@@ -237,12 +240,12 @@ deltaCpdr = (1-szcp'*2/2.95).*C_0/Tc.*Cp_magDipRandFields(tvec'/Tc,d0md);
 %% Cp in random strains
 d0dr = .3;
 Tcrs = 2.3;
-Cpma = Cp_full_random_strains(d0dr,6*e,tvec/Tcrs);
+Cpma = Cp_full_random_strains(d0dr,6*s,tvec/Tcrs);
 
 %% Plot averaged data + fit including random strains
 figure; 
 % ax2 = subplot(5,1,[3:5]); 
-fp = plot(tvec,Cptheo,'-r','DisplayName',sprintf('MF: e=%.2g',e));
+fp = plot(tvec,Cptheo,'-r','DisplayName',sprintf('MF: e=%.2g',s));
 % fp = plot(avgData(i).T,Cptheodat,'-r','DisplayName',sprintf('MF: e=%.2g',e));
 hold on
 fpr = plot(tvec,Cpma,'-g','DisplayName',['Rand. strains:' newline '${\Delta e}/T_c$=' sprintf('%.2g',d0dr)]);
@@ -255,12 +258,12 @@ ylim([0 1.55])
 %     'BackgroundColor','none','Color','k');% add annotation
 % annttl.FontSize = ax.XAxis.Label.FontSize;
 grid on
-title(sprintf('$T_c=$ %.2g K',Tcrs));% title(ttlCpY);
+title(sprintf('$T_c=$ %.2g K',Tcrs));
 lgd = legend('show');
 
 %% Plot averaged data + theoretical correction from magnetic dipole interactions
 figure; 
-fp = plot(tvec,Cptheo,'-r','DisplayName',sprintf('MF: $e=$ %.2g',e));
+fp = plot(tvec,Cptheo,'-r','DisplayName',sprintf('MF: $e=$ %.2g',s));
 hold on
 fpr = plot(tvec(2:end-1),deltaCpdr','-g','DisplayName',['Mag. dip.:' newline '${\Delta e}/T_c$=' sprintf('%.2g',d0md)]);
 fpt = plot(tvec(2:end-1),Cptheo(2:end-1)+deltaCpdr','-m','DisplayName','MF + mag. dip.');
@@ -269,7 +272,7 @@ errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.b',...
 xlabel(xlblTemp); ylabel('$C_p/R$');
 ylim([0 1.55])
 grid on
-title(['TmVO$_4$ heat capacity: mean-field fit' newline '+ correction from magnetic dipoles']);% title(ttlCpY);
+title(['TmVO$_4$ heat capacity: mean-field fit' newline '+ correction from magnetic dipoles']);% title(ttlCp);
 lgd = legend('show');
 
 %% Mag dip correction to Cp for comparison with Cpres
