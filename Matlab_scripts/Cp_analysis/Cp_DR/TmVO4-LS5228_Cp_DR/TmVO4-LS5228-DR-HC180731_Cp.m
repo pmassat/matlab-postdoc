@@ -119,7 +119,7 @@ fitCpErr = avgData(i).CprErr;
 fitwghts = 1./fitCpErr;
 fitCpres = avgData(i).Cpres/R;
 
-%% Plot averaged data + fit including nematic fluctuations
+%% Plot averaged data + fit including external stress
 figure; 
 % coefficients of fit of residual Cp, obtained in Curve Fitting Tool with Adjusted R-square of 0.9927
 c1 =     0.02607;  %(0.01489, 0.03725)
@@ -140,6 +140,34 @@ annttl = annotation('textbox',[0.2 0.75 0.1 0.1],'interpreter','latex',...
 grid on
 % title(ttlCp);
 lgd = legend('show');
+
+%% Plot averaged data + CW fit 
+figure; 
+Tfit = 2.22; T66 = 1.8;
+% coefficients of fit of residual Cp, obtained when fitting in Curve Fitting Tool
+T0 =       2.091;%  (2.079, 2.103); fit a/(T-T0),  Adjusted R-square of 0.9992
+a =     0.02932;%  (0.02726, 0.03138); fit a/(T-T0),  Adjusted R-square of 0.9992
+a66 =     0.03713;%  (0.03533, 0.03892); fit a66/(T-T66),  Adjusted R-square of 0.9926
+% fp = fplot(@(t)a/(t-T0),[0 4],'-r','LineWidth',1.5,...
+%     'DisplayName',[sprintf('%.1g/(T-%.2g)',a,T0)]);
+fp = fplot(@(t)a66/(t-T66)^2,[0 4],'-r','LineWidth',1.5,...
+    'DisplayName',[sprintf('%.2g/(T-%.2g)',a66,T66) '$^2$']);
+hold on
+errorbar(fitT(fitT<Tfit),fitCpres(fitT<Tfit),fitCpErr(fitT<Tfit),'xk',...
+    'MarkerSize',9,'LineWidth',1,'DisplayName','Excluded')
+errorbar(fitT(fitT>Tfit),fitCpres(fitT>Tfit),fitCpErr(fitT>Tfit),'.b',...
+    'MarkerSize',18,'LineWidth',1,'DisplayName','Data')
+% errorbar(fitT,fitCpres,fitCpErr,'.b','MarkerSize',18,'LineWidth',1,'DisplayName','Data')
+xlabel(xlblTemp); ylabel('$\delta C_p/R$');
+xlim([0 4]); ylim([-.05 .25]);
+annttl = annotation('textbox',[0.2 0.8 0.1 0.1],'interpreter','latex',...
+    'String',{'TmVO$_{4}$'}, 'LineStyle','-','EdgeColor','none',...
+    'BackgroundColor','none','Color','k');% add annotation
+% annttl.FontSize = ax.XAxis.Label.FontSize;
+grid on
+% title(ttlCp);
+lgd = legend('show');
+
 
 
 
@@ -184,7 +212,8 @@ ax2.XLabel.Position(2) = -.15;
 % printSVG('2019-08-06_TmVO4-LS5228-DR-HC180731_Cp+fit')
 % printPNG('2019-11-19_TmVO4_MFIM_Cp')
 % printPNG('2019-11-19_TmVO4_Cp_data+MF')
-printPNG('2019-11-19_TmVO4_Cp_data+stress')
+% printPNG('2019-11-19_TmVO4_Cp_data+stress')
+printPNG('2019-11-20_TmVO4_CpRes_data+C66fit')
 
 %% Export averaged Cp data to text file
 % savepath = 'C:\Users\Pierre\Desktop\Postdoc\YTmVO4\YTmVO4_HeatCapacity\YTmVO4_Cp_anaLsis\2018-10-17_YTmVO4_averaged_Cp\';
