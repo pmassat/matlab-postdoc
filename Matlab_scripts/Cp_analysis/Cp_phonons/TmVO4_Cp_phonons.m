@@ -19,4 +19,26 @@ eval(['fitCp' num2str(i) '= data('  num2str(i) ').tbl.Cp /R']);
 eval(['fitWghts' num2str(i) '= R./data('  num2str(i) ').tbl.Cp_Err']);
 end
 
-%% 
+%% Phonons fit coefficients before optimizing 
+% Fit formula: c0 + (T/Tp)^3
+% Fit includes weights
+% fitCp1;  Adjusted R-square: 0.9892
+Tp1 =       26.86;%  (26.32, 27.4)
+c01 =    0.007943;%  (0.005699, 0.01019)
+% fitCp2;  Adjusted R-square: 0.8799
+Tp2 =       28.77;%  (25.09, 32.45)
+c02 =    -0.01208;%  (-0.02855, 0.004376)
+% fitCp3;  Adjusted R-square: 0.969
+Tp3 =       29.68;%  (28.2, 31.16)
+c03 =    0.008906;%  (0.005064, 0.01275)
+% fitCp4;  Adjusted R-square: 0.9877
+Tp4 =       22.16;%  (21.57, 22.75)
+c04 =     0.02448;%  (0.02129, 0.02768)
+
+
+
+
+
+
+
+
