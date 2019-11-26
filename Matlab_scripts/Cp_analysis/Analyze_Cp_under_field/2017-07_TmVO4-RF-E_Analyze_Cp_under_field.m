@@ -157,6 +157,16 @@ for i = 1:length(uh)
         separatedCpData(i).CpErr,separatedCpData(i).H);
 end
 
+%% Prepare fit of Cp vs Temperature 
+R = 8.314;
+i = 1;
+% Use these variables in Curve fitting tool
+clear fitT fitCp fitCpErr fitwghts 
+fitT = avgData(i).T;
+fitCp = avgData(i).Cp/R;
+fitCpErr = avgData(i).CpFullErr/R;
+fitwghts = 1./fitCpErr;
+
 %% Compute and plot derivative of averaged data
 figure; hold on
 for i = 1:length(uh)
@@ -243,7 +253,6 @@ Cpfit = avgData(j).Cp;
 CpfitErr = avgData(j).CpFullErr;
 wghts = 1./CpfitErr;
 Tmaxfit = 2.15;
-R = 8.314;
 
 %% Fit and plot
 [fitresult, gof] = fitCpmfvsTemp(Tfit,Cpfit,wghts,Tmaxfit);
@@ -313,9 +322,6 @@ printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
 
 
 
-
-%% 
-%%
 %% 3D scatter of Cp(T) at each field separately
 figure
 for i=1:length(uh)
@@ -342,7 +348,7 @@ xlabel('H (Oe)');ylabel('T (K)');zlabel('-dC_p/dT (\muJ/K)');
 xlim([0 hmax])
 legend()
 hold off
-%% Plot Cp/T(T)
+%% Plot Cp(T) at each field separately
 %%
 figure
 for i=1:length(uh)
@@ -354,120 +360,3 @@ ylabel('Cp/T (J/K^2/mol)')
 legendCell = cellstr(num2str(uh, '%-d Oe'));
 legend(legendCell)
 hold off
-%%
-whichT = 1.8:0.1:6.1;
-clear cstTCpdata
-for i=length(whichT):-1:1
-    if length(T(abs(T-whichT(i))<0.005)) < 4
-        whichT(i) = [];
-    end
-end
-
-for i=1:length(whichT)
-    cstTfilter = abs(T-whichT(i))<0.01;
-    cstTCpdata(i).H = H(cstTfilter);
-    cstTCpdata(i).T = T(cstTfilter);
-    cstTCpdata(i).Cp = Cp(cstTfilter);
-    
-    [cstTCpdata(i).H,wo] = sort(cstTCpdata(i).H);
-    cstTCpdata(i).H = cstTCpdata(i).H(wo);
-    cstTCpdata(i).Cp = cstTCpdata(i).Cp(wo);
-end
-%% 
-% For each value of temperature rounded to 0.1K (whichT), identify the closest 
-% temperature value measured and store this value and the corresponding Cp value
-%% Plot Cp(H) at constant T
-%%
-index = 1:length(whichT);
-for i=index
-    plot(cstTCpdata(i).H,cstTCpdata(i).Cp,'-+')
-    hold on
-end
-xlabel('Field (Oe)')
-ylabel('Cp (J/K/mol)')
-legendCell = cellstr(num2str(whichT(index)', '%1.1f K'));
-legend(legendCell)
-hold off
-%% Plot Cp/T(H) at constant T
-%%
-index = 1:length(whichT);
-for i=index
-    plot(cstTCpdata(i).H,cstTCpdata(i).Cp./cstTCpdata(i).T,'-+')
-    hold on
-end
-xlabel('Field (Oe)')
-ylabel('Cp/T (J/K^2/mol)')
-legendCell = cellstr(num2str(whichT(index)', '%1.1f K'));
-legend(legendCell)
-hold off
-%% 
-% Next steps: 
-% 
-% # save file in TmAsO4 folder
-% # plot Cp/T = f(T)
-% # Calculate Cp = f(H) at fixed temperature
-% 
-% 
-%% Below this point: code not adapted yet
-%%
-x=separatedCpData(4).T;
-y=separatedCpData(4).Cp;
-%%
-for i=1:length(fields)
-    separatedCpData(i).f=fitSpline(separatedCpData(i).T,-separatedCpData(i).Cp);
-%Is fitSpline a Matlab function? Cannot find it in the help.
-%    separatedCpData(i).d2=differentiate(separatedCpData(i).f,separatedCpData(i).T);
-    plot(separatedCpData(i).f,'deriv1')
-    hold on
-end
-legend(legendCell)
-xlabel('Temperature (K)')
-ylabel('-dCp/dT (J/K^2/mol)')
-hold off
-%%
-figure
-% n = length(fields);
-% C=[]
-% for i=0:n-1
-%     C=[C; 1-i/n i/n 0];
-% end
-% set(0,'defaultaxescolororder',C) %red to green
-for i=1:length(fields)
-    separatedCpData(i).f=fitSpline(separatedCpData(i).T,separatedCpData(i).Cp);
-    separatedCpData(i).d2=differentiate(separatedCpData(i).f,separatedCpData(i).T);
-    scatter3(separatedCpData(i).H,separatedCpData(i).T,-separatedCpData(i).d2,'filled')
-    hold on
-end
-xlim([0 hmax])
-ylim([0 3])
-xlabel('Field (Oe)')
-ylabel('Temperature (K)')
-zlabel('-dCp/dT (J/K/mol)')
-hold off
-%%
-T2=[];
-H2=[];
-d2Cp2=[];
-for i=1:length(fields)
-    T2= [T2; separatedCpData(i).T];
-    H2=[ H2; separatedCpData(i).H];
-    d2Cp2=[d2Cp2; separatedCpData(i).d2];
-end
-
-tstep=0.025;
-% hmax=8000;
-% hstep=500;
-% [Hg,Tg] = meshgrid(0:hstep:hmax,tmin:tstep:3);%for griddata
-Hgl=0:hstep:hmax;%for gridfit
-Tgl=tmin:tstep:3;%for gridfit
-figure
-d2Cpgf = gridfit(H2,T2,d2Cp2,Hgl,Tgl);
-d2Cpg = griddata(H2,T2,d2Cp2,Hg,Tg);
-surf(Hg,Tg,-d1Cpg,'EdgeColor','none')
-xlabel('Field (Oe)')
-ylabel('Temperature (K)')
-zlabel('-dCp/dT (uJ/K^3)')
-hold on
-%scatter3(H2,T2,-d2Cp2,'.k')
-xlim([0 hmax])
-ylim([0 3])

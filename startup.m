@@ -1,3 +1,6 @@
+%% Define physical constants
+R = 8.314;% gas constant, in J/mol/K
+
 %% Graphics properties
 set(groot,'defaultTextFontsize',18);
 set(groot,'defaultAxesFontsize',18);
