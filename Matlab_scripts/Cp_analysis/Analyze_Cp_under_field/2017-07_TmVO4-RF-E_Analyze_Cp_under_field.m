@@ -7,11 +7,10 @@ DATA=ImportTmVO4Cp(filename);% Use this data to plot color map of phase diagram
 %% Sample properties
 m = 0.25e-3;% mass of sample, in g
 M = 283.87;% molar mass of TmVO4, in g/mol
-R = 8.314;% gas constant, in J/K/mol
 Tc = 2.126;% Value of transition temperature in this sample
 
 %%
-Hc0 = 0.51;% value in Tesla units of the critical field at zero temperature
+Hc0 = 0.49;% value in Tesla units of the critical field at zero temperature
 % in the absence of demagnetizing factor
 % see data taken on needles of TmVO4-LS5200 in July 2017
 rescaling = Hc0/0.72;% rescaling factor, due to demag 
@@ -118,54 +117,55 @@ end
 Tsep = 6e-3;% Data points taken within an interval of Tsep are considered to be measured at the same temperature setpoint
 % 6mK is an empirical estimate of the dispersion of data points taken consecutively at a given temperature. 
 for i = 1:length(uh)
-%     T2 = repmat(separatedCpData(i).T,1);
-%     Tm = zeros(length(separatedCpData(i).T),1);
-%     Tsd = zeros(length(separatedCpData(i).T),1);
-%     Cpm = zeros(length(separatedCpData(i).Cp),1);
-%     Cpsd = zeros(length(separatedCpData(i).Cp),1);
-%     CpmErr = zeros(length(separatedCpData(i).Cp),1);
-%     for k = 1:length(T2)
-%         if T2(k)==0
-%             continue
-%         elseif length(T2(abs(T2-T2(k))<Tsep))>3
-%             Tsep2 = Tsep/2;% reduce the temperature interval
-% %             T2(abs(T2-T2(k))<Tsep2)%print out values of temperature which
-% %             verify the if statement
-%             Tm(k) = mean(T2(abs(T2-T2(k))<Tsep2));
-%             Tsd(k) = std(T2(abs(T2-T2(k))<Tsep2));
-%             Cpm(k) = mean(separatedCpData(i).Cp(abs(T2-T2(k))<Tsep2));
-%             Cpsd(k) = std(separatedCpData(i).Cp(abs(T2-T2(k))<Tsep2));
-%             CpmErr(k) = sum(separatedCpData(i).CpErr(abs(T2-T2(k))<Tsep2))/...
-%                 sqrt(length(separatedCpData(i).CpErr(abs(T2-T2(k))<Tsep2)));
-%             T2(abs(T2-T2(k))<Tsep2)=0;
-%         else
-%             Tm(k) = mean(T2(abs(T2-T2(k))<Tsep));
-%             Tsd(k) = std(T2(abs(T2-T2(k))<Tsep));
-%             Cpm(k) = mean(separatedCpData(i).Cp(abs(T2-T2(k))<Tsep));
-%             Cpsd(k) = std(separatedCpData(i).Cp(abs(T2-T2(k))<Tsep));
-%             CpmErr(k) = sum(separatedCpData(i).CpErr(abs(T2-T2(k))<Tsep))/...
-%                 sqrt(length(separatedCpData(i).CpErr(abs(T2-T2(k))<Tsep)));
-%             T2(abs(T2-T2(k))<Tsep)=0;
-%         end
-%     end
-%     separatedCpData(i).Hm = separatedCpData(i).H(Tm>0);
-%     separatedCpData(i).Tm = Tm(Tm>0);
-%     separatedCpData(i).Tsd = Tsd(Tm>0);
-%     separatedCpData(i).Cpm = Cpm(Cpm>0);
-%     separatedCpData(i).CpmFullErr = Cpsd(Cpm>0) + CpmErr(Cpm>0);
     avgData(i) = averageCpwithH(Tsep,separatedCpData(i).T,separatedCpData(i).Cp,...
         separatedCpData(i).CpErr,separatedCpData(i).H);
 end
 
 %% Prepare fit of Cp vs Temperature 
-R = 8.314;
-i = 1;
+i = 9;
 % Use these variables in Curve fitting tool
 clear fitT fitCp fitCpErr fitwghts 
 fitT = avgData(i).T;
 fitCp = avgData(i).Cp/R;
 fitCpErr = avgData(i).CpFullErr/R;
 fitwghts = 1./fitCpErr;
+
+%% Compute Cp for Gaussian distribution of fields
+h = uh(i)/(Hc0*1e4);
+rhsgm = 0.08;
+sgm = h*rhsgm;
+T = linspace(0,1.4,701);
+Cpid = zeros(length(T),1);
+Cpreal = zeros(length(T),1);
+for j=1:length(T)
+    Cpid(j) = Cp_TFIM(T(j),h);
+    Cpreal(j) = CpTFIM_normpdf(T(j),h,sgm);
+end
+
+%% Plot Cp for Gaussian distribution of fields
+Tc = 2.15;
+figure
+plot(fitT,fitCp,'.','DisplayName','data')
+hold on;
+plot(T*Tc,Cpid,'DisplayName',sprintf('h=%.2f',h));
+plot(T*Tc,Cpreal,'DisplayName',sprintf('h=%.2f,r=%.1e',h,rhsgm));
+title(sprintf('Cp_TFIM vs CpTFIM_normpdf H=%.0fOe',uh(i)))
+legend()
+
+%% Compute additional Cp for Gaussian distribution of fields
+h = 0.95;
+rhsgm = 0.08;
+sgm = h*rhsgm;
+for j=1:length(T)
+    Cpreal(j) = CpTFIM_normpdf(T(j),h,sgm);
+end
+plot(T*Tc,Cpreal,'DisplayName',sprintf('h=%.2f,r=%.1e',h,rhsgm));
+
+%% Plot additional Cp for Gaussian distribution of fields
+offset = 0.01;
+plot(T*Tc,Cpreal+offset,'DisplayName',sprintf('h=%.2f,r=%.1e',h,rhsgm));
+
+
 
 %% Compute and plot derivative of averaged data
 figure; hold on
@@ -267,9 +267,11 @@ figure; hold on
 rng = [1 5 7 9 13];
 clr = lines(length(rng));
 eb = cell(size(rng));
-for i=1:length(rng)
-    fp = plot(Ttlf(2:end-1)*Tc,Cptlf(:,i));% requires computing Cptlf in 'F_S_Cp_TLFIM_compute.m'
-%     fp = fplot(@(t)Cp_TFIM_offset_strain(t/2.14,uh(i)/(5.1e3),0),[0 3.2],'LineWidth',2);
+% for i=1:length(rng)
+%     fp = plot(Ttlf(2:end-1)*Tc,Cptlf(:,i));% requires computing Cptlf in 'F_S_Cp_TLFIM_compute.m'
+% end
+for i=rng
+    fp = fplot(@(t)Cp_TFIM(t/2.14,uh(i)/(5.1e3)),[0 3.2],'LineWidth',2);
 %     fp = fplot(@(t)Cp_TFIM_offset_strain(t/2.125,uh(i)/(5.1e3),1.5e-3),[0 4],'LineWidth',2);
 % Fit parameters on data at H=0: Tc=2.125(3), e=1.5(4)e-3
 % Note: the values of amplitude coefficient and Tc extracted from fit 
@@ -283,7 +285,7 @@ for i=rng
 end
 xlabel('Temperature (K)'); ylabel('C$_p$/R');%ylabel('C$_p$ (JK$^{-1}$mol$^{-1}$)');
 % title('Heat capacity of TmVO4 at various fields')
-title([sprintf('h=H/Hc*%.3g, e=',factor) mat2str(e,2)])
+% title([sprintf('h=H/Hc*%.3g, e=',factor) mat2str(e,2)])
 lgd = legend([eb{:}]); lgd.Title.String = '$H/H_c$';
 % legendCell = cellstr(num2str(uh, '%-d Oe')); legend(legendCell)
 ax = gca; ax.YMinorTick = 'on';% Add minor ticks on Y axis
@@ -291,7 +293,8 @@ grid on;%
 hold off
 
 %% Export figure 
-% printPNG('2019-05-17_TmVO4-RF-E_Cp_vs_T_4H_+fits_No-strain')
+formatFigure
+printPNG('2020-01-07_TmVO4-RF-E_CpTFIM_normpdf_5000Oe')
 % printPDF('2019-08-21_TmVO4-RF-E_Cp_vs_T_5H_theory_e-propto-h-cube')
 
 %% Prepare MF fit of Cp vs Temperature under field
@@ -318,7 +321,7 @@ annfit = annotation('textbox',[0.575 0.175 0.2 0.1],'interpreter','latex',...
 formatFigure
 annfit.Position(2)=.175;
 %% Export figure to pdf
-printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
+% printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
 
 
 

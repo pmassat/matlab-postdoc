@@ -1,13 +1,11 @@
-% 
-% figure;
-% ax = axes('LineStyleOrder',{'-*',':','--o'});
-% hold(ax,'on');
-% for i=1:3
-%     ax.ColorOrderIndex = i;
-%     ax.LineStyleOrderIndex = i;
-%     plot(ax,1+10*i:10+10*i,rand(1,10))
-% end
+%% 
+i = 15;
+% Use these variables in Curve fitting tool
+clear fitT fitCp fitCpErr fitwghts 
+fitT = avgData(i).T;
+fitCp = avgData(i).Cp/R;
+fitCpErr = avgData(i).CpFullErr/R;
+fitwghts = 1./fitCpErr;
 
-fileID = fopen('fexp.m','w');
-fprintf(fileID,str);
-fclose(fileID);
+
+
