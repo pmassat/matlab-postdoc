@@ -10,10 +10,11 @@ M = 283.87;% molar mass of TmVO4, in g/mol
 Tc = 2.126;% Value of transition temperature in this sample
 
 %%
-Hc0 = 0.49;% value in Tesla units of the critical field at zero temperature
+Hc0 = 0.51;% value in Tesla units of the critical field at zero temperature
 % in the absence of demagnetizing factor
 % see data taken on needles of TmVO4-LS5200 in July 2017
-rescaling = Hc0/0.72;% rescaling factor, due to demag 
+rescaling = Hc0/0.69;% rescaling factor, due to demag; 
+% obtained from fit using normal PDF of fields close to Hc; see below
 H=[DATA.FieldOersted]*rescaling;
 T=[DATA.SampleTempKelvin];
 Cp=[DATA.SampHCJmoleK];
@@ -24,9 +25,10 @@ H=H(whichPoints);
 T=T(whichPoints);
 Cp=Cp(whichPoints).*M/m*1e-6;% factor 1e-6 converts from uJ/K to J/K
 CpErr=CpErr(whichPoints).*M/m*1e-6;%
+[uh,~,X] = unique(round(H,-1));
+uh(2,:)=[];% When rounding to nearest tens, remove uh=10Oe because it is redundant with uh=0Oe
 
 %% Plot 3D scatter of Cp data
-[uh,~,X] = unique(round(H,-2));
 hmax=max(uh);
 tmin = min(T);
 tmax = max(T);
@@ -122,17 +124,18 @@ for i = 1:length(uh)
 end
 
 %% Prepare fit of Cp vs Temperature 
-i = 9;
+i = 8;
 % Use these variables in Curve fitting tool
 clear fitT fitCp fitCpErr fitwghts 
 fitT = avgData(i).T;
 fitCp = avgData(i).Cp/R;
 fitCpErr = avgData(i).CpFullErr/R;
 fitwghts = 1./fitCpErr;
+% Tc = 2.15;
 
 %% Compute Cp for Gaussian distribution of fields
 h = uh(i)/(Hc0*1e4);
-rhsgm = 0.08;
+rhsgm = 0.09;
 sgm = h*rhsgm;
 T = linspace(0,1.4,701);
 Cpid = zeros(length(T),1);
@@ -143,18 +146,17 @@ for j=1:length(T)
 end
 
 %% Plot Cp for Gaussian distribution of fields
-Tc = 2.15;
 figure
 plot(fitT,fitCp,'.','DisplayName','data')
 hold on;
 plot(T*Tc,Cpid,'DisplayName',sprintf('h=%.2f',h));
 plot(T*Tc,Cpreal,'DisplayName',sprintf('h=%.2f,r=%.1e',h,rhsgm));
-title(sprintf('Cp_TFIM vs CpTFIM_normpdf H=%.0fOe',uh(i)))
-legend()
+title(['Cp$\_$TFIM vs CpTFIM$\_$normpdf' sprintf(' H=%.0fOe',uh(i))]);
+lgd = legend(); lgd.Title = 'TmVO4-RF-E';
 
 %% Compute additional Cp for Gaussian distribution of fields
-h = 0.95;
-rhsgm = 0.08;
+% h = 0.87;
+rhsgm = 0.1;
 sgm = h*rhsgm;
 for j=1:length(T)
     Cpreal(j) = CpTFIM_normpdf(T(j),h,sgm);
@@ -293,8 +295,8 @@ grid on;%
 hold off
 
 %% Export figure 
-formatFigure
-printPNG('2020-01-07_TmVO4-RF-E_CpTFIM_normpdf_5000Oe')
+formatFigure; 
+% printPNG('2020-01-08_TmVO4-RF-E_CpTFIM_normpdf_4580Oe')
 % printPDF('2019-08-21_TmVO4-RF-E_Cp_vs_T_5H_theory_e-propto-h-cube')
 
 %% Prepare MF fit of Cp vs Temperature under field

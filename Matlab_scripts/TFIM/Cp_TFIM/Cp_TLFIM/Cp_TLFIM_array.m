@@ -1,4 +1,4 @@
-function y = Cp_TLFIM(t,S)
+function y = Cp_TLFIM_array(t,S)
 % t is the reduced temperature T/Tc
 T = t';% transpose temperature array into column vector
 dT = diff(T);
