@@ -50,7 +50,7 @@ for i=1%for all datasets
 end
 
 %% Parameters for plotting heat capacity
-xlblTemp = 'Temperature (K)';
+xlblTemp = '$T$ (K)';
 ylblCp = 'C$_p$ (J$\cdot$mol$^{-1}\cdot$K$^{-1}$)';
 ttlCp = 'Heat capacity of TmVO$_4$';
 
@@ -97,15 +97,19 @@ title('TmVO$_4$ heat capacity')
 xlabel(xlblTemp); ylabel('$C_p$ (J/K/mol)');
 
 %% Prepare plot of theoretical curve 
-Tc = 2.19;%  Value of transition temperature obtained from fit with Cp_LFIM_NF function in Curve Fitting Tool
-s =  5e-4;%  Value of longitudinal field obtained from fit with Cp_LFIM_NF function in Curve Fitting Tool
-tvec = linspace(1e-3,4,2000);
+% Tc = 2.19;%  Value of transition temperature obtained from fit with Cp_LFIM_NF function in Curve Fitting Tool
+Tc = 2.185;%  Value of transition temperature obtained from fit with Cp_LFIM_CW function in Curve Fitting Tool
+s =  5e-4;%  Value of longitudinal field obtained from fit with Cp_LFIM_NF or Cp_LFIM_CW function in Curve Fitting Tool
+T0 = 2.09;% Curie-Weiss temperature obtained from fit with Cp_LFIM_CW 
+A = 0.0136;% amplitude of CW divergence obtained from fit with Cp_LFIM_CW 
+tvec = linspace(1e-3,4,300);
 
 %% Compute pure mean-field heat capacity
 Cptheo0 = Cp_LFIM(tvec/Tc,0);
 
 %% Compute theoretical heat capacity in LFIM
-Cptheo = Cp_LFIM(tvec/Tc,s);
+% Cptheo = Cp_LFIM(tvec/Tc,s);
+Cptheo = Cp_LFIM_CW(tvec/Tc,s,A,T0/Tc);
 
 %% Subtract Cptheo from experimental data to analyze the residual Cp
 Cptheodat = Cp_LFIM(avgData(i).T/Tc,s);% theoretical Cp computed at same temperatures as data
@@ -119,12 +123,19 @@ fitCpErr = avgData(i).CprErr;
 fitwghts = 1./fitCpErr;
 fitCpres = avgData(i).Cpres/R;
 
+%% Prepare tight subplot for combining plots in single figure
+% For figure 1 of paper 1
+sf = 1;%5./6;% scaling factor of figure
+subplot = @(m,n,p) subtightplot (m, n, p, [0.0 0.0], [0.1 0.02], [0.13 0.02]*1/sf);
+figure; %formatFigure([6 7]*sf);
+ax = gca; ax.delete
+
 %% Plot averaged data + fit including external stress
-figure; 
+% figure; 
 % coefficients of fit of residual Cp, obtained in Curve Fitting Tool with Adjusted R-square of 0.9927
 c1 =     0.02607;  %(0.01489, 0.03725)
 c2 =    0.004759;  %(0.003322, 0.006196)
-% ax2 = subplot(5,1,[3:5]); 
+ax2 = subplot(5,1,[3:5]); 
 % fp = plot(tvec,Cptheo0,'-r','DisplayName','Mean-field');
 fp = plot(tvec,Cptheo,'-r','DisplayName',['$\sigma_{66}=$' sprintf(' %.1e',s)]);
 % fp = plot(avgData(i).T,Cptheodat,'-r','DisplayName',sprintf('MF: e=%.2g',e));
@@ -133,13 +144,13 @@ errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.b',...
     'MarkerSize',18,'LineWidth',1,'DisplayName','Data')
 xlabel(xlblTemp); ylabel('$C_p/R$');
 ylim([0 1.55])
-annttl = annotation('textbox',[0.2 0.75 0.1 0.1],'interpreter','latex',...
-    'String',{'TmVO$_{4}$'}, 'LineStyle','-','EdgeColor','none',...
-    'BackgroundColor','none','Color','k');% add annotation
+annttl = annotation('textbox',[0.2 0.5 0.17 0.1],'interpreter','latex',...
+    'String',{'TmVO$_{4}$'}, 'LineStyle','-','EdgeColor','black',...
+    'BackgroundColor','none','Color','k','LineWidth',1,'FitBoxToText','on');% add annotation
 % annttl.FontSize = ax.XAxis.Label.FontSize;
 grid on
 % title(ttlCp);
-lgd = legend('show');
+% lgd = legend('show');
 
 %% Plot averaged data + CW fit 
 figure; 
@@ -181,12 +192,6 @@ for j=1:length(tvec)
 sz(j) = 2.95/2*OP_TFIM(tvec(j)/Tc,0,s);%2.95 cm-1 is the total splitting of the GS doublet, see e.g. Melcher1976, fig.2(a)
 end
 
-%% Prepare tight subplot for combining plots in single figure
-% For figure 1 of paper 1
-subplot = @(m,n,p) subtightplot (m, n, p, [0.0 0.0], [0.1 0.02], [0.13 0.02]);
-figure; formatFigure([6 7]);
-ax = gca; ax.delete
-
 %% Plot splitting vs T
 % Top of figure 1 of paper 1
 ax1 = subplot(5,1,[1:2]); 
@@ -209,11 +214,11 @@ ax2.XLabel.Position(2) = -.15;
 
 %% Print figure to PNG file
 % formatFigure;
-% printSVG('2019-08-06_TmVO4-LS5228-DR-HC180731_Cp+fit')
+printSVG('2020-03-06_TmVO4-LS5228-DR-HC180731_Cp+fit')
 % printPNG('2019-11-19_TmVO4_MFIM_Cp')
 % printPNG('2019-11-19_TmVO4_Cp_data+MF')
 % printPNG('2019-11-19_TmVO4_Cp_data+stress')
-printPNG('2019-11-20_TmVO4_CpRes_data+C66fit')
+% printPNG('2019-11-20_TmVO4_CpRes_data+C66fit')
 
 %% Export averaged Cp data to text file
 % savepath = 'C:\Users\Pierre\Desktop\Postdoc\YTmVO4\YTmVO4_HeatCapacity\YTmVO4_Cp_anaLsis\2018-10-17_YTmVO4_averaged_Cp\';

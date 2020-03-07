@@ -1,4 +1,4 @@
- function y = Cp_LFIM_CW(t,e,t0,c)
+ function y = Cp_LFIM_CW(t,e,c,t0)
 % t is the reduced temperature T/Tc
 y = zeros(size(t));
 tc =1;% tc used to distinguish two cases: T/Tc<1 and >1
@@ -12,11 +12,11 @@ for i=1:length(t)
     if t(i)<tc 
         y(i) = r^2.*sech(r)^2 ./ D;% mean-field heat capacity for non-zero order parameter
     elseif e~=0
-%         y(i) = r^2.*sech(r)^2 ./ D + c/(t(i)-t0);% mean-field heat capacity + Curie-Weiss divergence above Tc
-        y(i) = r^2.*sech(r)^2 ./ D + c*t(i)/(t(i)-t0);% mean-field heat capacity + Curie-Weiss divergence above Tc
+        y(i) = r^2.*sech(r)^2 ./ D + c/(t(i)-t0);% mean-field heat capacity + Curie-Weiss divergence above Tc
+%         y(i) = r^2.*sech(r)^2 ./ D + c*t(i)/(t(i)-t0);% mean-field heat capacity + Curie-Weiss divergence above Tc
     else
-%         y(i) = c/(t(i)-t0);% Curie-Weiss divergence above Tc
-        y(i) = c*t(i)/(t(i)-t0);% mean-field heat capacity + Curie-Weiss divergence above Tc
+        y(i) = c/(t(i)-t0);% Curie-Weiss divergence above Tc
+%         y(i) = c*t(i)/(t(i)-t0);% mean-field heat capacity + Curie-Weiss divergence above Tc
     end
 end
 end
