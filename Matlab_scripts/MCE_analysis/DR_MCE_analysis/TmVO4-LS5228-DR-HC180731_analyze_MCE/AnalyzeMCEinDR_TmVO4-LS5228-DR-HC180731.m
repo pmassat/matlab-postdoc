@@ -105,25 +105,39 @@ for j = 1:lusr% for each value of sweep rate
 %     xlabel('Field (Oe)')
 %     ylabel('Temperature (K)')
 end
+
+%% Split temperature and field arrays based on sweeprate
+Tsrup = cell(lusr/2,1);% initialize cell arrays
+Hsrup = cell(lusr/2,1);
+Tsrdn = cell(lusr/2,1);
+Hsrdn = cell(lusr/2,1);
+for isr = 1:lusr/2% for each value of sweep rate
+    Tsrup{isr} = Tmce(FilterSR(:,lusr-isr+1));% cell array of temperatures for upsweep data
+    Hsrup{isr} = Hmce(FilterSR(:,lusr-isr+1));% cell array of fields for upsweep data
+    Tsrdn{isr} = Tmce(FilterSR(:,isr));% cell array of temperatures for downsweep data
+    Hsrdn{isr} = Hmce(FilterSR(:,isr));% cell array of fields for downsweep data
+end
+
 %% Plot upsweep and downsweep data with same sweeprate together
-for jj = 3%1:lusr/2% for each absolute value of sweep rate
+for isr = 3%1:lusr/2% for each absolute value of sweep rate
     figure; hold on
-    plot(Hmce(FilterSR(:,lusr-jj+1)),Tb2(FilterSR(:,lusr-jj+1)),'.','DisplayName',sprintf('+%g Oe/s',usr(lusr-jj+1)));
-	plot(Hmce(FilterSR(:,jj)),Tb2(FilterSR(:,jj)),'.','DisplayName',sprintf('%g Oe/s',usr(jj)));
+    plot(Hsrup{isr},Tb2(FilterSR(:,lusr-isr+1)),'.','DisplayName',sprintf('+%g Oe/s',usr(lusr-isr+1)));
+	plot(Hsrdn{isr},Tb2(FilterSR(:,isr)),'.','DisplayName',sprintf('%g Oe/s',usr(isr)));
     hold off
     % plot data for each magnetic field sweep rate separately
     legend('show','Location','best')
-    xlim([3200 6800]);% xlim([0,Hmax])
-    ylim([1 1.8]);
-    xlabel('Magnetic field (Oe)')
-    ylabel('Temperature (K)')
+    xlim([3200 6800]); ylim([1 1.8]);
+    xticks(3500:1000:6500);
+    xlabel('$H$ (Oe)')
+    ylabel('$T$ (K)')
     grid on
 end
 
 %% Figure exportation
 % xlim([0 10000]); ylim([0.55 0.83]);
 % printPNG('2019-05-20_TmVO4-LS5228-DR-HC180731_MCE_20Oeps_p6K-p7K-p8K');
-printPDF('2019-07-22_TmVO4-LS5228-DR-HC180731_MCE_20Oeps_1p1K-1p7K');
+% printPDF('2019-07-22_TmVO4-LS5228-DR-HC180731_MCE_20Oeps_1p1K-1p7K');
+
 %% Select full usable dataset
 % See labnotes for tables listing usable data
 useusr = usr(abs(usr)<30); lu2 = length(useusr);
@@ -149,7 +163,8 @@ pup = plot(Hmce(FullFilterUp),Tb2(FullFilterUp),'.');
 % Divide by Tc180731 to normalize temperature and by 5500 for magnetic field
 hold on
 pdown = plot(Hmce(FullFilterDown),Tb2(FullFilterDown),'.');
-xlabel('$H / H_c(T=0)$'); ylabel('$T / T_D(H=0)$');
+% xlabel('$H / H_c(T=0)$'); ylabel('$T / T_D(H=0)$');
+xlabel('$H$ (Oe)'); ylabel('$T$ (K)');
 % title('TmVO4-LS5228-DR-HC180731 MCE full usable dataset');
 lgd = legend([pup,pdown],'Upsweep','Downsweep');
 
@@ -159,14 +174,15 @@ lgd = legend([pup,pdown],'Upsweep','Downsweep');
 %% Rescale temperature of MCE data by factor (1+(1-T)/10)
 %% Note about the interpretation of data
 % The MCE observed here is different from what is reported in Kohama et al. 
+
 %% Plot the first derivative of temperature change with respect to magnetic field
 mceder = d1tb2s./d1hs*10^3.*exp(2-Tmce);% derivative of the temperature change
 % the exponential term allows the low temperature data to be multiplied by a higher factor than the high T data
-for jj = 3%1:lusr/2% for each value of sweep rate
+for isr = 3%1:lusr/2% for each value of sweep rate
     figure
-    plot(Hmce(FilterSR(:,jj)),Tmce(FilterSR(:,jj))+mceder(FilterSR(:,jj)),'.','DisplayName',strcat(num2str(usr(jj)),'Oe/s'))
+    plot(Hsrup{isr},Tsrup{isr}+mceder(FilterSR(:,lusr-isr+1)),'.','DisplayName',strcat(num2str(usr(lusr-isr+1)),'Oe/s'))
     hold on
-    plot(Hmce(FilterSR(:,lusr-jj+1)),Tmce(FilterSR(:,lusr-jj+1))+mceder(FilterSR(:,lusr-jj+1)),'.','DisplayName',strcat(num2str(usr(lusr-jj+1)),'Oe/s'))
+    plot(Hsrdn{isr},Tsrdn{isr}+mceder(FilterSR(:,isr)),'.','DisplayName',strcat(num2str(usr(isr)),'Oe/s'))
     hold off
     % plot data for each magnetic field sweep rate separately
     legend('show')
@@ -181,11 +197,11 @@ end
 % In order to not get confused with shifting of datasets due to reduction
 % of number of data points when using diff, I prefer the above convolution method
 mcediff = diff(Tb2smth)*10^2;
-for jj = 1:lusr/2% for each value of sweep rate
+for isr = 1:lusr/2% for each value of sweep rate
     figure
-    plot(Hmce(FilterSR(:,jj)),Tmce(FilterSR(:,jj))+mcediff(FilterSR(:,jj)),'.','DisplayName',strcat(num2str(usr(jj)),'Oe/s'))
+    plot(Hsrup{isr},Tsrup{isr}+mcediff(FilterSR(:,lusr-isr+1)),'.','DisplayName',strcat(num2str(usr(lusr-isr+1)),'Oe/s'))
     hold on
-    plot(Hmce(FilterSR(:,lusr-jj+1)),Tmce(FilterSR(:,lusr-jj+1))+mcediff(FilterSR(:,lusr-jj+1)),'.','DisplayName',strcat(num2str(usr(lusr-jj+1)),'Oe/s'))
+    plot(Hsrdn{isr},Tsrdn{isr}+mcediff(FilterSR(:,isr)),'.','DisplayName',strcat(num2str(usr(isr)),'Oe/s'))
     hold off
     % plot data for each magnetic field sweep rate separately
     legend('show')
@@ -201,20 +217,59 @@ end
 % [~, d1hs, d2hs] = gConvolve(Hmce,sigma);% smooth field data and derivative
 mceder2 = d2tb2s./d1hs.^2*10^5.*exp(2-Tmce);% derivative of the temperature change
 % the exponential term allows the low temperature data to be multiplied by a higher factor than the high T data
-for jj = 3%1:lusr/2% for each value of sweep rate
+for isr = 3%1:lusr/2% for each value of sweep rate
     figure
-    plot(Hmce(FilterSR(:,jj)),Tmce(FilterSR(:,jj))+mceder2(FilterSR(:,jj)),'.','DisplayName',strcat(num2str(usr(jj)),'Oe/s'))
+    plot(Hsrup{isr},Tsrup{isr}+mceder2(FilterSR(:,lusr-isr+1)),'.','DisplayName',sprintf('+%g Oe/s',usr(lusr-isr+1)))
     hold on
-    plot(Hmce(FilterSR(:,lusr-jj+1)),Tmce(FilterSR(:,lusr-jj+1))+mceder2(FilterSR(:,lusr-jj+1)),'.','DisplayName',strcat(num2str(usr(lusr-jj+1)),'Oe/s'))
+    plot(Hsrdn{isr},Tsrdn{isr}+mceder2(FilterSR(:,isr)),'.','DisplayName',sprintf('%g Oe/s',usr(isr)))
     hold off
     % plot data for each magnetic field sweep rate separately
     legend('show')
-    xlim([0,Hmax])
-    ylim([0 max(Tmce)])
-    xlabel('Field (Oe)')
-    ylabel('$T+\frac{\partial^2\Delta T}{\partial^2 H}$')
-    title(['$\sigma = $' sprintf('%i',sigma)])
+%     xlim([0,Hmax]); ylim([0 max(Tmce)])
+    xlim([3200,6500]); ylim([1.0 1.8]);
+    xticks(3500:1000:6500);
+    xlabel('$H$ (Oe)'); ylabel('$T$ (K) $+\frac{\partial^2\Delta T}{\partial^2 H}$ (K/Oe$^{2})$');
+%     title(['$\sigma = $' sprintf('%i',sigma)])
 end
+
+%% Split mceder2 array based on sweeprate
+d2mceus = cell(lusr/2,1);% initialize cell arrays
+d2mceds = cell(lusr/2,1);
+for isr = 1:lusr/2% for each value of sweep rate
+    d2mceus{isr} = mceder2(FilterSR(:,lusr-isr+1));% cell array of 2nd derivative of MCE data for field swept up
+    d2mceds{isr} = mceder2(FilterSR(:,isr));% cell array of 2nd derivative of MCE data for field swept down
+end
+
+%% Filter data according to temperature
+
+
+%% Identify the maximum of the second derivative at each temperature
+clear utus utds
+isr = 3;% index of sweep rate; 3 corresponds to +-20 Oe/s
+utus = unique(round(Tsrup{isr},1));% unique values of temperatures for the selected sweeprate 
+Hfilterus = Hsrup{isr} > 3300 & Hsrup{isr} < 6500;
+for itmce = 1:length(utus)
+    Tfilter = round(Tsrup{isr},1)==utus(itmce);
+    maxd2mce(itmce).T = utus(itmce);
+    maxd2mce(itmce).upsweep(2) = max(d2mceus{isr}(Tfilter & Hfilterus));
+    maxd2mce(itmce).upsweep(1) = Hsrup{isr}(Tfilter & Hfilterus & d2mceus{isr}==maxd2mce(itmce).upsweep(2));
+    maxd2mce(itmce).downsweep(2) = max(d2mceds{isr}(Tfilter & Hfilterus));
+    maxd2mce(itmce).downsweep(1) = Hsrdn{isr}(Tfilter & Hfilterus & d2mceds{isr}==maxd2mce(itmce).downsweep(2));
+end
+
+%% Same for downsweeps
+utds = unique(round(Tsrdn{isr},1));%
+if utds ~= utus
+    warning("The values of temperature measured for up- and downsweeps are not the same.")
+end
+Hfilterds = Hsrdn{isr} > 3300 & Hsrdn{isr} < 6500;
+for itmce = 1:length(utds)
+    Tfilter = round(Tsrdn{isr},1)==utds(itmce);
+    maxd2mce(itmce).T = utus(itmce);
+    maxd2mce(itmce).downsweep(2) = max(d2mceds{isr}(Tfilter & Hfilterds));
+    maxd2mce(itmce).downsweep(1) = Hsrdn{isr}(Tfilter & Hfilterds & d2mceds{isr}==maxd2mce(itmce).downsweep(2));
+end
+
 
 %% 
 % Next steps:

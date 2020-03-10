@@ -105,7 +105,7 @@ A = 0.0136;% amplitude of CW divergence obtained from fit with Cp_LFIM_CW
 tvec = linspace(1e-3,4,300);
 
 %% Compute pure mean-field heat capacity
-Cptheo0 = Cp_LFIM(tvec/Tc,0);
+Cptheo0 = Cp_TFIM(tvec/Tc,0);
 
 %% Compute theoretical heat capacity in LFIM
 % Cptheo = Cp_LFIM(tvec/Tc,s);
@@ -127,7 +127,7 @@ fitCpres = avgData(i).Cpres/R;
 % For figure 1 of paper 1
 sf = 1;%5./6;% scaling factor of figure
 subplot = @(m,n,p) subtightplot (m, n, p, [0.0 0.0], [0.1 0.02], [0.13 0.02]*1/sf);
-figure; %formatFigure([6 7]*sf);
+figure; formatFigure([6 7]*sf);
 ax = gca; ax.delete
 
 %% Plot averaged data + fit including external stress
@@ -136,21 +136,21 @@ ax = gca; ax.delete
 c1 =     0.02607;  %(0.01489, 0.03725)
 c2 =    0.004759;  %(0.003322, 0.006196)
 ax2 = subplot(5,1,[3:5]); 
-% fp = plot(tvec,Cptheo0,'-r','DisplayName','Mean-field');
-fp = plot(tvec,Cptheo,'-r','DisplayName',['$\sigma_{66}=$' sprintf(' %.1e',s)]);
-% fp = plot(avgData(i).T,Cptheodat,'-r','DisplayName',sprintf('MF: e=%.2g',e));
+p0 = plot(tvec,Cptheo0,'Color',[.5 .5 .5],'DisplayName','Mean-field');
 hold on
-errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.b',...
-    'MarkerSize',18,'LineWidth',1,'DisplayName','Data')
+p1 = plot(tvec,Cptheo,'-r','DisplayName',['MF + $\sigma$ + CW']);
+% fp = plot(avgData(i).T,Cptheodat,'-r','DisplayName',sprintf('MF: e=%.2g',e));
+pdat = errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.b',...
+    'MarkerSize',18,'LineWidth',1,'DisplayName','Experiment');
 xlabel(xlblTemp); ylabel('$C_p/R$');
 ylim([0 1.55])
-annttl = annotation('textbox',[0.2 0.5 0.17 0.1],'interpreter','latex',...
+annttl = annotation('textbox',[0.2 0.45 0.17 0.1],'interpreter','latex',...
     'String',{'TmVO$_{4}$'}, 'LineStyle','-','EdgeColor','black',...
     'BackgroundColor','none','Color','k','LineWidth',1,'FitBoxToText','on');% add annotation
 % annttl.FontSize = ax.XAxis.Label.FontSize;
 grid on
 % title(ttlCp);
-% lgd = legend('show');
+lgd = legend([pdat, p0, p1]);
 
 %% Plot averaged data + CW fit 
 figure; 
@@ -161,7 +161,7 @@ a =     0.02932;%  (0.02726, 0.03138); fit a/(T-T0),  Adjusted R-square of 0.999
 a66 =     0.03713;%  (0.03533, 0.03892); fit a66/(T-T66),  Adjusted R-square of 0.9926
 % fp = fplot(@(t)a/(t-T0),[0 4],'-r','LineWidth',1.5,...
 %     'DisplayName',[sprintf('%.1g/(T-%.2g)',a,T0)]);
-fp = fplot(@(t)a66/(t-T66)^2,[0 4],'-r','LineWidth',1.5,...
+p1 = fplot(@(t)a66/(t-T66)^2,[0 4],'-r','LineWidth',1.5,...
     'DisplayName',[sprintf('%.2g/(T-%.2g)',a66,T66) '$^2$']);
 hold on
 errorbar(fitT(fitT<Tfit),fitCpres(fitT<Tfit),fitCpErr(fitT<Tfit),'xk',...
@@ -214,7 +214,7 @@ ax2.XLabel.Position(2) = -.15;
 
 %% Print figure to PNG file
 % formatFigure;
-printSVG('2020-03-06_TmVO4-LS5228-DR-HC180731_Cp+fit')
+printSVG('2020-03-09_TmVO4-LS5228-DR-HC180731_Cp+fit')
 % printPNG('2019-11-19_TmVO4_MFIM_Cp')
 % printPNG('2019-11-19_TmVO4_Cp_data+MF')
 % printPNG('2019-11-19_TmVO4_Cp_data+stress')
@@ -279,7 +279,7 @@ Cpma = Cp_full_random_strains(d0dr,6*s,tvec/Tcrs);
 %% Plot averaged data + fit including random strains
 figure; 
 % ax2 = subplot(5,1,[3:5]); 
-fp = plot(tvec,Cptheo,'-r','DisplayName',sprintf('MF: e=%.2g',s));
+p1 = plot(tvec,Cptheo,'-r','DisplayName',sprintf('MF: e=%.2g',s));
 % fp = plot(avgData(i).T,Cptheodat,'-r','DisplayName',sprintf('MF: e=%.2g',e));
 hold on
 fpr = plot(tvec,Cpma,'-g','DisplayName',['Rand. strains:' newline '${\Delta e}/T_c$=' sprintf('%.2g',d0dr)]);
@@ -297,7 +297,7 @@ lgd = legend('show');
 
 %% Plot averaged data + theoretical correction from magnetic dipole interactions
 figure; 
-fp = plot(tvec,Cptheo,'-r','DisplayName',sprintf('MF: $e=$ %.2g',s));
+p1 = plot(tvec,Cptheo,'-r','DisplayName',sprintf('MF: $e=$ %.2g',s));
 hold on
 fpr = plot(tvec(2:end-1),deltaCpdr','-g','DisplayName',['Mag. dip.:' newline '${\Delta e}/T_c$=' sprintf('%.2g',d0md)]);
 fpt = plot(tvec(2:end-1),Cptheo(2:end-1)+deltaCpdr','-m','DisplayName','MF + mag. dip.');
