@@ -8,6 +8,9 @@
 % diary off
 % diary on
 
+%% Get today's date and convert it to string
+todaystr = datestr(datetime('today'),29);% datetime outputs a 'datetime' variable type, not string
+
 %% Read file and replace regular expression
 test1 = fileread('filename.m');% Read file and store its content as string into variable test1
 str = regexprep(test1,'[\\\n\r]+','\n');% Replace all strings with a '\' sign followed by newlines with a single newline
@@ -135,13 +138,13 @@ dT(1) = diffT(1)/2; dT(end) = diffT(end)/2;
 
 
 
-%% Count the number of elements in a field 'f1' of a structure
+%% Count the number of elements in a structure field
 % https://www.mathworks.com/matlabcentral/answers/841-how-to-find-number-of-arrays-in-a-structure-filed
 % Also implemented in 'ENS_peak_fit_ICpV.mlx'
 function N1 = fieldCount(inputStruct)
 N1 = 0;
 for i = 1: numel(inputStruct)
-  if(~isempty(inputStruct(i).f1))
+  if(~isempty(inputStruct(i).f1))% field is called f1 here
       N1 = N1 + 1;
   end
 end

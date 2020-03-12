@@ -133,6 +133,25 @@ for isr = 3%1:lusr/2% for each absolute value of sweep rate
     grid on
 end
 
+%% Export data to text file
+savepath = pwd;
+todaystr = datestr(datetime('today'),29);
+fname = [todaystr '_TmVO4-LS5228-DR-HC180731_MCE_'];
+headerstr = sprintf('This data is restricted to sweeprates of +-%i Oe/s',abs(usr(isr)));
+M(1).data = cat(2,Hsrup{isr},Tb2(FilterSR(:,lusr-isr+1)));
+M(1).id = 'upsweep';
+M(2).data = cat(2,Hsrdn{isr},Tb2(FilterSR(:,isr)));
+M(2).id = 'downsweep';
+for i=1:2
+    expstr = fullfile(savepath, [fname M(i).id '.dat']);
+    fid = fopen(expstr, 'wt');
+    fprintf(fid, '%s\n', ['Exported from AnalyzeMCEinDR_TmVO4-LS5228-DR-HC180731 on ' todaystr]);  % header
+    fprintf(fid, '%s\n', [headerstr]);  % header
+    fprintf(fid, '%s\t%s\n','H (Oe)','T (K)');  % header
+    fclose(fid);
+    dlmwrite(expstr,M(i).data,'-append','delimiter','\t')
+end
+
 %% Figure exportation
 % xlim([0 10000]); ylim([0.55 0.83]);
 % printPNG('2019-05-20_TmVO4-LS5228-DR-HC180731_MCE_20Oeps_p6K-p7K-p8K');
@@ -240,9 +259,6 @@ for isr = 1:lusr/2% for each value of sweep rate
     d2mceds{isr} = mceder2(FilterSR(:,isr));% cell array of 2nd derivative of MCE data for field swept down
 end
 
-%% Filter data according to temperature
-
-
 %% Identify the maximum of the second derivative at each temperature
 clear utus utds
 isr = 3;% index of sweep rate; 3 corresponds to +-20 Oe/s
@@ -253,8 +269,6 @@ for itmce = 1:length(utus)
     maxd2mce(itmce).T = utus(itmce);
     maxd2mce(itmce).upsweep(2) = max(d2mceus{isr}(Tfilter & Hfilterus));
     maxd2mce(itmce).upsweep(1) = Hsrup{isr}(Tfilter & Hfilterus & d2mceus{isr}==maxd2mce(itmce).upsweep(2));
-    maxd2mce(itmce).downsweep(2) = max(d2mceds{isr}(Tfilter & Hfilterus));
-    maxd2mce(itmce).downsweep(1) = Hsrdn{isr}(Tfilter & Hfilterus & d2mceds{isr}==maxd2mce(itmce).downsweep(2));
 end
 
 %% Same for downsweeps
