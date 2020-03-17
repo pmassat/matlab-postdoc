@@ -123,52 +123,6 @@ for i = 1:length(uh)
         separatedCpData(i).CpErr,separatedCpData(i).H);
 end
 
-%% Prepare fit of Cp vs Temperature 
-i = 8;
-% Use these variables in Curve fitting tool
-clear fitT fitCp fitCpErr fitwghts 
-fitT = avgData(i).T;
-fitCp = avgData(i).Cp/R;
-fitCpErr = avgData(i).CpFullErr/R;
-fitwghts = 1./fitCpErr;
-% Tc = 2.15;
-
-%% Compute Cp for Gaussian distribution of fields
-h = uh(i)/(Hc0*1e4);
-rhsgm = 0.09;
-sgm = h*rhsgm;
-T = linspace(0,1.4,701);
-Cpid = zeros(length(T),1);
-Cpreal = zeros(length(T),1);
-for j=1:length(T)
-    Cpid(j) = Cp_TFIM(T(j),h);
-    Cpreal(j) = CpTFIM_normpdf(T(j),h,sgm);
-end
-
-%% Plot Cp for Gaussian distribution of fields
-figure
-plot(fitT,fitCp,'.','DisplayName','data')
-hold on;
-plot(T*Tc,Cpid,'DisplayName',sprintf('h=%.2f',h));
-plot(T*Tc,Cpreal,'DisplayName',sprintf('h=%.2f,r=%.1e',h,rhsgm));
-title(['Cp$\_$TFIM vs CpTFIM$\_$normpdf' sprintf(' H=%.0fOe',uh(i))]);
-lgd = legend(); lgd.Title = 'TmVO4-RF-E';
-
-%% Compute additional Cp for Gaussian distribution of fields
-% h = 0.87;
-rhsgm = 0.1;
-sgm = h*rhsgm;
-for j=1:length(T)
-    Cpreal(j) = CpTFIM_normpdf(T(j),h,sgm);
-end
-plot(T*Tc,Cpreal,'DisplayName',sprintf('h=%.2f,r=%.1e',h,rhsgm));
-
-%% Plot additional Cp for Gaussian distribution of fields
-offset = 0.01;
-plot(T*Tc,Cpreal+offset,'DisplayName',sprintf('h=%.2f,r=%.1e',h,rhsgm));
-
-
-
 %% Compute and plot derivative of averaged data
 figure; hold on
 for i = 1:length(uh)
@@ -299,6 +253,76 @@ formatFigure;
 % printPNG('2020-01-08_TmVO4-RF-E_CpTFIM_normpdf_4580Oe')
 % printPDF('2019-08-21_TmVO4-RF-E_Cp_vs_T_5H_theory_e-propto-h-cube')
 
+%% Prepare fit of Cp vs Temperature 
+i = 9;
+% Use these variables in Curve fitting tool
+clear fitT fitCp fitCpErr fitwghts 
+fitT = avgData(i).T;
+fitCp = avgData(i).Cp/R;
+fitCpErr = avgData(i).CpFullErr/R;
+fitwghts = 1./fitCpErr;
+% Tc = 2.15;
+
+%% Compute Cp for Gaussian distribution of fields
+for i=rng(2:end)
+Cptheo(i).h = uh(i)/(Hc0*1e4);
+Cptheo(i).rhsgm = 0.09;
+Cptheo(i).sgm = Cptheo(i).h*Cptheo(i).rhsgm;
+Cptheo(i).T = linspace(0,1.4,141);
+Cptheo(i).single_h = zeros(size(Cptheo(i).T));
+Cptheo(i).phenomeno = zeros(size(Cptheo(i).T));
+% Compute Cptheo(1).single_h = Cp_TFIM(h=0) and Cptheo(1).phenomeno =
+% Cp_LFIM(h=0)
+for j=2:length(Cptheo(i).T)
+    Cptheo(i).single_h(j) = Cp_TFIM(Cptheo(i).T(j),Cptheo(i).h);
+    Cptheo(i).phenomeno(j) = CpTFIM_normpdf(Cptheo(i).T(j),Cptheo(i).h,Cptheo(i).sgm);
+    end
+end
+end
+
+%% Plot Cp for Gaussian distribution of fields
+figure
+plot(fitT,fitCp,'.','DisplayName','data')
+hold on;
+plot(Cptheo(i).T*Tc,Cptheo(i).single_h,'DisplayName',sprintf('h=%.2f',Cptheo(i).h));
+plot(Cptheo(i).T*Tc,Cptheo(i).phenomeno,'DisplayName',sprintf('h=%.2f,r=%.1e',Cptheo(i).h,Cptheo(i).rhsgm));
+title(['Cp$\_$TFIM vs CpTFIM$\_$normpdf' sprintf(' H=%.0fOe',uh(i))]);
+lgd = legend(); title(lgd,'TmVO4-RF-E');
+
+%% Plot averaged data at each field separately
+figure; hold on
+rng = [1 5 7 9 13];
+clr = lines(length(rng));
+eb = cell(size(rng));
+for i=rng
+plot(Cptheo(i).T*Tc,Cptheo(i).single_h,'DisplayName','Color',clr(rng==i,:),sprintf('h=%.2f',Cptheo(i).h));
+plot(Cptheo(i).T*Tc,Cptheo(i).phenomeno,'DisplayName','Color',clr(rng==i,:),...
+    sprintf('h=%.2f,r=%.1e',Cptheo(i).h,Cptheo(i).rhsgm));
+end
+for i=rng
+eb{rng==i} = errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,...
+    '.','MarkerSize',18,'DisplayName',num2str(uh(i)/(Hc0*1e4),'%.2f'),...
+    'Color',clr(rng==i,:),'LineWidth',2);
+end
+xlabel('Temperature (K)'); ylabel('C$_p$/R');%ylabel('C$_p$ (JK$^{-1}$mol$^{-1}$)');
+lgd = legend([eb{:}]); lgd.Title.String = '$H/H_c$';
+ax = gca; ax.YMinorTick = 'on';% Add minor ticks on Y axis
+grid on;%
+hold off
+
+%% Compute additional Cp for Gaussian distribution of fields
+% Cptheo(i).h = 0.87;
+Cptheo(i).rhsgm = 0.1;
+Cptheo(i).sgm = Cptheo(i).h*Cptheo(i).rhsgm;
+for j=1:length(Cptheo(i).T)
+    Cptheo(i).phenomeno(j) = CpTFIM_normpdf(Cptheo(i).T(j),Cptheo(i).h,Cptheo(i).sgm);
+end
+plot(Cptheo(i).T*Tc,Cptheo(i).phenomeno,'DisplayName',sprintf('h=%.2f,r=%.1e',Cptheo(i).h,Cptheo(i).rhsgm));
+
+%% Plot additional Cp for Gaussian distribution of fields
+offset = 0.01;
+plot(Cptheo(i).T*Tc,Cptheo(i).phenomeno+offset,'DisplayName',sprintf('h=%.2f,r=%.1e',Cptheo(i).h,Cptheo(i).rhsgm));
+
 %% Prepare MF fit of Cp vs Temperature under field
 index = 15;
 H1 = uh(index);
@@ -306,6 +330,7 @@ T1 = avgData(index).T;
 Cp1 = avgData(index).Cp/R;
 Cp1Err = avgData(index).CpFullErr/R;
 wghts1 = 1./Cp1Err;
+
 %% Fit and plot
 maxTfit = 2;%Kelvin
 hrstr = sprintf('%.2f',H1/(Hc0*1e4));
