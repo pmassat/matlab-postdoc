@@ -77,11 +77,11 @@ srtd = srtd';
 %% Compute average of data points taken
 clear avgData
 R = 8.314;% gas constant in J/mol/K
-Tp = 26;% Temperature scale of phonons contribution to Cp in TmVO4, in K
+Tp = 26;% Temperature scale of phonons contribution to Cp in TmVO4, in K; see 'TmVO4_Cp_phonons.m'
 for i = 1
     avgData(i) = averageCp(6e-3,srtd{i}.T,srtd{i}.Cpmol,srtd{i}.CpmolErr);
     avgData.CpFull = avgData.Cp;
-    avgData.Cp = avgData.CpFull - R*(avgData.T/Tp).^3;
+    avgData.Cp = avgData.CpFull - R*(avgData.T/Tp).^3;% electronic contribution to Cp, after subtracting phonons contribution
     avgData.Cpr = avgData.Cp/R;
     avgData.CprErr = avgData.CpFullErr/R;
 end

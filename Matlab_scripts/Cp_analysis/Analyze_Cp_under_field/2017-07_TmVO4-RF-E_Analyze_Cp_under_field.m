@@ -7,7 +7,7 @@ DATA=ImportTmVO4Cp(filename);% Use this data to plot color map of phase diagram
 %% Sample properties
 m = 0.25e-3;% mass of sample, in g
 M = 283.87;% molar mass of TmVO4, in g/mol
-Tc = 2.126;% Value of transition temperature in this sample
+Tc0 = 2.126;% Value of transition temperature in this sample
 
 %%
 Hc0 = 0.51;% value in Tesla units of the critical field at zero temperature
@@ -27,6 +27,13 @@ Cp=Cp(whichPoints).*M/m*1e-6;% factor 1e-6 converts from uJ/K to J/K
 CpErr=CpErr(whichPoints).*M/m*1e-6;%
 [uh,~,X] = unique(round(H,-1));
 uh(2,:)=[];% When rounding to nearest tens, remove uh=10Oe because it is redundant with uh=0Oe
+
+%% Plot 2D scatter of Cp data at H=0
+figure
+plot(T(round(H,-1)<20),Cp(round(H,-1)<20),'.')
+% xlim([0 hmax]);ylim([0 tmax]);
+xlabel('Temperature (K)');
+ylabel('Cp (J/K/mol)')
 
 %% Plot 3D scatter of Cp data
 hmax=max(uh);
@@ -71,6 +78,7 @@ zlim([0 1.1*max(Cp)])
 xlabel('Field (Oe)')
 ylabel('Temperature (K)')
 zlabel('Cp (J/K/mol)')
+
 %% Plot a 3D surface of the derivative of Cp
 % Note: this is not a fit!
 figure
@@ -116,12 +124,29 @@ end
 %% Average datapoints taken at any given temperature and field setpoint
 % We want to compute the average of data points that are repetitions of the
 % same measurement, i.e. with same temperature and field setpoints
+clear avgData
 Tsep = 6e-3;% Data points taken within an interval of Tsep are considered to be measured at the same temperature setpoint
 % 6mK is an empirical estimate of the dispersion of data points taken consecutively at a given temperature. 
-for i = 1:length(uh)
-    avgData(i) = averageCpwithH(Tsep,separatedCpData(i).T,separatedCpData(i).Cp,...
-        separatedCpData(i).CpErr,separatedCpData(i).H);
+Tp = 27;% Temperature scale of phonons contribution to Cp in TmVO4, in K; see 'TmVO4_Cp_phonons.m'
+for i=length(uh):-1:1
+avgData(i) = averageCpwithH2(Tsep,separatedCpData(i).T,separatedCpData(i).Cp,...
+    separatedCpData(i).CpErr,separatedCpData(i).H);
 end
+for i=length(uh):-1:1
+avgData(i).Cpel = avgData(i).Cp - R*(avgData(i).T/Tp).^3;% electronic contribution to Cp, after subtracting phonons contribution
+avgData(i).Cpelr = avgData(i).Cpel/R;
+end
+
+%% Plot averaged data 
+i = 1;
+figure
+plot(avgData(i).T,avgData(i).Cp,'.','DisplayName','$C_p^{\mathrm{full}}$')
+hold on
+plot(avgData(i).T,R*(avgData(i).T/Tp).^3,'.','DisplayName','$C_p^{\mathrm{phonons}}$')
+plot(avgData(i).T,avgData(i).Cpel,'.','DisplayName','$C_p^{\mathrm{full}}-C_p^{\mathrm{phonons}}$')
+legend('show')
+title('TmVO$_4$ heat capacity')
+xlabel('T (K)'); ylabel('$C_p$ (J/K/mol)');
 
 %% Compute and plot derivative of averaged data
 figure; hold on
@@ -153,7 +178,7 @@ d1Cpgm = conv2(Cpgm,d1Gaussian','same');
 % from 'AnalyzeMCEinDR_TmVO4-LS5228-DR-HC180731.m'
 figure
 n = 300;
-contourf(Hgm./5100,Tgm/Tc,-d1Cpgm,n,'EdgeColor','none');
+contourf(Hgm./5100,Tgm/Tc0,-d1Cpgm,n,'EdgeColor','none');
 hold on;
 fplt = fplot(@(h)h/atanh(h),[0 1.1],'Color','k','LineWidth',1);
 xlabel('$H / H_c(T=0)$'); ylabel('$T / T_D(H=0)$');
@@ -175,7 +200,7 @@ fclose(fid);
 
 %% Export X and Y axes values of above matrix
 Hgmr = Hgm(1,:)./5100;
-Tgmr = Tgm(:,1)/Tc;
+Tgmr = Tgm(:,1)/Tc0;
 % Hgmr and Tgmr exported manually on 2019-07-29 by copying from Matlab 
 % variables and pasting into worksheet of TmVO4_phase_diagram_Cp_MCE.opju
 
@@ -227,7 +252,7 @@ eb = cell(size(rng));
 %     fp = plot(Ttlf(2:end-1)*Tc,Cptlf(:,i));% requires computing Cptlf in 'F_S_Cp_TLFIM_compute.m'
 % end
 for i=rng
-    fp = fplot(@(t)Cp_TFIM(t/2.14,uh(i)/(5.1e3)),[0 3.2],'LineWidth',2);
+    fp = fplot(@(t)Cp_TFIM(t/Tc0,uh(i)/(Hc0*1e4)),[0 3.2],'LineWidth',2);
 %     fp = fplot(@(t)Cp_TFIM_offset_strain(t/2.125,uh(i)/(5.1e3),1.5e-3),[0 4],'LineWidth',2);
 % Fit parameters on data at H=0: Tc=2.125(3), e=1.5(4)e-3
 % Note: the values of amplitude coefficient and Tc extracted from fit 
@@ -235,7 +260,7 @@ for i=rng
 %     clr{rng==i} = get(fp,'Color');
 end
 for i=rng
-    eb{rng==i} = errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,...
+    eb{rng==i} = errorbar(avgData(i).T,avgData(i).Cpelr,avgData(i).CpFullErr/R,...
         '.','MarkerSize',18,'DisplayName',num2str(uh(i)/(Hc0*1e4),'%.2f'),...
         'Color',clr(rng==i,:),'LineWidth',2);
 end
@@ -258,55 +283,64 @@ i = 9;
 % Use these variables in Curve fitting tool
 clear fitT fitCp fitCpErr fitwghts 
 fitT = avgData(i).T;
-fitCp = avgData(i).Cp/R;
+fitCp = avgData(i).Cpelr;
 fitCpErr = avgData(i).CpFullErr/R;
 fitwghts = 1./fitCpErr;
 % Tc = 2.15;
 
 %% Compute Cp for Gaussian distribution of fields
-for i=rng(2:end)
+clear Cptheo
+for i=rng
 Cptheo(i).h = uh(i)/(Hc0*1e4);
 Cptheo(i).rhsgm = 0.09;
 Cptheo(i).sgm = Cptheo(i).h*Cptheo(i).rhsgm;
-Cptheo(i).T = linspace(0,1.4,141);
-Cptheo(i).single_h = zeros(size(Cptheo(i).T));
-Cptheo(i).phenomeno = zeros(size(Cptheo(i).T));
-% Compute Cptheo(1).single_h = Cp_TFIM(h=0) and Cptheo(1).phenomeno =
-% Cp_LFIM(h=0)
-for j=2:length(Cptheo(i).T)
-    Cptheo(i).single_h(j) = Cp_TFIM(Cptheo(i).T(j),Cptheo(i).h);
-    Cptheo(i).phenomeno(j) = CpTFIM_normpdf(Cptheo(i).T(j),Cptheo(i).h,Cptheo(i).sgm);
-    end
+Cptheo(i).t = linspace(0,1.5,301);% reduced temperature, T/Tc
+Cptheo(i).single_h = zeros(size(Cptheo(i).t));
+Cptheo(i).phenomeno = zeros(size(Cptheo(i).t));
 end
+i = 1;
+Cptheo(i).single_h = Cp_TFIM(Cptheo(i).t,Cptheo(i).h);
+Cptheo(i).phenomeno = Cp_LFIM(Cptheo(i).t,1.5e-3);
+% Fit parameters on data at H=0: Tc=2.125(3), e=1.5(4)e-3
+% Cp_LFIM(h=0)
+for i=rng(2:end)
+    for j=2:length(Cptheo(i).t)
+    Cptheo(i).single_h(j) = Cp_TFIM(Cptheo(i).t(j),Cptheo(i).h);
+    Cptheo(i).phenomeno(j) = CpTFIM_normpdf(Cptheo(i).t(j),Cptheo(i).h,Cptheo(i).sgm);
+    end
 end
 
 %% Plot Cp for Gaussian distribution of fields
 figure
-plot(fitT,fitCp,'.','DisplayName','data')
+plot(avgData(i).T,avgData(i).Cpelr,'.','DisplayName','data')
 hold on;
-plot(Cptheo(i).T*Tc,Cptheo(i).single_h,'DisplayName',sprintf('h=%.2f',Cptheo(i).h));
-plot(Cptheo(i).T*Tc,Cptheo(i).phenomeno,'DisplayName',sprintf('h=%.2f,r=%.1e',Cptheo(i).h,Cptheo(i).rhsgm));
+plot(Cptheo(i).t*Tc0,Cptheo(i).single_h,'DisplayName',sprintf('h=%.2f',Cptheo(i).h));
+plot(Cptheo(i).t*Tc0,Cptheo(i).phenomeno,'DisplayName',sprintf('h=%.2f,r=%.1e',Cptheo(i).h,Cptheo(i).rhsgm));
 title(['Cp$\_$TFIM vs CpTFIM$\_$normpdf' sprintf(' H=%.0fOe',uh(i))]);
 lgd = legend(); title(lgd,'TmVO4-RF-E');
 
 %% Plot averaged data at each field separately
 figure; hold on
-rng = [1 5 7 9 13];
 clr = lines(length(rng));
 eb = cell(size(rng));
 for i=rng
-plot(Cptheo(i).T*Tc,Cptheo(i).single_h,'DisplayName','Color',clr(rng==i,:),sprintf('h=%.2f',Cptheo(i).h));
-plot(Cptheo(i).T*Tc,Cptheo(i).phenomeno,'DisplayName','Color',clr(rng==i,:),...
+plot(Cptheo(i).t*Tc0,Cptheo(i).single_h,'--','Color',clr(rng==i,:),'DisplayName',sprintf('h=%.2f',Cptheo(i).h));
+plot(Cptheo(i).t*Tc0,Cptheo(i).phenomeno,'Color',clr(rng==i,:),'DisplayName',...
     sprintf('h=%.2f,r=%.1e',Cptheo(i).h,Cptheo(i).rhsgm));
 end
 for i=rng
-eb{rng==i} = errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,...
+eb{rng==i} = errorbar(avgData(i).T,avgData(i).Cpelr,avgData(i).CpFullErr/R,...
     '.','MarkerSize',18,'DisplayName',num2str(uh(i)/(Hc0*1e4),'%.2f'),...
     'Color',clr(rng==i,:),'LineWidth',2);
 end
 xlabel('Temperature (K)'); ylabel('C$_p$/R');%ylabel('C$_p$ (JK$^{-1}$mol$^{-1}$)');
 lgd = legend([eb{:}]); lgd.Title.String = '$H/H_c$';
 ax = gca; ax.YMinorTick = 'on';% Add minor ticks on Y axis
+anntheo = annotation('textbox',[0.15 0.75 0.2 0.1],'interpreter','latex',...
+'String',{['$--$ Simple mean-fit'] ['----- Normal PDF of $H$']...
+}, 'LineStyle','-','EdgeColor','k',...
+    'FitBoxToText','on','LineWidth',1,'BackgroundColor','w','Color','k');% add annotation
+title('Heat capacity of TmVO$_4$')
 grid on;%
 hold off
 
@@ -314,14 +348,14 @@ hold off
 % Cptheo(i).h = 0.87;
 Cptheo(i).rhsgm = 0.1;
 Cptheo(i).sgm = Cptheo(i).h*Cptheo(i).rhsgm;
-for j=1:length(Cptheo(i).T)
-    Cptheo(i).phenomeno(j) = CpTFIM_normpdf(Cptheo(i).T(j),Cptheo(i).h,Cptheo(i).sgm);
+for j=1:length(Cptheo(i).t)
+    Cptheo(i).phenomeno(j) = CpTFIM_normpdf(Cptheo(i).t(j),Cptheo(i).h,Cptheo(i).sgm);
 end
-plot(Cptheo(i).T*Tc,Cptheo(i).phenomeno,'DisplayName',sprintf('h=%.2f,r=%.1e',Cptheo(i).h,Cptheo(i).rhsgm));
+plot(Cptheo(i).t*Tc0,Cptheo(i).phenomeno,'DisplayName',sprintf('h=%.2f,r=%.1e',Cptheo(i).h,Cptheo(i).rhsgm));
 
 %% Plot additional Cp for Gaussian distribution of fields
 offset = 0.01;
-plot(Cptheo(i).T*Tc,Cptheo(i).phenomeno+offset,'DisplayName',sprintf('h=%.2f,r=%.1e',Cptheo(i).h,Cptheo(i).rhsgm));
+plot(Cptheo(i).t*Tc0,Cptheo(i).phenomeno+offset,'DisplayName',sprintf('h=%.2f,r=%.1e',Cptheo(i).h,Cptheo(i).rhsgm));
 
 %% Prepare MF fit of Cp vs Temperature under field
 index = 15;
@@ -347,7 +381,10 @@ annfit = annotation('textbox',[0.575 0.175 0.2 0.1],'interpreter','latex',...
     'FitBoxToText','on','LineWidth',1,'BackgroundColor','w','Color','k');% add annotation
 formatFigure
 annfit.Position(2)=.175;
+
 %% Export figure to pdf
+% formatFigure; 
+printPDF([todaystr '_TmVO4-RF-E_Cp_fit']);
 % printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
 
 
@@ -364,6 +401,7 @@ xlabel('H (Oe)');ylabel('T (K)');zlabel('C_p (\muJ/K)');
 xlim([0 hmax])
 legend()
 hold off
+
 %% Plot dCp/dT at each field separately
 % Need to average data points measured at each temperature first
 
@@ -378,6 +416,7 @@ xlabel('H (Oe)');ylabel('T (K)');zlabel('-dC_p/dT (\muJ/K)');
 xlim([0 hmax])
 legend()
 hold off
+
 %% Plot Cp(T) at each field separately
 %%
 figure

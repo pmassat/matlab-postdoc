@@ -1,5 +1,6 @@
-%% Define physical constants
+%% Define constants used in most scripts
 R = 8.314;% gas constant, in J/mol/K
+todaystr = datestr(datetime('today'),29);% Create string containing today's date, in format yyyy-mm-dd
 
 %% Graphics properties
 set(groot,'defaultTextFontsize',18);
