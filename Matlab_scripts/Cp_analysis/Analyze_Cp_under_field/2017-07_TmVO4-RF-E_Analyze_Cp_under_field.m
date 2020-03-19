@@ -294,19 +294,20 @@ for i=rng
 Cptheo(i).h = uh(i)/(Hc0*1e4);
 Cptheo(i).rhsgm = 0.09;
 Cptheo(i).sgm = Cptheo(i).h*Cptheo(i).rhsgm;
-Cptheo(i).t = linspace(0,1.5,301);% reduced temperature, T/Tc
-Cptheo(i).single_h = zeros(size(Cptheo(i).t));
-Cptheo(i).phenomeno = zeros(size(Cptheo(i).t));
+Cptheo(i).t_single_h = linspace(0,1.5,601);% reduced temperature, T/Tc
+Cptheo(i).single_h = zeros(size(Cptheo(i).t_single_h));
+Cptheo(i).t_phenomeno = linspace(0,1.5,301);% reduced temperature, T/Tc
+Cptheo(i).phenomeno = zeros(size(Cptheo(i).t_phenomeno));
 end
 i = 1;
-Cptheo(i).single_h = Cp_TFIM(Cptheo(i).t,Cptheo(i).h);
-Cptheo(i).phenomeno = Cp_LFIM(Cptheo(i).t,1.5e-3);
+Cptheo(i).single_h = Cp_TFIM(Cptheo(i).t_single_h,Cptheo(i).h);
+Cptheo(i).phenomeno = Cp_LFIM(Cptheo(i).t_phenomeno,1.5e-3);
 % Fit parameters on data at H=0: Tc=2.125(3), e=1.5(4)e-3
 % Cp_LFIM(h=0)
 for i=rng(2:end)
-    for j=2:length(Cptheo(i).t)
-    Cptheo(i).single_h(j) = Cp_TFIM(Cptheo(i).t(j),Cptheo(i).h);
-    Cptheo(i).phenomeno(j) = CpTFIM_normpdf(Cptheo(i).t(j),Cptheo(i).h,Cptheo(i).sgm);
+Cptheo(i).single_h = Cp_TFIM(Cptheo(i).t_single_h,Cptheo(i).h);
+    for j=2:length(Cptheo(i).t_phenomeno)
+    Cptheo(i).phenomeno(j) = CpTFIM_normpdf(Cptheo(i).t_phenomeno(j),Cptheo(i).h,Cptheo(i).sgm);
     end
 end
 
@@ -324,8 +325,9 @@ figure; hold on
 clr = lines(length(rng));
 eb = cell(size(rng));
 for i=rng
-plot(Cptheo(i).t*Tc0,Cptheo(i).single_h,'--','Color',clr(rng==i,:),'DisplayName',sprintf('h=%.2f',Cptheo(i).h));
-plot(Cptheo(i).t*Tc0,Cptheo(i).phenomeno,'Color',clr(rng==i,:),'DisplayName',...
+% fp = fplot(@(t)Cp_TFIM(t/Tc0,Cptheo(i).h),[0 3.2],'--','LineWidth',2,'Color',clr(rng==i,:));
+plot(Cptheo(i).t_single_h*Tc0,Cptheo(i).single_h,'--','Color',clr(rng==i,:),'DisplayName',sprintf('h=%.2f',Cptheo(i).h));
+plot(Cptheo(i).t_phenomeno*Tc0,Cptheo(i).phenomeno,'Color',clr(rng==i,:),'DisplayName',...
     sprintf('h=%.2f,r=%.1e',Cptheo(i).h,Cptheo(i).rhsgm));
 end
 for i=rng
@@ -333,14 +335,17 @@ eb{rng==i} = errorbar(avgData(i).T,avgData(i).Cpelr,avgData(i).CpFullErr/R,...
     '.','MarkerSize',18,'DisplayName',num2str(uh(i)/(Hc0*1e4),'%.2f'),...
     'Color',clr(rng==i,:),'LineWidth',2);
 end
-xlabel('Temperature (K)'); ylabel('C$_p$/R');%ylabel('C$_p$ (JK$^{-1}$mol$^{-1}$)');
+xlabel('$T$ (K)'); ylabel('$C_p/R$');%ylabel('C$_p$ (JK$^{-1}$mol$^{-1}$)');
 lgd = legend([eb{:}]); lgd.Title.String = '$H/H_c$';
 ax = gca; ax.YMinorTick = 'on';% Add minor ticks on Y axis
-anntheo = annotation('textbox',[0.15 0.75 0.2 0.1],'interpreter','latex',...
-'String',{['$--$ Simple mean-fit'] ['----- Normal PDF of $H$']...
-}, 'LineStyle','-','EdgeColor','k',...
+anntheo = annotation('textbox',[0.13 0.83 0.2 0.1],'interpreter','latex',...
+    'String',{['$--$ 1-parameter fit'] ['----- 2-parameter fit']...
+    }, 'LineStyle','-','EdgeColor','k',...
     'FitBoxToText','on','LineWidth',1,'BackgroundColor','w','Color','k');% add annotation
-title('Heat capacity of TmVO$_4$')
+annnum = annotation('textbox',[0.01 0.01 0.2 0.1],'interpreter','latex',...
+    'String',{['(a)']}, 'LineStyle','-','EdgeColor','None',...
+    'BackgroundColor','none','Color','k','VerticalAlignment','bottom');% add numbering annotation
+% title('Heat capacity of TmVO$_4$')
 grid on;%
 hold off
 
@@ -383,7 +388,7 @@ formatFigure
 annfit.Position(2)=.175;
 
 %% Export figure to pdf
-% formatFigure; 
+% formatFigure;
 printPDF([todaystr '_TmVO4-RF-E_Cp_fit']);
 % printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
 

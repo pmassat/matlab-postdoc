@@ -14,6 +14,6 @@ function formatFigure(varargin)
 % Note: this line resizes the figure to make it fill the page; however, in
 % the case of a color map, it does not take into account the colorbar, thus
 % one needs to adjust the values of elements 3 and 4 manually
-%     set(gca, 'Position', [InSet(1:2), 0.99-InSet(1)-InSet(3), 0.99-InSet(2)-InSet(4)]);% for all plots other than colormaps
+    set(gca, 'Position', [InSet(1:2), 0.99-InSet(1)-InSet(3), 0.99-InSet(2)-InSet(4)]);% for all plots other than colormaps
 %     print(h,'-fillpage',filestr,'-dpdf','-r0');
 end
