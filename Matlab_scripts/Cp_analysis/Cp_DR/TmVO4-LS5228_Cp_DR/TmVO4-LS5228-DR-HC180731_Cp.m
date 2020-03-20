@@ -96,20 +96,23 @@ legend('show')
 title('TmVO$_4$ heat capacity')
 xlabel(xlblTemp); ylabel('$C_p$ (J/K/mol)');
 
-%% Prepare plot of theoretical curve 
+%% Prepare plot of theoretical heat capacity curve 
 % Tc = 2.19;%  Value of transition temperature obtained from fit with Cp_LFIM_NF function in Curve Fitting Tool
 Tc = 2.185;%  Value of transition temperature obtained from fit with Cp_LFIM_CW function in Curve Fitting Tool
-s =  5e-4;%  Value of longitudinal field obtained from fit with Cp_LFIM_NF or Cp_LFIM_CW function in Curve Fitting Tool
-T0 = 2.09;% Curie-Weiss temperature obtained from fit with Cp_LFIM_CW 
-A = 0.0136;% amplitude of CW divergence obtained from fit with Cp_LFIM_CW 
-tvec = linspace(1e-3,4,300);
+s =  5e-4;%  Value of longitudinal field obtained from fit with Cp_LFIM_NF and Cp_LFIM_CW and Cp_LFIM_MEC_cst_stress function in Curve Fitting Tool
+T_CW = 2.09;% Curie-Weiss temperature obtained from fit with function Cp_LFIM_CW 
+A_CW = 0.0136;% amplitude of CW divergence obtained from fit with function Cp_LFIM_CW 
+T0 = 1.6;% Divergence temperature obtained from fit with function Cp_LFIM_MEC_cst_stress
+A = 5e-3;% Amplitude of "high"-temperature divergence obtained from fit with function Cp_LFIM_MEC_cst_stress
+tvec = linspace(1e-3,4,300);% temperature vector for computation of Cp
 
 %% Compute pure mean-field heat capacity
 Cptheo0 = Cp_TFIM(tvec/Tc,0);
 
 %% Compute theoretical heat capacity in LFIM
 % Cptheo = Cp_LFIM(tvec/Tc,s);
-Cptheo = Cp_LFIM_CW(tvec/Tc,s,A,T0/Tc);
+% Cptheo = Cp_LFIM_CW(tvec/Tc,s,A,T0/Tc);
+Cptheo = Cp_LFIM_MEC_cst_stress(tvec/Tc,s,A,T0/Tc);
 
 %% Subtract Cptheo from experimental data to analyze the residual Cp
 Cptheodat = Cp_LFIM(avgData(i).T/Tc,s);% theoretical Cp computed at same temperatures as data
@@ -138,15 +141,15 @@ c2 =    0.004759;  %(0.003322, 0.006196)
 ax2 = subplot(5,1,[3:5]); 
 p0 = plot(tvec,Cptheo0,'Color',[.5 .5 .5],'DisplayName','Mean-field');
 hold on
-p1 = plot(tvec,Cptheo,'-r','DisplayName',['MF + $\sigma$ + CW']);
+p1 = plot(tvec,Cptheo,'-r','DisplayName',['MF + $\epsilon$ + $\sigma$']);
 % fp = plot(avgData(i).T,Cptheodat,'-r','DisplayName',sprintf('MF: e=%.2g',e));
 pdat = errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.b',...
     'MarkerSize',18,'LineWidth',1,'DisplayName','Experiment');
 xlabel(xlblTemp); ylabel('$C_p/R$');
 ylim([0 1.55])
-annttl = annotation('textbox',[0.2 0.45 0.17 0.1],'interpreter','latex',...
-    'String',{'TmVO$_{4}$'}, 'LineStyle','-','EdgeColor','black',...
-    'BackgroundColor','none','Color','k','LineWidth',1,'FitBoxToText','on');% add annotation
+% annttl = annotation('textbox',[0.2 0.45 0.17 0.1],'interpreter','latex',...
+%     'String',{'TmVO$_{4}$'}, 'LineStyle','-','EdgeColor','black',...
+%     'BackgroundColor','none','Color','k','LineWidth',1,'FitBoxToText','on');% add annotation
 % annttl.FontSize = ax.XAxis.Label.FontSize;
 grid on
 % title(ttlCp);
@@ -214,7 +217,7 @@ ax2.XLabel.Position(2) = -.15;
 
 %% Print figure to PNG file
 % formatFigure;
-printSVG('2020-03-09_TmVO4-LS5228-DR-HC180731_Cp+fit')
+printSVG([todaystr '_TmVO4-LS5228-DR-HC180731_Cp+fit'])
 % printPNG('2019-11-19_TmVO4_MFIM_Cp')
 % printPNG('2019-11-19_TmVO4_Cp_data+MF')
 % printPNG('2019-11-19_TmVO4_Cp_data+stress')
