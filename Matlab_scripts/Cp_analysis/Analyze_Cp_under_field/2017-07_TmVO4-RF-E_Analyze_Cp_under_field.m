@@ -251,8 +251,9 @@ eb = cell(size(rng));
 % for i=1:length(rng)
 %     fp = plot(Ttlf(2:end-1)*Tc,Cptlf(:,i));% requires computing Cptlf in 'F_S_Cp_TLFIM_compute.m'
 % end
+maxTplot = 3.2;%
 for i=rng
-    fp = fplot(@(t)Cp_TFIM(t/Tc0,uh(i)/(Hc0*1e4)),[0 3.2],'LineWidth',2);
+    fp = fplot(@(t)Cp_TFIM(t/Tc0,uh(i)/(Hc0*1e4)),[0 maxTplot],'LineWidth',2);
 %     fp = fplot(@(t)Cp_TFIM_offset_strain(t/2.125,uh(i)/(5.1e3),1.5e-3),[0 4],'LineWidth',2);
 % Fit parameters on data at H=0: Tc=2.125(3), e=1.5(4)e-3
 % Note: the values of amplitude coefficient and Tc extracted from fit 
@@ -265,6 +266,7 @@ for i=rng
         'Color',clr(rng==i,:),'LineWidth',2);
 end
 xlabel('Temperature (K)'); ylabel('C$_p$/R');%ylabel('C$_p$ (JK$^{-1}$mol$^{-1}$)');
+xlim([0 maxTplot])
 % title('Heat capacity of TmVO4 at various fields')
 % title([sprintf('h=H/Hc*%.3g, e=',factor) mat2str(e,2)])
 lgd = legend([eb{:}]); lgd.Title.String = '$H/H_c$';
@@ -336,6 +338,7 @@ eb{rng==i} = errorbar(avgData(i).T,avgData(i).Cpelr,avgData(i).CpFullErr/R,...
     'Color',clr(rng==i,:),'LineWidth',2);
 end
 xlabel('$T$ (K)'); ylabel('$C_p/R$');%ylabel('C$_p$ (JK$^{-1}$mol$^{-1}$)');
+xlim([0 max(Cptheo(rng(1)).t_single_h*Tc0)]);
 lgd = legend([eb{:}]); lgd.Title.String = '$H/H_c$';
 ax = gca; ax.YMinorTick = 'on';% Add minor ticks on Y axis
 anntheo = annotation('textbox',[0.13 0.83 0.2 0.1],'interpreter','latex',...
