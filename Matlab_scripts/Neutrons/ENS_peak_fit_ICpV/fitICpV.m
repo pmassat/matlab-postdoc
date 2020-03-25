@@ -168,10 +168,11 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
                 % end of string defining the fit equation
             end
             
-            fitEqn = cell(1:nPeaks);
-            for i1=1:nPeaks
-                fitEqn{i1} = fitEqStr(obj.allParams{i1},obj.freeParams{i1});
+            fitEqn = cell(1,nPeaks);
+            for peakIdx=1:nPeaks
+                fitEqn{peakIdx} = fitEqStr(obj.allParams{peakIdx},obj.freeParams{peakIdx});
             end
+%             disp(fitEqn)
             fullFitStr = join(string(fitEqn),'+');% sum equation strings for all peaks
 %             disp(fullFitStr);% display the fit equation for debugging
             

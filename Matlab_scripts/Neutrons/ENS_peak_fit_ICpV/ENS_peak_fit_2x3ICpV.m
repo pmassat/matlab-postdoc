@@ -69,22 +69,32 @@ hcenter = -8.0;% center of unsplit peak in reciprocal space
 % ufb = 0.99; % upper fit boundary = highest value of h-hc for which to include datapoints for the fit
 istart = 1;
 iend = length(field);
+fullHrange = istart:1:iend;% full range of magnetic fields
+aboveHc = iend;% range of magnetic fields above the critical field
 
-%% Perform and plot fit using convolution of Ikeda-Carpenter function with pseudo-Voigt
-xc = [hcenter(1)-.03 hcenter(1)+.01];% position of peaks in reciprocal space
-lx = length(xc);
-rng = istart:1:iend;
-I1 = 8e4; R1 = 0.1; a1 = 200; b1 = 0.1; g1 = 1e-3; s1 = 6.6e-3;% free parameters initial values
-I2 = I1/0.46; R2 = 0.1; a2 = 200; b2 = 0.1; g2 = 1e-3; s2 = 6.6e-3;% free parameters initial values
-% freePrms1 = {'I',I1;'R',R1;'alpha',a1;'beta',b1;'gamma',g1;'sigma',s1;'x0',hc};%7 free parameters
+%% Initialize fit using convolution of Ikeda-Carpenter function with pseudo-Voigt
+clear fitPrms
+I2 = 17e4;% fit parameters initial values
+peakCenter = hcenter*(1-[-1:1]*1e-3);% position of peaks in reciprocal space
+freeKeySet =        {'I',   'R',    'alpha','beta', 'gamma','sigma','x0'};%7 free parameters
+for fitPeakIdx = 1:3% initialize fit parameter values
+    freeValueSet =  {4e4,   0.1,    200,    0.1,    1e-3,   6.6e-3, peakCenter(fitPeakIdx)};%7 free parameters
+    for keyIdx = 1:length(freeKeySet)
+        fitPrms(fitPeakIdx).freePrms{keyIdx,1} = sprintf([freeKeySet{keyIdx} '%i'],fitPeakIdx);
+        fitPrms(fitPeakIdx).freePrms{keyIdx,2} = freeValueSet{keyIdx};
+    end
+end
+fitPrms(2).freePrms{1,2} = 8e4;%change initial intensity of central fit peak
+% freePrms11 = {'I',I11;'R11',R1;'alpha11',a1;'beta',b1;'gamma',g1;'sigma',s1;'x011',peakCenter(1)};%7 free parameters
 % freePrms1 = {'I1',I1;'R1',R1;'beta1',b1;'gamma1',g1;'x01',hc(1)};% 5 free parameters
 % freePrms2 = {'I2',I2;'R2',R2;'beta2',b2;'gamma2',g2;'x02',hc(2)};% 5 free parameters
-freePrms1 = {'I2*0.46',I1;'x01',xc(1)};% free parameters
-freePrms2 = {'I2',I2;'x02',xc(2)};% free parameters
+% freePrms2 = {'I2',I2;'x02',xc(2)};% free parameters
 % Note: the order in which free parameters are defined matters because of
 % how the array of initial fitting parameters 'initParams' is defined
 fmt1 = 'ENS at T=%.2fK H=%.3fT %i params fit';% string format for plot title
-for i=rng
+
+%% Perform and plot fit 
+for i=aboveHc
     nData1 = nData(i).hh0(nData(i).dI>0);
     datExcld = nData1<min(hcenter)-.7 | nData1>max(hcenter)+0.55 |...
         (nData1>min(hcenter)-.35 & nData1<min(hcenter)-0.15) |...
@@ -93,21 +103,23 @@ for i=rng
 % data points that correspond to other peaks as well as those that are too far away
 % datExcld should be defined on the x interval where obj.dY>0, otherwise
 % the number of excluded points will be higher than the number of data points
-    myfit = fitICpV(nData(i).hh0,nData(i).I,nData(i).dI,xc); 
+    myfit = fitICpV(nData(i).hh0,nData(i).I,nData(i).dI,peakCenter); 
     myfit.dataExcl = datExcld;
-    ap1 = myfit.allParams{1}; ap1('alpha') = 140; ap1('sigma') = 6.6e-3;% 'ap1' is shorter than 'myfit.allParams{1}'
-    ap1('R')=0.0; ap1('beta')=0; ap1('I') = I1; ap1('gamma') = 0;
-    ap2 = myfit.allParams{2}; ap2('gamma') = 0;
-    myfit.freeParams = {freePrms1,freePrms2};
+%     ap1 = myfit.allParams{1}; ap1('gamma') = 0;% 'ap1' is shorter than 'myfit.allParams{1}'
+%     ap1('alpha') = 140; ap1('sigma') = 6.6e-3;% It is not necessary to reassign the values that are assigned by default
+%     ap1('R')=0.0; ap1('beta')=0; ap1('I') = I1; 
+%     ap2 = myfit.allParams{2}; ap2('gamma') = 0;
+    myfit.freeParams = {fitPrms.freePrms}
     myfit.indepFreePrms();% compute array of *independent* free parameters
     Nprms = length(myfit.indepFreeParams);% total number of independent free parameters
     label = sprintf(fmt1,nData(i).temp,field(i),Nprms);
-    fitStr = ['fit'  int2str(lx) 'ICpV' int2str(Nprms)]; 
-    gofStr = ['gof'  int2str(lx) 'ICpV' int2str(Nprms)];
+    fitStr = ['fit'  int2str(length(peakCenter)) 'ICpV' int2str(Nprms)]; 
+    gofStr = ['gof'  int2str(length(peakCenter)) 'ICpV' int2str(Nprms)];
     [nData(i).(fitStr), nData(i).(gofStr)] = myfit.compute_fit();
     if exist('H_c','var'); hfactor = H_c/cval(1);
-    else hfactor = 1;end
-    if mod(i,20)==1% select data to plot
+    else hfactor = 1;
+    end
+    if 1%mod(i,20)==1% select data to plot
         myfit.plot_fit(nData(i).(fitStr));% title(label);
     xlim([hcenter-.1 hcenter+.1]);
     ann00 = annotation('textbox',[0.15 0.8 0.2 0.1],'interpreter','latex',...
@@ -118,6 +130,7 @@ for i=rng
     end
     disp(label); disp(nData(i).(fitStr)); disp(nData(i).(gofStr));
 end
+
 %% Write fit parameters to a table 
 np = Nprms;
 fitStrnp = fitStr; gofStrnp = gofStr;
@@ -129,11 +142,11 @@ for i=1:numel(Stbl)
   %if a row of Stbl.(fitStrnp) is empty, use it to store the following table
 end
 if ~flag; Ntbl = numel(Stbl)+1; end% if all the rows of Stbl.(fitStrnp) are non-empty, store table in a new row
-Stbl(Ntbl).(fitStrnp) = table(field(rng)','VariableNames',{'Field_Oe'});% first column of the table contains magnetic field values
+Stbl(Ntbl).(fitStrnp) = table(field(fullHrange)','VariableNames',{'Field_Oe'});% first column of the table contains magnetic field values
 cfn = coeffnames(nData(istart).(fitStrnp));% extract fit coefficient names, i.e. free parameters 
 for nc=1:np% for each free parameter
-    prm = extract_structure_field(nData(rng),fitStrnp,cfn{nc});% get its value
-    cft = cell2mat(arrayfun(@(c) confint(c.(fitStrnp)),nData(rng).','Uniform',0));% get the 95% confidence intervals
+    prm = extract_structure_field(nData(fullHrange),fitStrnp,cfn{nc});% get its value
+    cft = cell2mat(arrayfun(@(c) confint(c.(fitStrnp)),nData(fullHrange).','Uniform',0));% get the 95% confidence intervals
     cftm = cft(1:2:end,nc); cftp = cft(2:2:end,nc);% get the lower and upper bounds of that interval, respectively
     prmErrm = prm-cftm;prmErrp = prm-cftp;% calculate corresponding negative and positive absolute errors
     relErrm = abs(prmErrm./prm);relErrp = abs(prmErrp./prm);% and relative errors
@@ -145,7 +158,7 @@ end
 % % this is only useful when looking at the influence of the value of R on
 % % the quality of fits
 % end
-rsquarenp = extract_structure_field(nData(rng),gofStrnp,'rsquare');% extract r^2 value from goodness of fit
+rsquarenp = extract_structure_field(nData(fullHrange),gofStrnp,'rsquare');% extract r^2 value from goodness of fit
 Stbl(Ntbl).(fitStrnp).Rsquare = rsquarenp;% store r^2 value in a new column
 flag = 0;% reset flag for next run
 
@@ -181,7 +194,7 @@ fprintf(fileID,'\nInitial values of free parameters:\n');
 S = string(vertcat(myfit.freeParams{:}));
 fprintf(fileID,'%s\n',strcat(S(:,1)," = ",S(:,2)));
 fprintf(fileID,'\nFixed values of all parameters (disregard free parameters):');
-for il=1:lx
+for il=1:length(peakCenter)
     fprintf(fileID,['\nPeak #' int2str(il) '\n']);
     K = keys(myfit.allParams{il}); V = values(myfit.allParams{il});
     fprintf(fileID,'%s\n',strcat(K," = ",string(V)));
@@ -205,11 +218,11 @@ fclose(fileID);
 % end
 
 %% Extract splitting between peaks as the distance between peak maxima
-xM1 = ones(length(rng),1); xM2 = ones(length(rng),1); 
-splitting = zeros(length(rng),1);
+xM1 = ones(length(fullHrange),1); xM2 = ones(length(fullHrange),1); 
+splitting = zeros(length(fullHrange),1);
 hM1 = repmat(xM1,1); hM2 = repmat(xM2,1); 
 Imax1 = repmat(xM1,1); Imax2 = repmat(xM2,1); 
-for i=rng
+for i=fullHrange
     label = sprintf(fmt1,nData(i).temp,field(i),Nprms);
 %     I1 = nData(i).(fitStr).I1; 
     I2 = nData(i).(fitStr).I2;
@@ -218,8 +231,8 @@ for i=rng
     f1 = @(x)-(I2*0.46*voigtIkedaCarpenter_ord(x,[0,140,0,0,0.05,6.6e-3,x01]));
     f2 = @(x)-(I2*voigtIkedaCarpenter_ord(x,[0,140,0,0,0.05,6.6e-3,x02]));
 %fnfit = -1*[fit function] so that the maximum becomes a minimum
-    xM1(i) = fminbnd(f1,xc(1)-.1,xc(1)+.1);% Identify position of the maximum of fit of peak 1 on interval [hc-0.2 hc+0.2]
-    xM2(i) = fminbnd(f2,xc(2)-.1,xc(2)+.1);% Same for peak 2
+    xM1(i) = fminbnd(f1,peakCenter(1)-.1,peakCenter(1)+.1);% Identify position of the maximum of fit of peak 1 on interval [hc-0.2 hc+0.2]
+    xM2(i) = fminbnd(f2,peakCenter(2)-.1,peakCenter(2)+.1);% Same for peak 2
     splitting(i) = -(xM2(i) - xM1(i))/hcenter;
     [~,idxM1] = min(abs((nData(i).hh0-xM1(i))));% extract index of max of peak 1 in dataset
     hM1(i) = nData(i).hh0(idxM1);% position of peak 1 in dataset
@@ -238,7 +251,7 @@ wghts = min(spltRE)./spltRE;
 %% Plot splitting
 figure
 % plot(field,splitting,'.')
-errorbar(field,splitting,spltRE(rng),'.','MarkerSize',12);
+errorbar(field,splitting,spltRE(fullHrange),'.','MarkerSize',12);
 ylim([0 6e-3])
 
 %% Fit splitting
