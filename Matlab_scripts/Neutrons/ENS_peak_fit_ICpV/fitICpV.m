@@ -28,7 +28,7 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
                 fixedKeySet{i0} = {'I','R','alpha','beta','gamma','k','sigma','x0'};
 % Important note: Matlab sorts the keys without asking! They are sorted
 % alphabetically, with capital letters grouped together before lowercase ones
-                fixedValueSet{i0} = [2e5, 0, 140, 0, 1e-3, 0.05, 6.6e-3, xPeaks(i0)];
+                fixedValueSet{i0} = [2e5, 0, 140, 0, 0, 0.05, 6.6e-3, xPeaks(i0)];
 % Defining fit parameters in object properties allows to call
 % them both for fitting and plotting. The user must be careful however not
 % to change them between fitting and plotting, otherwise the plotted fit

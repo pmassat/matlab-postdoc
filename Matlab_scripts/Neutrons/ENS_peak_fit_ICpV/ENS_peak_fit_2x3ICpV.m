@@ -67,24 +67,24 @@ hcenter = -8.0;% center of unsplit peak in reciprocal space
 
 %% Analysis parameters
 % ufb = 0.99; % upper fit boundary = highest value of h-hc for which to include datapoints for the fit
-istart = 1;
-iend = length(field);
-fullHrange = istart:1:iend;% full range of magnetic fields
-aboveHc = iend;% range of magnetic fields above the critical field
+fullHrange = 1:length(field);% full range of magnetic fields
+istart = length(field)-5;
+iend = istart-5;
+aboveHc = istart:-1:iend;% range of magnetic fields above the critical field
 
 %% Initialize fit using convolution of Ikeda-Carpenter function with pseudo-Voigt
 clear fitPrms
 I2 = 17e4;% fit parameters initial values
-peakCenter = hcenter*(1-[-1:1]*1e-3);% position of peaks in reciprocal space
-freeKeySet =        {'I',   'R',    'alpha','beta', 'gamma','sigma','x0'};%7 free parameters
+peakCenter = hcenter*(1-[0:2]*2e-3);% position of peaks in reciprocal space
+freeKeySet =        {'I','x0'};%7 free parameters
 for fitPeakIdx = 1:3% initialize fit parameter values
-    freeValueSet =  {4e4,   0.1,    200,    0.1,    1e-3,   6.6e-3, peakCenter(fitPeakIdx)};%7 free parameters
+    freeValueSet =  {5e4, peakCenter(fitPeakIdx)};%7 free parameters
     for keyIdx = 1:length(freeKeySet)
         fitPrms(fitPeakIdx).freePrms{keyIdx,1} = sprintf([freeKeySet{keyIdx} '%i'],fitPeakIdx);
         fitPrms(fitPeakIdx).freePrms{keyIdx,2} = freeValueSet{keyIdx};
     end
 end
-fitPrms(2).freePrms{1,2} = 8e4;%change initial intensity of central fit peak
+fitPrms(2).freePrms{1,2} = 1e5;%change initial intensity of central fit peak
 % freePrms11 = {'I',I11;'R11',R1;'alpha11',a1;'beta',b1;'gamma',g1;'sigma',s1;'x011',peakCenter(1)};%7 free parameters
 % freePrms1 = {'I1',I1;'R1',R1;'beta1',b1;'gamma1',g1;'x01',hc(1)};% 5 free parameters
 % freePrms2 = {'I2',I2;'R2',R2;'beta2',b2;'gamma2',g2;'x02',hc(2)};% 5 free parameters
@@ -109,7 +109,7 @@ for i=aboveHc
 %     ap1('alpha') = 140; ap1('sigma') = 6.6e-3;% It is not necessary to reassign the values that are assigned by default
 %     ap1('R')=0.0; ap1('beta')=0; ap1('I') = I1; 
 %     ap2 = myfit.allParams{2}; ap2('gamma') = 0;
-    myfit.freeParams = {fitPrms.freePrms}
+    myfit.freeParams = {fitPrms.freePrms};
     myfit.indepFreePrms();% compute array of *independent* free parameters
     Nprms = length(myfit.indepFreeParams);% total number of independent free parameters
     label = sprintf(fmt1,nData(i).temp,field(i),Nprms);
