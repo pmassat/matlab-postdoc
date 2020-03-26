@@ -43,15 +43,18 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
 % free parameters from the array of free paraemters
             obj.indepFreeParams = vertcat(obj.freeParams{:});
             ifp = obj.indepFreeParams;% shorter variable name, easier to handle
-            for kfp=length(ifp):-1:1
-                lfp = length(ifp);% length may change when deleting a cell
-                for jfp=lfp:-1:1
-                    if isequal(ifp{jfp,1},ifp{kfp,1}); continue;
-                    elseif contains(ifp{jfp,1},ifp{kfp,1}); ifp(jfp,:)=[];
+            dependentRow = [];% create a list of row indices of the obj.freeParams that contain dependent fit parameters
+            for refRow=1:length(ifp)
+                if any(dependentRow==refRow)% if the row index of the row to be compared is already contained in list dependentRow
+                    continue% continue to the next row
+                end%
+                for compRow=refRow+1:length(ifp)% loop over cells that are below the cell of comparison
+                    if contains(ifp{compRow,1},ifp{refRow,1})% if the parameter name in row #refRow is contained in that of row #compRow
+                        dependentRow(end+1) = compRow;% store row #compRow into dependentRow list
                     end
                 end
             end
-            obj.indepFreeParams = ifp;% update array of independent free parameters
+            obj.indepFreeParams(dependentRow,:) = [];% update array of independent free parameters
         end
 
 %% Compute fit method
@@ -268,12 +271,12 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
                             % is contained in the current dependent parameter and store its array index
                             [sdiff,smatch] = strsplit(obj.freeParams{ii}{idxfp},obj.indepFreeParams{idxifp});
                             if ~isempty(sdiff{1})
-                                fitPrms(jj) = str2num([sdiff{1} num2str(fitresult.(smatch{1}))]);
+                                fitPrms(jj) = str2double([sdiff{1} num2str(fitresult.(smatch{1}))]);
                             % Note: str2double does not work here as it 
                             % does not handle mathematical operations,
                             % whereas str2num does
                             elseif ~isempty(sdiff{2})
-                                fitPrms(jj) = str2num([num2str(fitresult.(smatch{1})) sdiff{2}]);
+                                fitPrms(jj) = str2double([num2str(fitresult.(smatch{1})) sdiff{2}]);
                             else; fitPrms(jj) = fitresult.(smatch{1});
                             end
                         end
@@ -306,7 +309,7 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
             pdat = errorbar(xData,yData,obj.dY,'.b','MarkerSize',18,'LineWidth',2);
             pexcl = plot(obj.X(excludedPoints),obj.Y(excludedPoints),'xk',...
                 'MarkerSize',9);
-            legend([pdat,pfit],'I vs. hh0','fit ICpV','Location','best');
+            legend([pdat,pfit],'I vs. hh0','fit ICpV','Location','northeast');
 %             legend([pdat,pexcl,pfit],'I vs. hh0','Excluded','fit ICpV');
             % Label axes
             xlabel("hh0"); ylabel("I (a.u.)");

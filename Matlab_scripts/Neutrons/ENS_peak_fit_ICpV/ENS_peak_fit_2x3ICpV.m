@@ -65,32 +65,39 @@ field = extractfield(nData,'field');
 %% Center of peak to be studied in the following
 hcenter = -8.0;% center of unsplit peak in reciprocal space
 
+%% Initialize fit using convolution of Ikeda-Carpenter function with pseudo-Voigt
+clear fitPrms
+% I2 = 17e4;% fit parameters initial values
+peakCenter = hcenter+([-2 2]*1e-2);% initial positions of peaks in reciprocal space
+peakIntensity = [5 20]*1e4;% initial intensities of peaks 
+peakGWidth = [1]*1e-3;% initial Gaussian widths of peaks 
+peakLWidth = [5]*1e-3;% initial Lorentzian widths of peaks 
+% freeKeySet =        {'I',   'gamma','x0'};% free parameters
+freeKeySet =        {'I','x0'};% free parameters
+depParamValues =    {};% fit parameters which will be the same for all fit functions
+% Note: the order in which free parameters are defined matters because of
+% how the array of initial fitting parameters 'initParams' is defined
+for fitPeakIdx = length(peakCenter):-1:1% initialize fit parameter values
+    freeValueSet =  [{peakIntensity(fitPeakIdx)}, depParamValues(:)',{peakCenter(fitPeakIdx)}];% free parameters
+    keyIdx = 1;
+    fitPrms(fitPeakIdx).freePrms{keyIdx,1} = sprintf([freeKeySet{keyIdx} '%i'],fitPeakIdx);
+    fitPrms(fitPeakIdx).freePrms{keyIdx,2} = freeValueSet{keyIdx};
+    for keyIdx = 2:length(freeKeySet)-1
+        fitPrms(fitPeakIdx).freePrms{keyIdx,1} = freeKeySet{keyIdx};
+        fitPrms(fitPeakIdx).freePrms{keyIdx,2} = freeValueSet{keyIdx};
+    end
+    keyIdx = length(freeKeySet);
+    fitPrms(fitPeakIdx).freePrms{keyIdx,1} = sprintf([freeKeySet{keyIdx} '%i'],fitPeakIdx);
+    fitPrms(fitPeakIdx).freePrms{keyIdx,2} = freeValueSet{keyIdx};
+end
+% fitPrms(2).freePrms{1,2} = 1e5;%change initial intensity of central fit peak
+
 %% Analysis parameters
 % ufb = 0.99; % upper fit boundary = highest value of h-hc for which to include datapoints for the fit
 fullHrange = 1:length(field);% full range of magnetic fields
-istart = length(field)-5;
-iend = istart-5;
+istart = length(field);
+iend = istart;
 aboveHc = istart:-1:iend;% range of magnetic fields above the critical field
-
-%% Initialize fit using convolution of Ikeda-Carpenter function with pseudo-Voigt
-clear fitPrms
-I2 = 17e4;% fit parameters initial values
-peakCenter = hcenter*(1-[0:2]*2e-3);% position of peaks in reciprocal space
-freeKeySet =        {'I','x0'};%7 free parameters
-for fitPeakIdx = 1:3% initialize fit parameter values
-    freeValueSet =  {5e4, peakCenter(fitPeakIdx)};%7 free parameters
-    for keyIdx = 1:length(freeKeySet)
-        fitPrms(fitPeakIdx).freePrms{keyIdx,1} = sprintf([freeKeySet{keyIdx} '%i'],fitPeakIdx);
-        fitPrms(fitPeakIdx).freePrms{keyIdx,2} = freeValueSet{keyIdx};
-    end
-end
-fitPrms(2).freePrms{1,2} = 1e5;%change initial intensity of central fit peak
-% freePrms11 = {'I',I11;'R11',R1;'alpha11',a1;'beta',b1;'gamma',g1;'sigma',s1;'x011',peakCenter(1)};%7 free parameters
-% freePrms1 = {'I1',I1;'R1',R1;'beta1',b1;'gamma1',g1;'x01',hc(1)};% 5 free parameters
-% freePrms2 = {'I2',I2;'R2',R2;'beta2',b2;'gamma2',g2;'x02',hc(2)};% 5 free parameters
-% freePrms2 = {'I2',I2;'x02',xc(2)};% free parameters
-% Note: the order in which free parameters are defined matters because of
-% how the array of initial fitting parameters 'initParams' is defined
 fmt1 = 'ENS at T=%.2fK H=%.3fT %i params fit';% string format for plot title
 
 %% Perform and plot fit 
@@ -101,7 +108,7 @@ for i=aboveHc
         (nData1>max(hcenter)+0.14 & nData1<max(hcenter)+0.2);%
 %     (nData1>max(hc)+0.045 & nData1<max(hc)+0.065);% Exclude 
 % data points that correspond to other peaks as well as those that are too far away
-% datExcld should be defined on the x interval where obj.dY>0, otherwise
+% datExcld should be defined on the x interval where obj.dY>0, ot herwise
 % the number of excluded points will be higher than the number of data points
     myfit = fitICpV(nData(i).hh0,nData(i).I,nData(i).dI,peakCenter); 
     myfit.dataExcl = datExcld;
@@ -109,6 +116,8 @@ for i=aboveHc
 %     ap1('alpha') = 140; ap1('sigma') = 6.6e-3;% It is not necessary to reassign the values that are assigned by default
 %     ap1('R')=0.0; ap1('beta')=0; ap1('I') = I1; 
 %     ap2 = myfit.allParams{2}; ap2('gamma') = 0;
+    myfit.allParams{1}('alpha') = 148; myfit.allParams{2}('alpha') = myfit.allParams{1}('alpha');
+    myfit.allParams{1}('sigma') = 3e-3; myfit.allParams{2}('sigma') = myfit.allParams{1}('sigma');
     myfit.freeParams = {fitPrms.freePrms};
     myfit.indepFreePrms();% compute array of *independent* free parameters
     Nprms = length(myfit.indepFreeParams);% total number of independent free parameters
@@ -120,10 +129,11 @@ for i=aboveHc
     else hfactor = 1;
     end
     if 1%mod(i,20)==1% select data to plot
-        myfit.plot_fit(nData(i).(fitStr));% title(label);
+        myfit.plot_fit(nData(i).(fitStr)); title(['\#' sprintf('%i fit params: ',i) strjoin(freeKeySet,', ')]);
     xlim([hcenter-.1 hcenter+.1]);
-    ann00 = annotation('textbox',[0.15 0.8 0.2 0.1],'interpreter','latex',...
-        'String',{sprintf('T=%.2fK',nData(i).temp) sprintf('H=%.2fT',field(i)*hfactor)},...
+    annotParam = annotation('textbox',[0.15 0.75 0.2 0.1],'interpreter','latex','String',...
+        {sprintf('T=%.2fK',nData(i).temp); sprintf('H=%.2fT',field(i)*hfactor);
+        sprintf('adjR$^2$=%.4f',nData(i).(gofStr).adjrsquare)},...
         'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...
         'FitBoxToText','on','LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
 % hAnnotAxes = findall(gcf,'Tag','scribeOverlay');% retrieve annotation object, in case it is necessary to manipulate it
