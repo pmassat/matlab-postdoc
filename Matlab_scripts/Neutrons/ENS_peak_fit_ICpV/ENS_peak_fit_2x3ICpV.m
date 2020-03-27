@@ -68,8 +68,8 @@ hcenter = -8.0;% center of unsplit peak in reciprocal space
 %% Initialize fit using convolution of Ikeda-Carpenter function with pseudo-Voigt
 clear fitPrms
 % I2 = 17e4;% fit parameters initial values
-peakCenter = hcenter+([-2 2]*1e-2);% initial positions of peaks in reciprocal space
-peakIntensity = [5 20]*1e4;% initial intensities of peaks 
+peakCenter = hcenter+([-2:2:2]*1e-2);% initial positions of peaks in reciprocal space
+peakIntensity = [10 10 1]*1e4;% initial intensities of peaks 
 peakGWidth = [1]*1e-3;% initial Gaussian widths of peaks 
 peakLWidth = [5]*1e-3;% initial Lorentzian widths of peaks 
 % freeKeySet =        {'I',   'gamma','x0'};% free parameters
@@ -96,12 +96,13 @@ end
 % ufb = 0.99; % upper fit boundary = highest value of h-hc for which to include datapoints for the fit
 fullHrange = 1:length(field);% full range of magnetic fields
 istart = length(field);
-iend = istart;
+iend = 78;%istart-5;
 aboveHc = istart:-1:iend;% range of magnetic fields above the critical field
 fmt1 = 'ENS at T=%.2fK H=%.3fT %i params fit';% string format for plot title
 
 %% Perform and plot fit 
-for i=aboveHc
+fitRange = aboveHc;
+for i=fitRange
     nData1 = nData(i).hh0(nData(i).dI>0);
     datExcld = nData1<min(hcenter)-.7 | nData1>max(hcenter)+0.55 |...
         (nData1>min(hcenter)-.35 & nData1<min(hcenter)-0.15) |...
@@ -116,8 +117,10 @@ for i=aboveHc
 %     ap1('alpha') = 140; ap1('sigma') = 6.6e-3;% It is not necessary to reassign the values that are assigned by default
 %     ap1('R')=0.0; ap1('beta')=0; ap1('I') = I1; 
 %     ap2 = myfit.allParams{2}; ap2('gamma') = 0;
-    myfit.allParams{1}('alpha') = 148; myfit.allParams{2}('alpha') = myfit.allParams{1}('alpha');
-    myfit.allParams{1}('sigma') = 3e-3; myfit.allParams{2}('sigma') = myfit.allParams{1}('sigma');
+    for fitPeakIdx = 1:length(peakCenter)
+    myfit.allParams{fitPeakIdx}('alpha') = 148;% myfit.allParams{2}('alpha') = myfit.allParams{1}('alpha');
+    myfit.allParams{fitPeakIdx}('sigma') = 11.25e-3/length(peakCenter);% myfit.allParams{2}('sigma') = myfit.allParams{1}('sigma');
+    end
     myfit.freeParams = {fitPrms.freePrms};
     myfit.indepFreePrms();% compute array of *independent* free parameters
     Nprms = length(myfit.indepFreeParams);% total number of independent free parameters
@@ -133,7 +136,8 @@ for i=aboveHc
     xlim([hcenter-.1 hcenter+.1]);
     annotParam = annotation('textbox',[0.15 0.75 0.2 0.1],'interpreter','latex','String',...
         {sprintf('T=%.2fK',nData(i).temp); sprintf('H=%.2fT',field(i)*hfactor);
-        sprintf('adjR$^2$=%.4f',nData(i).(gofStr).adjrsquare)},...
+        sprintf('adjR$^2$=%.5f',nData(i).(gofStr).adjrsquare);
+        ['$\sigma$=' sprintf('%.2e',myfit.allParams{1}('sigma'))]},...
         'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...
         'FitBoxToText','on','LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
 % hAnnotAxes = findall(gcf,'Tag','scribeOverlay');% retrieve annotation object, in case it is necessary to manipulate it
@@ -152,11 +156,11 @@ for i=1:numel(Stbl)
   %if a row of Stbl.(fitStrnp) is empty, use it to store the following table
 end
 if ~flag; Ntbl = numel(Stbl)+1; end% if all the rows of Stbl.(fitStrnp) are non-empty, store table in a new row
-Stbl(Ntbl).(fitStrnp) = table(field(fullHrange)','VariableNames',{'Field_Oe'});% first column of the table contains magnetic field values
+Stbl(Ntbl).(fitStrnp) = table(field(fitRange)','VariableNames',{'Field_Oe'});% first column of the table contains magnetic field values
 cfn = coeffnames(nData(istart).(fitStrnp));% extract fit coefficient names, i.e. free parameters 
 for nc=1:np% for each free parameter
-    prm = extract_structure_field(nData(fullHrange),fitStrnp,cfn{nc});% get its value
-    cft = cell2mat(arrayfun(@(c) confint(c.(fitStrnp)),nData(fullHrange).','Uniform',0));% get the 95% confidence intervals
+    prm = extract_structure_field(nData(fitRange),fitStrnp,cfn{nc});% get its value
+    cft = cell2mat(arrayfun(@(c) confint(c.(fitStrnp)),nData(fitRange).','Uniform',0));% get the 95% confidence intervals
     cftm = cft(1:2:end,nc); cftp = cft(2:2:end,nc);% get the lower and upper bounds of that interval, respectively
     prmErrm = prm-cftm;prmErrp = prm-cftp;% calculate corresponding negative and positive absolute errors
     relErrm = abs(prmErrm./prm);relErrp = abs(prmErrp./prm);% and relative errors
@@ -168,34 +172,56 @@ end
 % % this is only useful when looking at the influence of the value of R on
 % % the quality of fits
 % end
-rsquarenp = extract_structure_field(nData(fullHrange),gofStrnp,'rsquare');% extract r^2 value from goodness of fit
-Stbl(Ntbl).(fitStrnp).Rsquare = rsquarenp;% store r^2 value in a new column
+rsquarenp = extract_structure_field(nData(fitRange),gofStrnp,'adjrsquare');% extract r^2 value from goodness of fit
+Stbl(Ntbl).(fitStrnp).adjRsquare = rsquarenp;% store r^2 value in a new column
 flag = 0;% reset flag for next run
 
 %% Plot ratio of peak intensities as a function of field
-if ismember('I1', Stbl(end).(fitStr).Properties.VariableNames) && ismember('I2', Stbl(end).(fitStr).Properties.VariableNames)
+varStr = {'I2','I1','I3'};
+rsquareThreshold = 0.999;% Use 0 in order to consider all fit results 
+rsquareFilter = Stbl(end).(fitStr).adjRsquare>rsquareThreshold;% Filter fit results based on values of adjusted R^2
+fitFilter = rsquareFilter;
+if all(ismember(varStr, Stbl(end).(fitStr).Properties.VariableNames))
     figure; hold on;
-    If1 = Stbl(end).(fitStr).I1; If1Err = Stbl(end).(fitStr).I1_RelErr.*If1;
-    If2 = Stbl(end).(fitStr).I2; If2Err = Stbl(end).(fitStr).I2_RelErr.*If2;
-    Iratio = If1./If2;
-    IrErr = abs(If1Err.*If2-If2Err.*If1)./If2.^2;
-    errorbar(Stbl(end).fit2ICpV4.Field_Oe,Iratio,IrErr,'.','MarkerSize',12);
-    % errorbar(Stbl.fit2ICpV4.Field_Oe,If1,Stbl.fit2ICpV4.I1_RelErr,'.','MarkerSize',12);
-    % errorbar(Stbl.fit2ICpV4.Field_Oe,If2,Stbl.fit2ICpV4.I2_RelErr,'.','MarkerSize',12);
-    ylim([0 2*Iratio(1)]);
-    title('TmVO$_4$ neutrons elastic 880 peak intensity ratio vs field at 0.6K');
-    xlabel('Magnetic field (Oe)'); ylabel('I$_1$/I$_2$');
-    nmaxavg = 10;
-    annir = annotation('textbox',[0.15 0.8 0.2 0.1],'interpreter','latex',...
-        'String',sprintf('Average of I$_1$/I$_2$ below %.2fT: %.2f',Stbl(end).fit2ICpV4.Field_Oe(nmaxavg),mean(Iratio(1:nmaxavg))),...
-        'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...
-        'LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
-    annir.FitBoxToText='on';% fit annotation box to text
+    for varIdx = length(varStr):-1:1
+        Ifit(varIdx).value = Stbl(end).(fitStr).(varStr{varIdx})(fitFilter);
+        varErrStr = [varStr{varIdx} '_RelErr'];
+        Ifit(varIdx).error = Stbl(end).(fitStr).(varErrStr)(fitFilter).*Ifit(varIdx).value;
+    end
+    for varIdx = 2:length(varStr)
+        Ifit(varIdx).ratio = Ifit(varIdx).value./Ifit(1).value;
+        Ifit(varIdx).ratioErr = abs(Ifit(1).error.*Ifit(varIdx).value-Ifit(varIdx).error.*Ifit(1).value)./Ifit(1).value.^2;
+        Ifit(varIdx).avgRatio = mean(Ifit(varIdx).ratio);
+        Ifit(varIdx).avgRatioErr = mean(Ifit(varIdx).ratioErr)+std(Ifit(varIdx).ratio);
+    end
+    plotIdx = 3;
+    xdata = Stbl(end).(fitStr).Field_Oe(fitFilter);
+%     errorbar(xdata,Ifit(plotIdx).value,Ifit(plotIdx).error,'.','MarkerSize',12);
+%     title(sprintf('%s for fit results with $R^2>$%.4f',varStr{plotIdx},rsquareThreshold));
+%     ylabel(sprintf('%s',varStr{plotIdx}));
+    errorbar(xdata,Ifit(plotIdx).ratio,Ifit(plotIdx).ratioErr,'.','MarkerSize',12);
+    title(sprintf('%s/%s for fit results with $R^2>$%.4f',varStr{plotIdx},varStr{1},rsquareThreshold));
+    ylabel(sprintf('%s/%s',varStr{plotIdx},varStr{1}));
+%     ylim([0 2*Iratio(1)]);
+    xlabel('Magnetic field (Oe)'); 
+%     nmaxavg = 10;
+%     annir = annotation('textbox',[0.15 0.8 0.2 0.1],'interpreter','latex',...
+%         'String',sprintf('Average of I$_1$/I$_2$ below %.2fT: %.2f',Stbl(end).(fitStr).Field_Oe(nmaxavg),mean(Iratio(1:nmaxavg))),...
+%         'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...
+%         'LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
+%     annir.FitBoxToText='on';% fit annotation box to text
 else; warning('Need two intensities to plot ratio. Ignoring this part.');
 end
 
+%% Compute average of fit quantities
+
+
+%% Change to data analysis directory 
+cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_neutrons\2019-02_ORNL_Corelli\2019-02-14\p6K\p6K_analysis\'
+% Then double-click the appropriate subfolder
+
 %% Write table to file
-fileChar = [sprintf('%1.eK',nData(1).temp) fitStr '.txt'];% '_R=' sprintf('%2.e',ap1('R'))
+fileChar = [todaystr sprintf('_%1.eK_',nData(1).temp) fitStr '.txt'];% '_R=' sprintf('%2.e',ap1('R'))
 fileID = fopen(fileChar,'a');
 % fprintf(fileID,'\nValues of free parameters after fit:\n');
 % fprintf(fileID,'%s\n',nData(np).Stbl);
@@ -228,11 +254,11 @@ fclose(fileID);
 % end
 
 %% Extract splitting between peaks as the distance between peak maxima
-xM1 = ones(length(fullHrange),1); xM2 = ones(length(fullHrange),1); 
-splitting = zeros(length(fullHrange),1);
+xM1 = ones(length(fitRange),1); xM2 = ones(length(fitRange),1); 
+splitting = zeros(length(fitRange),1);
 hM1 = repmat(xM1,1); hM2 = repmat(xM2,1); 
 Imax1 = repmat(xM1,1); Imax2 = repmat(xM2,1); 
-for i=fullHrange
+for i=fitRange
     label = sprintf(fmt1,nData(i).temp,field(i),Nprms);
 %     I1 = nData(i).(fitStr).I1; 
     I2 = nData(i).(fitStr).I2;
@@ -261,7 +287,7 @@ wghts = min(spltRE)./spltRE;
 %% Plot splitting
 figure
 % plot(field,splitting,'.')
-errorbar(field,splitting,spltRE(fullHrange),'.','MarkerSize',12);
+errorbar(field,splitting,spltRE(fitRange),'.','MarkerSize',12);
 ylim([0 6e-3])
 
 %% Fit splitting
