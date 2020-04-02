@@ -3,7 +3,7 @@
 cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_neutrons\2019-02_ORNL_Corelli\2019-02-14';
 clear nData;
 FilesOrtho = dir('p6K_*.txt');
-for i=1:length(FilesOrtho)
+for i=length(FilesOrtho):-1:1
     tbl1 = ImportNeutronsLineCut(FilesOrtho(i).name);
     nData(i).file = FilesOrtho(i).name;
     nData(i).hh0 = tbl1.hh0;
@@ -13,7 +13,7 @@ for i=1:length(FilesOrtho)
         'DelimiterType','RegularExpression','CollapseDelimiters',true);
     % extract value of field from file name using regular expression
     str = replace(C{2},'p','.');% replace letter p (if any) with a decimal dot
-    nData(i).field = str2num(str);
+    nData(i).field = str2double(str);
     nData(i).temp = 0.6;
 end
 
