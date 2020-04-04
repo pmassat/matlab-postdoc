@@ -62,6 +62,21 @@ nData(round(field,2)==0).I = nData(round(field,2)==0).I*0.73/1.15;
 % rescale data at zero field, as it has a higher intensity than the rest
 field = extractfield(nData,'field');
 
+%% Plot one spectrum from each dataset to compare them
+figure
+hold on
+range = 14:15;
+p = cell(size(range));
+for i = range
+    p{range==i} = plot(nData(i).hh0,nData(i).I,'DisplayName','Dataset2');
+end
+p{range==14}.DisplayName = 'Dataset1';
+xlabel('hh0'); ylabel('I');
+title('Neutrons spectra measured on TmVO$_4$ on 2019-02-14');
+xlim([-10.25 -5.75]);
+ax = gca(); ax.TitleFontSizeMultiplier = .85;
+legend('show','Location','best')
+
 %% Center of peak to be studied in the following
 hcenter = -8.0;% center of unsplit peak in reciprocal space
 

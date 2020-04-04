@@ -20,3 +20,13 @@ fplot(func, [0 10]);
 
 %%
 I = integral(func,0,10,'ArrayValued',true);
+
+
+
+
+
+
+
+
+
+
