@@ -134,18 +134,18 @@ figure; formatFigure([6 7]*sf);
 ax = gca; ax.delete
 
 %% Plot averaged data + fit including external stress
-% figure; 
+figure; 
 % coefficients of fit of residual Cp, obtained in Curve Fitting Tool with Adjusted R-square of 0.9927
 c1 =     0.02607;  %(0.01489, 0.03725)
 c2 =    0.004759;  %(0.003322, 0.006196)
-ax2 = subplot(5,1,[3:5]); 
+% ax2 = subplot(5,1,[3:5]); 
 p0 = plot(tvec,Cptheo0,'Color',[.5 .5 .5],'DisplayName','Mean-field');
 hold on
-p1 = plot(tvec,Cptheo,'-r','DisplayName',['MF + $\epsilon$ + $\sigma$']);
+p1 = plot(tvec,Cptheo,'-r','DisplayName',['MF + pheno.']);
 % fp = plot(avgData(i).T,Cptheodat,'-r','DisplayName',sprintf('MF: e=%.2g',e));
 pdat = errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.b',...
     'MarkerSize',18,'LineWidth',1,'DisplayName','Experiment');
-xlabel(xlblTemp); ylabel('$C_p/R$');
+xlabel(xlblTemp); ylabel('$C_p^{4f}/R$');
 ylim([0 1.55])
 % annttl = annotation('textbox',[0.2 0.45 0.17 0.1],'interpreter','latex',...
 %     'String',{'TmVO$_{4}$'}, 'LineStyle','-','EdgeColor','black',...
@@ -153,7 +153,7 @@ ylim([0 1.55])
 % annttl.FontSize = ax.XAxis.Label.FontSize;
 grid on
 % title(ttlCp);
-lgd = legend([pdat, p0, p1]);
+lgd = legend([pdat, p0, p1], 'Location', 'northwest');
 
 %% Plot averaged data + CW fit 
 figure; 
@@ -216,6 +216,7 @@ ax1.YTick = [];
 ax2.XLabel.Position(2) = -.15;
 
 %% Print figure to PNG file
+% cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_summary_figures\TmVO4_GS-splitting+multipoles+Cp'
 % formatFigure;
 printSVG([todaystr '_TmVO4-LS5228-DR-HC180731_Cp+fit'])
 % printPNG('2019-11-19_TmVO4_MFIM_Cp')
