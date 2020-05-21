@@ -317,8 +317,8 @@ end
 figure
 plot(avgData(i).T,avgData(i).Cpelr,'.','DisplayName','data')
 hold on;
-plot(Cptheo(i).t*Tc0,Cptheo(i).single_h,'DisplayName',sprintf('h=%.2f',Cptheo(i).h));
-plot(Cptheo(i).t*Tc0,Cptheo(i).phenomeno,'DisplayName',sprintf('h=%.2f,r=%.1e',Cptheo(i).h,Cptheo(i).rhsgm));
+plot(Cptheo(i).t_single_h*Tc0,Cptheo(i).single_h,'DisplayName',sprintf('h=%.2f',Cptheo(i).h));
+plot(Cptheo(i).t_phenomeno*Tc0,Cptheo(i).phenomeno,'DisplayName',sprintf('h=%.2f,r=%.1e',Cptheo(i).h,Cptheo(i).rhsgm));
 title(['Cp$\_$TFIM vs CpTFIM$\_$normpdf' sprintf(' H=%.0fOe',uh(i))]);
 lgd = legend(); title(lgd,'TmVO4-RF-E');
 
