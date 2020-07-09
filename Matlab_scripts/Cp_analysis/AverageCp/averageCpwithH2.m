@@ -21,28 +21,30 @@ for k=1:length(T)
         halfrelTsep = relTsep/2;% ... reduce the temperature interval
 %             T(abs(T-T(k))<Tsep2)%print out values of temperature which
 %             verify the if statement
-        Tm(k) = mean(T(abs(T-T(k))/T(k)<halfrelTsep));
-        Tsd(k) = std(T(abs(T-T(k))/T(k)<halfrelTsep));
-        Cpm(k) = mean(Cp(abs(T-T(k))/T(k)<halfrelTsep));
-        Cpsd(k) = std(Cp(abs(T-T(k))/T(k)<halfrelTsep));
-        CpmErr(k) = sum(CpErr(abs(T-T(k))/T(k)<halfrelTsep))/...
-            sqrt(length(CpErr(abs(T-T(k))/T(k)<halfrelTsep)));
-        T(abs(T-T(k))/T(k)<halfrelTsep)=0;
+        Tselect1 = abs(T-T(k))/T(k)<halfrelTsep;
+        Tm(k) = mean(T(Tselect1));
+        Tsd(k) = std(T(Tselect1));
+        Cpm(k) = mean(Cp(Tselect1));
+        Cpsd(k) = std(Cp(Tselect1));
+        CpmErr(k) = sum(CpErr(Tselect1))/...
+            sqrt(length(CpErr(Tselect1)));
+        T(Tselect1)=0;
     else
-        Tm(k) = mean(T(abs(T-T(k))/T(k)<relTsep));
-        Tsd(k) = std(T(abs(T-T(k))/T(k)<relTsep));
-        Cpm(k) = mean(Cp(abs(T-T(k))/T(k)<relTsep));
-        Cpsd(k) = std(Cp(abs(T-T(k))/T(k)<relTsep));
-        CpmErr(k) = sum(CpErr(abs(T-T(k))/T(k)<relTsep))/...
-            sqrt(length(CpErr(abs(T-T(k))/T(k)<relTsep)));
-        T(abs(T-T(k))/T(k)<relTsep)=0;
+        Tselect2 = abs(T-T(k))/T(k)<relTsep;
+        Tm(k) = mean(T(Tselect2));
+        Tsd(k) = std(T(Tselect2));
+        Cpm(k) = mean(Cp(Tselect2));
+        Cpsd(k) = std(Cp(Tselect2));
+        CpmErr(k) = sum(CpErr(Tselect2))/...
+            sqrt(length(CpErr(Tselect2)));
+        T(Tselect2)=0;
     end
 end
 S.H = H(Tm>0);
 S.T = Tm(Tm>0);
 S.Tsd = Tsd(Tm>0);
-S.Cp = Cpm(Cpm>0);
-S.CpFullErr = Cpsd(Cpm>0) + CpmErr(Cpm>0);
+S.Cp = Cpm(Tm>0);
+S.CpFullErr = Cpsd(Tm>0) + CpmErr(Tm>0);
 end
 
 
