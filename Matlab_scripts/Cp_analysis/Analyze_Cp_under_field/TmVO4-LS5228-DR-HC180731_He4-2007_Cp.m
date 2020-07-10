@@ -11,7 +11,6 @@ cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2020-07_TmVO4-LS52
 
 %% Import data YTmVO4
 Data = ImportCpDR('2018-07-31_TmVO4-LS5228-DR-HC180731.dat');
-% Data0 = importCpSharedPPMS_('20180322_TmVO4-LS5228-MP3-Plt-HC1803_Cp.dat');
 
 %% Rename variables
 isTableCol = @(t, thisCol) ismember(thisCol, t.Properties.VariableNames);
@@ -51,7 +50,7 @@ Data.CpmolErr = Data.CpErr *1e-6*M/m;% molar heat capacity, in J/mol/K
 % starting from a heat capacity measured in microJoules per Kelvin, as is measured in the DR
 % Cpmol is calculated per mole of Tm3+ ions, hence the (1-dpg) factor in the denominator
 
-%% Keep only data under zero magnetic field
+%% Split data by magnetic field
 uh = unique(round(Data.H,-1));
 for i=1:length(uh)%for all datasets
     split(i).unsorted = Data(round(Data.H,-1)==uh(i),:);% split data based on field value

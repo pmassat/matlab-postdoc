@@ -1,4 +1,4 @@
-function TmAsO4LS5341HC18060220180602 = importfile(filename, startRow, endRow)
+function TmAsO4LS5341HC18060220180602 = ImportCpFisherPPMSTable(filename, startRow, endRow)
 %IMPORTFILE Import numeric data from a text file as a matrix.
 %   TMASO4LS5341HC18060220180602 = IMPORTFILE(FILENAME) Reads data from
 %   text file FILENAME for the default selection.
@@ -80,5 +80,5 @@ fclose(fileID);
 % script.
 
 %% Create output variable
-TmAsO4LS5341HC18060220180602 = table(dataArray{1:end-1}, 'VariableNames', {'TimeStampSeconds','Comment','SystemStatusCode','PuckTempKelvin','SystemTempKelvin','FieldOersted','PressureTorr','SampleTempKelvin','TempRiseKelvin','SampHCJK','SampHCErrJK','AddendaHCJK','AddendaHCErrJK','TotalHCJK','TotalHCErrJK','FitDeviationChiSquare','TimeConsttau1seconds','TimeConsttau2seconds','SampleCouplingPercent','DebyeTempKelvin','DebyeTempErrKelvin','CalCorrectionFactor','ThermResistOhms','HtrResistOhms','PuckResistOhms','WireCondWK','MeasTimeseconds','TempSquaredK2','SampHCTempJKK','AddendaOffsetHCJK'});
+TmAsO4LS5341HC18060220180602 = table(dataArray{1:end-1}, 'VariableNames', {'TimeStampSeconds','Comment','SystemStatusCode','PuckTempKelvin','SystemTempKelvin','FieldOersted','PressureTorr','SampleTempKelvin','TempRiseKelvin','SampHCuJK','SampHCErruJK','AddendaHCuJK','AddendaHCErruJK','TotalHCuJK','TotalHCErruJK','FitDeviationChiSquare','TimeConsttau1seconds','TimeConsttau2seconds','SampleCouplingPercent','DebyeTempKelvin','DebyeTempErrKelvin','CalCorrectionFactor','ThermResistOhms','HtrResistOhms','PuckResistOhms','WireCondWK','MeasTimeseconds','TempSquaredK2','SampHCTempJKK','AddendaOffsetHCuJK'});
 
