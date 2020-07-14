@@ -10,7 +10,7 @@ cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2020-07_TmVO4-LS52
 % *     For dT data, use standard deviation
 
 %% Import data YTmVO4
-Data = ImportCpDR('2018-07-31_TmVO4-LS5228-DR-HC180731.dat');
+Data = ImportCpDR('2020-07_TmVO4-LS5228-DR-HC180731-2007.dat');
 
 %% Rename variables
 isTableCol = @(t, thisCol) ismember(thisCol, t.Properties.VariableNames);
@@ -169,11 +169,7 @@ ax2.XLabel.Position(2) = -.15;
 %% Print figure to PNG file
 % cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_summary_figures\TmVO4_GS-splitting+multipoles+Cp'
 % formatFigure;
-printSVG([todaystr '_TmVO4-LS5228-DR-HC180731_Cp+fit'])
-% printPNG('2019-11-19_TmVO4_MFIM_Cp')
-% printPNG('2019-11-19_TmVO4_Cp_data+MF')
-% printPNG('2019-11-19_TmVO4_Cp_data+stress')
-% printPNG('2019-11-20_TmVO4_CpRes_data+C66fit')
+printPNG([todaystr '_TmVO4-LS5228-DR-HC180731_He4-2007_70kOe_Cp+fit'])
 
 %% Export averaged Cp data to text file
 % savepath = 'C:\Users\Pierre\Desktop\Postdoc\YTmVO4\YTmVO4_HeatCapacity\YTmVO4_Cp_anaLsis\2018-10-17_YTmVO4_averaged_Cp\';
