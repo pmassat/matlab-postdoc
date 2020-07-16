@@ -72,7 +72,7 @@ for i=1:length(uh)
     avgData(i).CprErr = avgData(i).CpFullErr/R;
 end
 
-%% Plot averaged data 
+%% Plot averaged data without phonons contribution
 i = 2;
 figure
 errorbar(avgData(i).T,avgData(i).CpFull,avgData(i).CpFullErr,'.','MarkerSize',18,...
@@ -84,6 +84,19 @@ errorbar(avgData(i).T,avgData(i).Cp,avgData(i).CpFullErr,'.','MarkerSize',18,...
 % plot(avgData(i).T,avgData(i).Cp,'.','DisplayName','$C_p^{\mathrm{full}}-C_p^{\mathrm{phonons}}$')
 legend('show')
 title('TmVO$_4$ heat capacity')
+xlabel(xlblTemp); ylabel('$C_p$ (J/K/mol)');
+
+%% Plot full dataset of averaged data (with phonons contribution)
+figure; hold on
+relevant_fields = [1:2:9]*10000;% other values of field were measured after the sample flew away
+for i=1:length(uh)
+    if ismember(uh(i),relevant_fields)%
+        errorbar(avgData(i).T,avgData(i).CpFull,avgData(i).CpFullErr,'.-','MarkerSize',18,...
+            'DisplayName',['$H=$' sprintf(' %i kOe',uh(i)/1000)] )
+    end
+end
+legend('show')
+title('TmVO$_4$ heat capacity, mag. field // $a$')
 xlabel(xlblTemp); ylabel('$C_p$ (J/K/mol)');
 
 %% Prepare plot of theoretical heat capacity curve 
@@ -121,35 +134,44 @@ printfitres = annotation('textbox',[.4 .4 .4 .1],'FontSize',12,'LineWidth',1,...
 % Result
 puck666lowToffset = 0.04;% Kelvin; result from fit of 10 kOe data: Toffset = 0.03818 with (-0.1037, 0.18) 95% confidence bounds
 
-%% Fit data at H = 70 kOe 
-% A Schottky anomaly doesn't fit!
-i = 7;
+%% Fit data at H > Hc (change value of i as desired)
+% Spoiler: a Schottky anomaly doesn't fit!
+i = 9;
 [xData, yData, weights] = prepareCurveData( avgData(i).T, avgData(i).Cpr, 1./avgData(i).CprErr);
 % Set up fittype and options.
 % Gaussian fit including phonons contribution and the temperature offset of
 % the puck calibration
-ft1 = fittype( 'A*exp(-((T-b)/c)^2)+((T-0.04)/30)^3', 'independent', 'T', 'dependent', 'y' );
+fits(1).ft = fittype( 'A*exp(-((T-b)/c)^2)+((T-0.04)/30)^3', 'independent', 'T', 'dependent', 'y' );
 % Schottky fit including phonons contribution and the temperature offset...
-ft2 = fittype( 'Schottky(A,D,T-0.04)+((T-0.04)/30)^3', 'independent', 'T', 'dependent', 'y' );
-opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
-opts.Weights = weights;
-% Fit model to data.
-opts.StartPoint = [1 3 1];
-[fitresult1, gof1] = fit( xData, yData, ft1, opts );
-opts.StartPoint = [1 3];
-[fitresult2, gof2] = fit( xData, yData, ft2, opts );
-% Plot fit with data.
+fits(2).ft = fittype( 'Schottky(A,D,T-0.04)+((T-0.04)/30)^3', 'independent', 'T', 'dependent', 'y' );
+fits(3).ft = fittype( 'fnrmtemp(An,mu,sgm,T-0.04)+((T-0.04)/30)^3', 'independent', 'T', 'dependent', 'y' );
+startpoints = [1 3 1];
+lowerbounds = [0 0 0];
+fitlinespec = {'g' 'r' 'm'};
+numcoeff = [3 2 3];
+% Plot data
 figure( 'Name', 'Fit data at 70 kOe' ); hold on
 dp = plot( xData, yData,'.', 'DisplayName', 'Fitted data');
-h1 = plot( fitresult1, 'g');
-h2 = plot( fitresult2);
-legend([dp, h1, h2], 'Data', 'Gaussian', 'Schottky');
+numfits = 2;
+xfit = linspace(0,7,71);
+for j=1:numfits
+    fits(j).opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
+    fits(j).opts.Weights = weights;
+    fits(j).opts.Lower = lowerbounds(1:numcoeff(j));
+    % Fit model to data and plot
+    fits(j).opts.StartPoint = startpoints(1:numcoeff(j));
+    [fits(j).fitresult, fits(j).gof] = fit( xData, yData, fits(j).ft, fits(j).opts );
+    yfit = fits(j).fitresult(xfit);
+    fits(j).plt = plot( xfit, yfit, 'Color', fitlinespec{j});
+end
+fitlegends = {'Gaussian', 'Schottky', 'Schottky dist.'};
+legend([dp, fits(1:numfits).plt], {'Data', fitlegends{1:numfits}});
 xlabel(xlblTemp); ylabel('$C_p/R$');
-title('TmVO$_4$ heat capacity, H=70 kOe // $a$')
+title( [ 'TmVO$_4$ heat capacity, ' sprintf('H=%i kOe // $a$', uh(i)/1000) ] )
 
 %% Prepare fit of Cp vs Temperature 
 % Use these variables in Curve fitting tool
-i = 9
+i = 9;
 fitT = avgData(i).T;
 fitCp = avgData(i).Cpr;
 fitCpErr = avgData(i).CprErr;
@@ -159,17 +181,10 @@ fitwghts = 1./fitCpErr;
 
 %% % % Plot & export figure % % % 
 
-%% Figure formatting when combining plots
-ax1.YLabel.Position(1) = ax2.YLabel.Position(1);
-anngap.FontSize = ax1.XAxis.Label.FontSize;
-ax1.XTickLabel={};
-ax1.YTick = [];
-ax2.XLabel.Position(2) = -.15;
-
 %% Print figure to PNG file
 % cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_summary_figures\TmVO4_GS-splitting+multipoles+Cp'
 % formatFigure;
-printPNG([todaystr '_TmVO4-LS5228-DR-HC180731_He4-2007_70kOe_Cp+fit'])
+printPNG([todaystr '_TmVO4-LS5228-DR-HC180731_He4-2007_Cp-vs-field'])
 
 %% Export averaged Cp data to text file
 % savepath = 'C:\Users\Pierre\Desktop\Postdoc\YTmVO4\YTmVO4_HeatCapacity\YTmVO4_Cp_anaLsis\2018-10-17_YTmVO4_averaged_Cp\';

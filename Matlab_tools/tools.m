@@ -106,7 +106,10 @@ Y = diff(X,1,1);
 
 %% Default line colors array is called lines
 % Calling lines(n) returns a n by 3 array of RGB colors
-C = lines(3);% Returns a 3x3 array 
+cmap = lines(n);% Returns a nx3 array 
+% then call color in j-th row as cmap(j,:)
+% See https://www.mathworks.com/help/matlab/ref/colormap.html for more
+% colormaps
 
 %% Change the line style order for plots
 % Note: the default line style order is {'-'} i.e. only one line style
@@ -133,10 +136,13 @@ dT(1) = diffT(1)/2; dT(end) = diffT(end)/2;
 % Light intensity set by the following properties of surface and patch objects:
 % AmbientStrength, DiffuseStrength, SpecularStrength
 
-
-
-
-
+%% Plot fit result on arbitrary scale
+% Rather than using plot(cfitobj,...), evaluate the cfit objects on the data range you care about:
+xr = x(x>xmin & x<xmax);
+y1 = cfit1(xr);
+y2 = cfit2(xr);
+plot(xr,y1,xr,y2);
+% See https://www.mathworks.com/matlabcentral/answers/161244-how-to-plot-a-cfit-object-in-the-borders-of-the-original-data
 
 %% Count the number of elements in a structure field
 % https://www.mathworks.com/matlabcentral/answers/841-how-to-find-number-of-arrays-in-a-structure-filed
