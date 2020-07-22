@@ -4,6 +4,24 @@ filename = 'TmVO4_RF-E_2017-07-14.dat';
 cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2017-07_TmVO4_Cp_MCE\2017-07-20_Cp\2017-07-20_TmVO4_Cp_analysis'
 DATA=ImportTmVO4Cp(filename);% Use this data to plot color map of phase diagram
 
+%% Import magnetic field distribution
+cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-RF-E_HC2017-07'
+Smfd = importfielddistrib_mat(filename, 15);
+
+%% Plot distribution of fields at a given value of external field
+i = 1;
+splt = split(Smfd(i).Hext);% splt{i}
+Hext = str2double(splt{i});
+mfd = Smfd(1).mfd(Smfd(i).mfd>0)/Hext;% create distribution from non-zero values
+figure;
+hist = histogram(mfd);% plot histogram of distribution
+counts = hist.BinCounts;
+lowedge = hist.BinEdges(1:end-1);
+highedge = hist.BinEdges(2:end);
+bincenter = mean([lowedge;highedge]);
+distrib = [bincenter;counts/sum(counts)];
+
+
 %% Sample properties
 m = 0.25e-3;% mass of sample, in g
 M = 283.87;% molar mass of TmVO4, in g/mol
