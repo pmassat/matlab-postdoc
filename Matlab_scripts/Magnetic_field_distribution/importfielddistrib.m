@@ -1,4 +1,4 @@
-function S = importfielddistrib_mat(filename, numfields, startRow, endRow)
+function S = importfielddistrib(filename, numfields, startRow, endRow)
 %IMPORTFILE Import numeric data from a text file as a matrix.
 %   MAGFIELDDISTRIB = IMPORTFILE(FILENAME)
 %   Reads data from text file FILENAME for the default selection.
@@ -31,9 +31,9 @@ fileID = fopen(filename,'r');
 headerFormatSpec = '%s';
 header = textscan(fileID, headerFormatSpec, numfields, 'TextType', 'string', 'Delimiter', {'if(dom==2,mfnc.Hz,0) (Oe) @ Bext='}, 'HeaderLines', startRow(1)-2, 'ReturnOnError', false, 'EndOfLine', '\r\n');
 frewind(fileID);
-hdr = cell(1,length(header{1})-1);% header contains field values
+hdr = zeros(1,length(header{1})-1);% header contains field values
 for col_header=2:length(header{1})
-    hdr{col_header-1} = [sprintf('%i Oe',str2double(header{1}(col_header))*10^4)];
+    hdr(col_header-1) = str2double(header{1}(col_header))*10^4;
 end
 
 %% Read columns of data according to the format.
@@ -103,6 +103,7 @@ magfielddistrib = cell2mat(raw);
 
 %% Combine field distribution header and array into structure
 for col=length(hdr):-1:1
-   S(col).Hext = hdr(col);
+   S(col).Hext_Oe = hdr(col);
    S(col).mfd = magfielddistrib(:,3+col);% first 3 columns are spatial coordinates
+end
 end

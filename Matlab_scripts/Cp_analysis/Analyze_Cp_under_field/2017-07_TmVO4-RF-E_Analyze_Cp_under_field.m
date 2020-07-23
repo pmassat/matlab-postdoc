@@ -6,15 +6,16 @@ DATA=ImportTmVO4Cp(filename);% Use this data to plot color map of phase diagram
 
 %% Import magnetic field distribution
 cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-RF-E_HC2017-07'
-Smfd = importfielddistrib_mat(filename, 15);
+mfdfilename = '2020-07-21_TmVO4-RF-E_zero-temp-magnetization_mag-field_distrib.txt';
+Smfd = importfielddistrib(mfdfilename, 15);
 
 %% Plot distribution of fields at a given value of external field
 i = 1;
-splt = split(Smfd(i).Hext);% splt{i}
-Hext = str2double(splt{i});
+% splt = split(Smfd(i).Hext);% splt{i}
+Hext = Smfd(i).Hext_Oe;%str2double(splt{i});
 mfd = Smfd(1).mfd(Smfd(i).mfd>0)/Hext;% create distribution from non-zero values
 figure;
-hist = histogram(mfd);% plot histogram of distribution
+hist = histogram(mfd, 'Normalization', 'pdf');% plot histogram of distribution
 counts = hist.BinCounts;
 lowedge = hist.BinEdges(1:end-1);
 highedge = hist.BinEdges(2:end);
