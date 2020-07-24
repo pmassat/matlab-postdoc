@@ -10,18 +10,23 @@ mfdfilename = '2020-07-21_TmVO4-RF-E_zero-temp-magnetization_mag-field_distrib.t
 Smfd = importfielddistrib(mfdfilename, 15);
 
 %% Plot distribution of fields at a given value of external field
-i = 1;
-% splt = split(Smfd(i).Hext);% splt{i}
-Hext = Smfd(i).Hext_Oe;%str2double(splt{i});
-mfd = Smfd(1).mfd(Smfd(i).mfd>0)/Hext;% create distribution from non-zero values
 figure;
-hist = histogram(mfd, 'Normalization', 'pdf');% plot histogram of distribution
-counts = hist.BinCounts;
-lowedge = hist.BinEdges(1:end-1);
-highedge = hist.BinEdges(2:end);
-bincenter = mean([lowedge;highedge]);
-distrib = [bincenter;counts/sum(counts)];
+hold on
+for i=[1,7:2:length(Smfd)]
+Hext = Smfd(i).Hext_Oe;%str2double(splt{i});
+mfd = Smfd(i).mfd(Smfd(i).mfd>0)/Hext;% create distribution from non-zero values
+% h = histogram(mfd, 'Normalization', 'pdf');% plot histogram of distribution
+[Smfd(i).hc, edges] = histcounts(mfd, 'Normalization', 'pdf');% plot histogram of distribution
+% binCenters = h.BinEdges + (h.BinWidth/2);
+Smfd(i).binCenters = mean([edges(1:end-1);edges(2:end)],1);
+Smfd(1).binWidths = edges(2:end)-edges(1:end-1);
+p = plot(binCenters, hc, '.-', 'DisplayName', sprintf('%i Oe',Hext));
+end
+lgd = legend('show');
 
+%% Compute the relative difference between curves at 1000 Oe and 7000 Oe
+mfd_diff(113).abs_diff = abs(Smfd(1).hc);%-Smfd(13).hc);
+% mfd_diff(113).rel = mfd_diff(113).abs/Smfd(1).binWidths(1);
 
 %% Sample properties
 m = 0.25e-3;% mass of sample, in g
