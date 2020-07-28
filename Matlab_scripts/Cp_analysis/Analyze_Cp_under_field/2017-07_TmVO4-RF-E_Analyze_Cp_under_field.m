@@ -16,11 +16,19 @@ for i=[1,7:2:length(Smfd)]
 Hext = Smfd(i).Hext_Oe;%str2double(splt{i});
 mfd = Smfd(i).mfd(Smfd(i).mfd>0)/Hext;% create distribution from non-zero values
 % h = histogram(mfd, 'Normalization', 'pdf');% plot histogram of distribution
+<<<<<<< HEAD
 [Smfd(i).hc, edges] = histcounts(mfd, 200, 'Normalization', 'pdf');% plot histogram of distribution
 % binCenters = h.BinEdges + (h.BinWidth/2);
 Smfd(i).binCenters = mean([edges(1:end-1);edges(2:end)],1);
 Smfd(1).binWidths = edges(2:end)-edges(1:end-1);
 p = plot(Smfd(i).binCenters, Smfd(i).hc, '.-', 'DisplayName', sprintf('%i Oe',Hext));
+=======
+[Smfd(i).hc, edges] = histcounts(mfd, 'Normalization', 'pdf');% plot histogram of distribution
+% binCenters = h.BinEdges + (h.BinWidth/2);
+Smfd(i).binCenters = mean([edges(1:end-1);edges(2:end)],1);
+Smfd(1).binWidths = edges(2:end)-edges(1:end-1);
+p = plot(binCenters, hc, '.-', 'DisplayName', sprintf('%i Oe',Hext));
+>>>>>>> 949c95b90c8dfdae6043a7a479efbf4a6c0bba40
 end
 lgd = legend('show');
 
