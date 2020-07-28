@@ -1,36 +1,48 @@
+%% Global variables
+Tc = 2.15;% in Kelvin units
+Hc = 5100;% in Oersted units
+
 %% Data importation
 sample = 'TmVO4-RF-E';
 filename = 'TmVO4_RF-E_2017-07-14.dat';
 cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2017-07_TmVO4_Cp_MCE\2017-07-20_Cp\2017-07-20_TmVO4_Cp_analysis'
 DATA=ImportTmVO4Cp(filename);% Use this data to plot color map of phase diagram
 
-%% Import magnetic field distribution
+%% Import magnetic field distribution from TXT file
 cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-RF-E_HC2017-07'
 mfdfilename = '2020-07-21_TmVO4-RF-E_zero-temp-magnetization_mag-field_distrib.txt';
 Smfd = importfielddistrib(mfdfilename, 15);
 
+%% Import magnetic field distribution from CSV file
+cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-RF-E_HC2017-07'
+mfdfilename = '2020-07-27_TmVO4-RF-E_COMSOL_mfd_T=0-p5-1-2-3K_H=4-8-12kOe_mesh-leq-30um.csv';
+Smfd = importfielddistrib_csv(mfdfilename, 15);
+
+%% Extract values of temperature and external magnetic field from structure header
+for sidx=1:length(Smfd)
+    THextCell = strsplit(Smfd(sidx).T_Hext,{' ','='});
+    Smfd(sidx).T_K = str2double(THextCell{3});
+    Smfd(sidx).Hext_Oe = str2double(THextCell{6})*10^4;
+end
+
 %% Plot distribution of fields at a given value of external field
 figure;
 hold on
-for i=[1,7:2:length(Smfd)]
-Hext = Smfd(i).Hext_Oe;%str2double(splt{i});
+for i=[4,7,5,10,6]
+Hext = Smfd(i).Hext_Oe;%
+T = Smfd(i).T_K;%
 mfd = Smfd(i).mfd(Smfd(i).mfd>0)/Hext;% create distribution from non-zero values
 % h = histogram(mfd, 'Normalization', 'pdf');% plot histogram of distribution
-<<<<<<< HEAD
-[Smfd(i).hc, edges] = histcounts(mfd, 200, 'Normalization', 'pdf');% plot histogram of distribution
+[Smfd(i).hc, edges] = histcounts(mfd, 100, 'Normalization', 'pdf');% plot histogram of distribution
 % binCenters = h.BinEdges + (h.BinWidth/2);
 Smfd(i).binCenters = mean([edges(1:end-1);edges(2:end)],1);
 Smfd(1).binWidths = edges(2:end)-edges(1:end-1);
-p = plot(Smfd(i).binCenters, Smfd(i).hc, '.-', 'DisplayName', sprintf('%i Oe',Hext));
-=======
-[Smfd(i).hc, edges] = histcounts(mfd, 'Normalization', 'pdf');% plot histogram of distribution
-% binCenters = h.BinEdges + (h.BinWidth/2);
-Smfd(i).binCenters = mean([edges(1:end-1);edges(2:end)],1);
-Smfd(1).binWidths = edges(2:end)-edges(1:end-1);
-p = plot(binCenters, hc, '.-', 'DisplayName', sprintf('%i Oe',Hext));
->>>>>>> 949c95b90c8dfdae6043a7a479efbf4a6c0bba40
+p = plot(Smfd(i).binCenters, Smfd(i).hc, '.-', 'DisplayName', sprintf('%.2g, %.2g',T/Tc,Hext/Hc));
 end
-lgd = legend('show');
+lgd = legend('show'); lgd.Title.String = '$T/T_c$, $H_{\mathrm{ext}}/H_c$';
+title('Distribution of fields in TmVO$_4$-RF-E')
+xlabel('$H_{\mathrm{in}}/H_{\mathrm{ext}}$')
+ylabel('Normalized PDF')
 
 %% Compute the relative difference between curves at 1000 Oe and 7000 Oe
 mfd_diff(113).abs_diff = abs(Smfd(1).hc);%-Smfd(13).hc);
@@ -424,7 +436,7 @@ annfit.Position(2)=.175;
 
 %% Export figure to pdf
 % formatFigure;
-printPDF([todaystr '_TmVO4-RF-E_Cp_fit']);
+printPDF([todaystr '_TmVO4-RF-E_mfd_T-H_dep']);
 % printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
 
 
