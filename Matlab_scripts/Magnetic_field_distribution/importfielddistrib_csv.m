@@ -23,7 +23,7 @@ end
 %% Read columns of data as text:
 % For more information, see the TEXTSCAN documentation.
 % formatSpec = '%6s%16s%15s%22s%11s%12s%15s%15s%15s%15s%15s%15s%15s%15s%15s%15s%s%[^\n\r]';
-data_format = repmat('%s',[1,numfields]);
+data_format = repmat('%s',[1,numfields+3]);
 formatSpec = strcat(data_format,'%[^\n\r]');
 
 %% Open the text file.
@@ -31,11 +31,11 @@ fileID = fopen(filename,'r');
 
 %% (Edit) Read header
 headerFormatSpec = '%s';
-header = textscan(fileID, headerFormatSpec, numfields-2, 'TextType', 'string', 'Delimiter', {',if(dom==2,mfnc.Hz,0) (Oe) @ '}, 'HeaderLines', startRow(1)-2, 'ReturnOnError', false, 'EndOfLine', '\r\n');
+header = textscan(fileID, headerFormatSpec, numfields+1, 'TextType', 'string', 'Delimiter', {',if(dom==2,mfnc.Hz,0) (Oe) @ '}, 'HeaderLines', startRow(1)-2, 'ReturnOnError', false, 'EndOfLine', '\r\n');
 frewind(fileID);
-hdr = cell(1,length(header{1})-1);% header contains field values
-for col_header=2:length(header{1})
-    hdr{col_header-1} = header{1}(col_header);
+hdr = cell(1,numfields);% header contains field values
+for col=1:numfields
+    hdr{col} = header{1}(col+1);
 end
 
 %% Read columns of data according to the format.
@@ -62,7 +62,7 @@ for col=1:length(dataArray)-1
 end
 numericData = NaN(size(dataArray{1},1),size(dataArray,2));
 
-for col=1:numfields
+for col=1:numfields+3
     % Converts text in the input cell array to numbers. Replaced non-numeric
     % text with NaN.
     rawData = dataArray{col};
@@ -106,6 +106,6 @@ magfielddistrib = cell2mat(raw);
 %% Combine field distribution header and array into structure
 for col=length(hdr):-1:1
    S(col).T_Hext = hdr{col};
-   S(col).mfd = magfielddistrib(:,3+col);%
+   S(col).mfd = magfielddistrib(:,col+3);%
 end
 end

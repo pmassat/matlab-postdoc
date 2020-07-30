@@ -1,12 +1,9 @@
-%% Global variables
-Tc = 2.15;% in Kelvin units
+%% Sample properties
+m = 0.25e-3;% mass of sample, in g
+M = 283.87;% molar mass of TmVO4, in g/mol
+Tc0 = 2.126;% Value of transition temperature in this sample, in Kelvin units
+Tcnum = 2.15;% in Kelvin units
 Hc = 5100;% in Oersted units
-
-%% Data importation
-sample = 'TmVO4-RF-E';
-filename = 'TmVO4_RF-E_2017-07-14.dat';
-cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2017-07_TmVO4_Cp_MCE\2017-07-20_Cp\2017-07-20_TmVO4_Cp_analysis'
-DATA=ImportTmVO4Cp(filename);% Use this data to plot color map of phase diagram
 
 %% Import magnetic field distribution from TXT file
 cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-RF-E_HC2017-07'
@@ -15,43 +12,60 @@ Smfd = importfielddistrib(mfdfilename, 15);
 
 %% Import magnetic field distribution from CSV file
 cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-RF-E_HC2017-07'
-mfdfilename = '2020-07-27_TmVO4-RF-E_COMSOL_mfd_T=0-p5-1-2-3K_H=4-8-12kOe_mesh-leq-30um.csv';
-Smfd = importfielddistrib_csv(mfdfilename, 15);
-
-%% Extract values of temperature and external magnetic field from structure header
-for sidx=1:length(Smfd)
-    THextCell = strsplit(Smfd(sidx).T_Hext,{' ','='});
-    Smfd(sidx).T_K = str2double(THextCell{3});
-    Smfd(sidx).Hext_Oe = str2double(THextCell{6})*10^4;
+mfdfilename = cell(1,2);
+S = cell(1,2);
+mfdfilename{1} = '2020-07-27_TmVO4-RF-E_COMSOL_mfd_mesh=finer-out+max20um-in_T=p001-1K_H=all.csv';
+mfdfilename{2} = '2020-07-27_TmVO4-RF-E_COMSOL_mfd_mesh=finer-out+max20um-in_T=2-3K_H=all.csv';
+for ic=1:length(S)
+    S{ic} = importfielddistrib_csv(mfdfilename{ic}, 28);
 end
 
-%% Plot distribution of fields at a given value of external field
-figure;
-hold on
-for i=[4,7,5,10,6]
-Hext = Smfd(i).Hext_Oe;%
-T = Smfd(i).T_K;%
-mfd = Smfd(i).mfd(Smfd(i).mfd>0)/Hext;% create distribution from non-zero values
+%% Extract values of temperature and external magnetic field from structure header
+Smfd = [S{1,:}];% concatenate structures
+for sidx=1:length(Smfd)
+    % split each header into a cell array of strings, using whitespace and '=' sign as separators
+    TBextCell = strsplit(Smfd(sidx).T_Hext,{' ','='});
+    % Find the index of the string cell containing "T" (temperature), and
+    % convert the following string cell (which contains the value of temperature) into a number
+    % Note: circshift(A,1) shifts the index of elements of array A by 1 to the right
+    Smfd(sidx).T_K = str2double(TBextCell{circshift(TBextCell=="T",1)});
+    % Same with "Bext", which is the external magnetic flux density, in Tesla
+    % units, and convert it into a value of magnetic field, in Oersted units
+    Smfd(sidx).Hext_Oe = str2double(TBextCell{circshift(TBextCell=="Bext",1)})*10^4;
+end
+
+%% Compute probability distribution of fields at a given value of T and Hext
+for i=1:length(Smfd)
+mfd = Smfd(i).mfd(Smfd(i).mfd>0)/Hc;% create distribution from non-zero values
 % h = histogram(mfd, 'Normalization', 'pdf');% plot histogram of distribution
 [Smfd(i).hc, edges] = histcounts(mfd, 100, 'Normalization', 'pdf');% plot histogram of distribution
 % binCenters = h.BinEdges + (h.BinWidth/2);
 Smfd(i).binCenters = mean([edges(1:end-1);edges(2:end)],1);
-Smfd(1).binWidths = edges(2:end)-edges(1:end-1);
-p = plot(Smfd(i).binCenters, Smfd(i).hc, '.-', 'DisplayName', sprintf('%.2g, %.2g',T/Tc,Hext/Hc));
+Smfd(i).binWidths = edges(2:end)-edges(1:end-1);
+end
+
+%% Plot distribution of fields at a given value of T and Hext
+figure;
+hold on
+for i=4:14:56
+T = Smfd(i).T_K;%
+Hext = Smfd(i).Hext_Oe;%
+p = plot(Smfd(i).binCenters, Smfd(i).hc, '.-', 'DisplayName', sprintf('%.2g, %.2g',T/Tcnum,Hext/Hc));
 end
 lgd = legend('show'); lgd.Title.String = '$T/T_c$, $H_{\mathrm{ext}}/H_c$';
-title('Distribution of fields in TmVO$_4$-RF-E')
-xlabel('$H_{\mathrm{in}}/H_{\mathrm{ext}}$')
+title(['Distribution of fields in TmVO$_4$-RF-E, $H_{\mathrm{ext}}=$' sprintf('%.2d Oe',Hext)])
+xlabel('$H_{\mathrm{in}}/H_{\mathrm{c}}$')
 ylabel('Normalized PDF')
 
 %% Compute the relative difference between curves at 1000 Oe and 7000 Oe
 mfd_diff(113).abs_diff = abs(Smfd(1).hc);%-Smfd(13).hc);
 % mfd_diff(113).rel = mfd_diff(113).abs/Smfd(1).binWidths(1);
 
-%% Sample properties
-m = 0.25e-3;% mass of sample, in g
-M = 283.87;% molar mass of TmVO4, in g/mol
-Tc0 = 2.126;% Value of transition temperature in this sample
+%% Data importation
+sample = 'TmVO4-RF-E';
+filename = 'TmVO4_RF-E_2017-07-14.dat';
+cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2017-07_TmVO4_Cp_MCE\2017-07-20_Cp\2017-07-20_TmVO4_Cp_analysis'
+DATA=ImportTmVO4Cp(filename);% Use this data to plot color map of phase diagram
 
 %%
 Hc0 = 0.51;% value in Tesla units of the critical field at zero temperature
@@ -59,7 +73,7 @@ Hc0 = 0.51;% value in Tesla units of the critical field at zero temperature
 % see data taken on needles of TmVO4-LS5200 in July 2017
 rescaling = Hc0/0.69;% rescaling factor, due to demag; 
 % obtained from fit using normal PDF of fields close to Hc; see below
-H=[DATA.FieldOersted]*rescaling;
+H=[DATA.FieldOersted];%*rescaling;
 T=[DATA.SampleTempKelvin];
 Cp=[DATA.SampHCJmoleK];
 CpErr=[DATA.SampHCErrJmoleK];
@@ -297,7 +311,7 @@ eb = cell(size(rng));
 % end
 maxTplot = 3.2;%
 for i=rng
-    fp = fplot(@(t)Cp_TFIM(t/Tc0,uh(i)/(Hc0*1e4)),[0 maxTplot],'LineWidth',2);
+    fp = fplot(@(t)Cp_TFIM(t/Tc0,uh(i)*rescaling/(Hc0*1e4)),[0 maxTplot],'LineWidth',2);
 %     fp = fplot(@(t)Cp_TFIM_offset_strain(t/2.125,uh(i)/(5.1e3),1.5e-3),[0 4],'LineWidth',2);
 % Fit parameters on data at H=0: Tc=2.125(3), e=1.5(4)e-3
 % Note: the values of amplitude coefficient and Tc extracted from fit 
@@ -313,7 +327,7 @@ xlabel('Temperature (K)'); ylabel('C$_p$/R');%ylabel('C$_p$ (JK$^{-1}$mol$^{-1}$
 xlim([0 maxTplot])
 % title('Heat capacity of TmVO4 at various fields')
 % title([sprintf('h=H/Hc*%.3g, e=',factor) mat2str(e,2)])
-lgd = legend([eb{:}]); lgd.Title.String = '$H/H_c$';
+lgd = legend([eb{:}]); lgd.Title.String = '$H_{\mathrm{ext}}/H_c$';
 % legendCell = cellstr(num2str(uh, '%-d Oe')); legend(legendCell)
 ax = gca; ax.YMinorTick = 'on';% Add minor ticks on Y axis
 grid on;%
@@ -335,36 +349,97 @@ fitwghts = 1./fitCpErr;
 % Tc = 2.15;
 
 %% Compute Cp for Gaussian distribution of fields
-clear Cptheo
+clear Cpnum
 for i=rng
-Cptheo(i).h = uh(i)/(Hc0*1e4);
-Cptheo(i).rhsgm = 0.09;
-Cptheo(i).sgm = Cptheo(i).h*Cptheo(i).rhsgm;
-Cptheo(i).t_single_h = linspace(0,1.5,601);% reduced temperature, T/Tc
-Cptheo(i).single_h = zeros(size(Cptheo(i).t_single_h));
-Cptheo(i).t_phenomeno = linspace(0,1.5,301);% reduced temperature, T/Tc
-Cptheo(i).phenomeno = zeros(size(Cptheo(i).t_phenomeno));
+Cpnum(i).h = uh(i)*rescaling/Hc;
+Cpnum(i).rhsgm = 0.09;
+Cpnum(i).sgm = Cpnum(i).h*Cpnum(i).rhsgm;
+Cpnum(i).t_single_h = linspace(0,1.5,601);% reduced temperature, T/Tc
+Cpnum(i).single_h = zeros(size(Cpnum(i).t_single_h));
+Cpnum(i).t_phenomeno = linspace(0,1.5,301);% reduced temperature, T/Tc
+Cpnum(i).normpdf = zeros(size(Cpnum(i).t_phenomeno));
 end
 i = 1;
-Cptheo(i).single_h = Cp_TFIM(Cptheo(i).t_single_h,Cptheo(i).h);
-Cptheo(i).phenomeno = Cp_LFIM(Cptheo(i).t_phenomeno,1.5e-3);
+Cpnum(i).single_h = Cp_TFIM(Cpnum(i).t_single_h,Cpnum(i).h);
+Cpnum(i).normpdf = Cp_LFIM(Cpnum(i).t_phenomeno,1.5e-3);
 % Fit parameters on data at H=0: Tc=2.125(3), e=1.5(4)e-3
 % Cp_LFIM(h=0)
 for i=rng(2:end)
-Cptheo(i).single_h = Cp_TFIM(Cptheo(i).t_single_h,Cptheo(i).h);
-    for j=2:length(Cptheo(i).t_phenomeno)
-    Cptheo(i).phenomeno(j) = CpTFIM_normpdf(Cptheo(i).t_phenomeno(j),Cptheo(i).h,Cptheo(i).sgm);
+Cpnum(i).single_h = Cp_TFIM(Cpnum(i).t_single_h,Cpnum(i).h);
+    for j=2:length(Cpnum(i).t_phenomeno)
+    Cpnum(i).normpdf(j) = CpTFIM_normpdf(Cpnum(i).t_phenomeno(j),Cpnum(i).h,Cpnum(i).sgm);
     end
 end
+
+%% Compute Cp for COMSOL distribution of fields
+for i=1
+Cpnum(i).comsolpdf = zeros(size(Cpnum(i).t_phenomeno));
+end
+
+%% Gaussian function (see normpdf.m)
+mu = .58; 
+sigma =.09*mu; 
+gauss = @(x) exp(-0.5 * ((x - mu)./sigma).^2) ./ (sqrt(2*pi) .* sigma);
+
+%% Compute probability distribution of fields at a given value of T and Hext
+Hcnum = 5500;
+for mfdidx=4:14:56
+mfd = Smfd(mfdidx).mfd(Smfd(mfdidx).mfd>0)/Hcnum;% create distribution from non-zero values
+% h = histogram(mfd, 'Normalization', 'pdf');% plot histogram of distribution
+[Smfd(mfdidx).hc, edges] = histcounts(mfd, 100, 'Normalization', 'pdf');% plot histogram of distribution
+% binCenters = h.BinEdges + (h.BinWidth/2);
+Smfd(mfdidx).binCenters = mean([edges(1:end-1);edges(2:end)],1);
+Smfd(mfdidx).binWidths = edges(2:end)-edges(1:end-1);
+end
+
+%% Create table from structure
+Tmfd = struct2table(Smfd);% 
+utmfd = unique(Tmfd.T_K);
+uhmfd = unique(Tmfd.Hext_Oe);
+
+%% For a given dataset, find closest values of temperature and field in COMSOL mfd
+i = 5;
+Hdata = unique(round(avgData(i).H,-2));
+[~,mfdhidx] = min(abs(Tmfd.Hext_Oe-Hdata));
+h = Tmfd.Hext_Oe(mfdhidx);
+tref = 0;
+for j=1:length(Cpnum(i).t_phenomeno)
+    % Find value of temperature in COMSOL mfd closest to that of actual data
+    [~,mfdtidx] = min(abs(Tmfd.T_K/Tcnum-Cpnum(i).t_phenomeno(j)));
+    % Improvement note: use sort instead of min, to be able to interpolate...
+    t = Tmfd.T_K(mfdtidx);
+    if t ~= tref
+        sprintf('j=%i, T=%.2gK',j,t)
+        tref=t;
+    end
+    % Same for value of field
+    % Find the row in Tmfd that matches both t and h 
+    row = find(Tmfd.T_K==t & Tmfd.Hext_Oe==h);
+    Cph = zeros(size(Tmfd.binCenters(row,:)));
+    for col=1:length(Tmfd.binCenters(row,:))
+        Cph(col) = Cp_TFIM(Cpnum(i).t_phenomeno(j),Tmfd.binCenters(row,col));
+    end
+    % Compute the corresponding value of heat capacity 
+    Cpnum(i).comsolpdf(j) = trapz(Tmfd.binCenters(row,:),Cph.*Tmfd.hc(row,:));
+end
+
+%% Plot Cp for COMSOL distribution of fields
+figure
+plot(avgData(i).T,avgData(i).Cpelr,'.','DisplayName','data')
+hold on;
+plot(Cpnum(i).t_single_h*Tc0,Cpnum(i).single_h,'DisplayName','MF');
+plot(Cpnum(i).t_phenomeno*Tc0,Cpnum(i).comsolpdf,'DisplayName',sprintf('Hc=%.2dOe',Hcnum));
+title(['Cp mean-field vs COMSOL pdf $H_{\mathrm{ext}}=$' sprintf('%.0fOe',uh(i))]);
+lgd = legend();% title(lgd,'TmVO4-RF-E');
 
 %% Plot Cp for Gaussian distribution of fields
 figure
 plot(avgData(i).T,avgData(i).Cpelr,'.','DisplayName','data')
 hold on;
-plot(Cptheo(i).t_single_h*Tc0,Cptheo(i).single_h,'DisplayName',sprintf('h=%.2f',Cptheo(i).h));
-plot(Cptheo(i).t_phenomeno*Tc0,Cptheo(i).phenomeno,'DisplayName',sprintf('h=%.2f,r=%.1e',Cptheo(i).h,Cptheo(i).rhsgm));
-title(['Cp$\_$TFIM vs CpTFIM$\_$normpdf' sprintf(' H=%.0fOe',uh(i))]);
-lgd = legend(); title(lgd,'TmVO4-RF-E');
+plot(Cpnum(i).t_single_h*Tc0,Cpnum(i).single_h,'DisplayName','MF');
+plot(Cpnum(i).t_phenomeno*Tc0,Cpnum(i).normpdf,'DisplayName','Gauss');
+title(['Cp mean-field vs normal pdf $H_{\mathrm{ext}}=$' sprintf('%.0fOe',uh(i))]);
+lgd = legend();% title(lgd,'TmVO4-RF-E');
 
 %% Plot averaged data at each field separately
 figure; hold on
@@ -372,9 +447,9 @@ clr = lines(length(rng));
 eb = cell(size(rng));
 for i=rng
 % fp = fplot(@(t)Cp_TFIM(t/Tc0,Cptheo(i).h),[0 3.2],'--','LineWidth',2,'Color',clr(rng==i,:));
-plot(Cptheo(i).t_single_h*Tc0,Cptheo(i).single_h,'--','Color',clr(rng==i,:),'DisplayName',sprintf('h=%.2f',Cptheo(i).h));
-plot(Cptheo(i).t_phenomeno*Tc0,Cptheo(i).phenomeno,'Color',clr(rng==i,:),'DisplayName',...
-    sprintf('h=%.2f,r=%.1e',Cptheo(i).h,Cptheo(i).rhsgm));
+plot(Cpnum(i).t_single_h*Tc0,Cpnum(i).single_h,'--','Color',clr(rng==i,:),'DisplayName',sprintf('h=%.2f',Cpnum(i).h));
+plot(Cpnum(i).t_phenomeno*Tc0,Cpnum(i).normpdf,'Color',clr(rng==i,:),'DisplayName',...
+    sprintf('h=%.2f,r=%.1e',Cpnum(i).h,Cpnum(i).rhsgm));
 end
 for i=rng
 eb{rng==i} = errorbar(avgData(i).T,avgData(i).Cpelr,avgData(i).CpFullErr/R,...
@@ -382,7 +457,7 @@ eb{rng==i} = errorbar(avgData(i).T,avgData(i).Cpelr,avgData(i).CpFullErr/R,...
     'Color',clr(rng==i,:),'LineWidth',2);
 end
 xlabel('$T$ (K)'); ylabel('$C_p/R$');%ylabel('C$_p$ (JK$^{-1}$mol$^{-1}$)');
-xlim([0 max(Cptheo(rng(1)).t_single_h*Tc0)]);
+xlim([0 max(Cpnum(rng(1)).t_single_h*Tc0)]);
 lgd = legend([eb{:}]); lgd.Title.String = '$H/H_c$';
 ax = gca; ax.YMinorTick = 'on';% Add minor ticks on Y axis
 anntheo = annotation('textbox',[0.13 0.83 0.2 0.1],'interpreter','latex',...
@@ -398,16 +473,16 @@ hold off
 
 %% Compute additional Cp for Gaussian distribution of fields
 % Cptheo(i).h = 0.87;
-Cptheo(i).rhsgm = 0.1;
-Cptheo(i).sgm = Cptheo(i).h*Cptheo(i).rhsgm;
-for j=1:length(Cptheo(i).t)
-    Cptheo(i).phenomeno(j) = CpTFIM_normpdf(Cptheo(i).t(j),Cptheo(i).h,Cptheo(i).sgm);
+Cpnum(i).rhsgm = 0.1;
+Cpnum(i).sgm = Cpnum(i).h*Cpnum(i).rhsgm;
+for j=1:length(Cpnum(i).t)
+    Cpnum(i).normpdf(j) = CpTFIM_normpdf(Cpnum(i).t(j),Cpnum(i).h,Cpnum(i).sgm);
 end
-plot(Cptheo(i).t*Tc0,Cptheo(i).phenomeno,'DisplayName',sprintf('h=%.2f,r=%.1e',Cptheo(i).h,Cptheo(i).rhsgm));
+plot(Cpnum(i).t*Tc0,Cpnum(i).normpdf,'DisplayName',sprintf('h=%.2f,r=%.1e',Cpnum(i).h,Cpnum(i).rhsgm));
 
 %% Plot additional Cp for Gaussian distribution of fields
 offset = 0.01;
-plot(Cptheo(i).t*Tc0,Cptheo(i).phenomeno+offset,'DisplayName',sprintf('h=%.2f,r=%.1e',Cptheo(i).h,Cptheo(i).rhsgm));
+plot(Cpnum(i).t*Tc0,Cpnum(i).normpdf+offset,'DisplayName',sprintf('h=%.2f,r=%.1e',Cpnum(i).h,Cpnum(i).rhsgm));
 
 %% Prepare MF fit of Cp vs Temperature under field
 index = 15;
@@ -436,7 +511,7 @@ annfit.Position(2)=.175;
 
 %% Export figure to pdf
 % formatFigure;
-printPDF([todaystr '_TmVO4-RF-E_mfd_T-H_dep']);
+printPNG([todaystr '_TmVO4-RF-E_mfd@4000Oe']);
 % printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
 
 
