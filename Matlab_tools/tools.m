@@ -8,6 +8,9 @@
 % diary off
 % diary on
 
+%% Parse function arguments
+% See https://www.mathworks.com/help/matlab/ref/inputparser.html
+
 %% Get today's date and convert it to string
 todaystr = datestr(datetime('today'),29);% datetime outputs a 'datetime' variable type, not string
 

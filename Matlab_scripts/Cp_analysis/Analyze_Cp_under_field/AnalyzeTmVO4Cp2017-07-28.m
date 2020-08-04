@@ -1,6 +1,70 @@
+Tc = 2.22;% transition temperature at zero field, in Kelvin units
+Hc = 5100;% critical field at zero temperature, in Oersted units
+
+%% Import magnetic field distribution from CSV file
+cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-LS5200_HC2017-07\TmVO4-LS5200_HC2017-07_COMSOL_results'
+% mfdfilename = cell(1,2);
+% S = cell(1,2);
+mfdfilename{1} = 'TmVO4-LS5200_HC2017-07_sample1-Needle_mesh-p1mm_T=p3-p4-3p1_Hext=all.csv';
+mfdfilename{2} = 'TmVO4-LS5200_HC2017-07_sample2-Arya_mesh-20um_T=p3-p4-3p1_Hext=all.csv';
+mfdDomNum = {2,3};
+for ic=1:length(S)
+    S{ic} = importfielddistrib_csv(mfdfilename{ic}, 56, 'domainNum', mfdDomNum{ic});
+end
+
+%% Extract values of temperature and external magnetic field from structure header
+Smfd = [S{1,:}];% concatenate structures
+for sidx=1:length(Smfd)
+    % split each header into a cell array of strings, using whitespace and '=' sign as separators
+    TBextCell = strsplit(Smfd(sidx).T_Bext,{' ','='});
+    % Find the index of the string cell containing "T" (temperature), and
+    % convert the following string cell (which contains the value of temperature) into a number
+    % Note: circshift(A,1) shifts the index of elements of array A by 1 to the right
+    Smfd(sidx).T_K = str2double(TBextCell{circshift(TBextCell=="T",1)});
+    % Same with "Bext", which is the external magnetic flux density, in Tesla
+    % units, and convert it into a value of magnetic field, in Oersted units
+    Smfd(sidx).Hext_Oe = str2double(TBextCell{circshift(TBextCell=="Bext",1)})*10^4;
+end
+
+%% Compute probability distribution of fields at a given value of T and Hext
+for i=1:length(Smfd)
+mfd = Smfd(i).mfd(Smfd(i).mfd>0)/Smfd(i).Hext_Oe;% create distribution from non-zero values
+% h = histogram(mfd, 'Normalization', 'pdf');% plot histogram of distribution
+[Smfd(i).hc, edges] = histcounts(mfd, 50, 'Normalization', 'pdf');% plot histogram of distribution
+% binCenters = h.BinEdges + (h.BinWidth/2);
+Smfd(i).binCenters = mean([edges(1:end-1);edges(2:end)],1);
+Smfd(i).binWidths = edges(2:end)-edges(1:end-1);
+end
+
+%% Plot distribution of fields at a given value of T and Hext
+figure;
+hold on
+needle_index = 2;% there are 2 needle-shaped samples 
+start_index = [0,56];% needle 1 data start at index 0+1, needle 2 data at 56+1
+param_index = 2;% 1 is constant T, 2 is constant Hext, see param_range
+param_range = {[4:8:56], [41:48]};% first range corresponds to a 
+% field dependence at constant temp, second range corresponds to a 
+% temperature dependence at constant field
+rng = start_index(needle_index)  + param_range{param_index};
+for i=rng 
+T = Smfd(i).T_K;%
+Hext = Smfd(i).Hext_Oe;%
+p = plot(Smfd(i).binCenters, Smfd(i).hc, '.-', 'DisplayName', sprintf('%.2g, %.2g',T/Tc,Hext/Hc));
+end
+lgd = legend('show','Location','northwest'); lgd.Title.String = '$T/T_c$, $H_{\mathrm{ext}}/H_c$';
+needle_title = sprintf('Distribution of fields in TmVO$_4$ needle %d', needle_index);
+param_title = {[', $T=$' sprintf('%.2g K',T)],...
+    [', $H_{\mathrm{ext}}=$' sprintf('%.2d Oe',Hext)]};
+title([needle_title param_title{param_index}])
+xlabel('$H_{\mathrm{in}}/H_{\mathrm{ext}}$')
+ylabel('Normalized PDF')
+
+%% Import HC data
 cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2017-07_TmVO4_Cp_MCE\2017-07-28--31\2017-07-28_Cp'
-DATA=ImportTmVO4Cp('TmVO4_Mosaic_2017-07-28.dat');% Use this data to plot Cp vs H, T superimposed on theoretical curves
+DATA=ImportTmVO4Cp('TmVO4_Mosaic_2017-07-28.dat');
+% Use this data to plot Cp vs (H, T) superimposed on theoretical curves
 % Average data points at each temperature + field 
+
 %%
 % H=[DATA.FieldOersted; DATA(2).FieldOersted];
 % T=[DATA.SampleTempKelvin; DATA(2).SampleTempKelvin];
@@ -321,6 +385,10 @@ cft=confint(fitresult);% extract confidence intervals from fit
 sprintf("Hc(T=0) = %.1d +- %.0e Oe",fitresult.Hc0,cval(1)-cft(1,1))% print out value of critical field, with error bars
 sprintf("Tc(H=0) = %.2f +- %.2f K",fitresult.Tc0,cval(2)-cft(1,2))% print out value of critical temperature, with error bars
 
+%% Export figure
+formatFigure;
+% printPNG([todaystr '_TmVO4-2017-07-needle2_mfd@H=4750Oe']);
+% printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
 
 
 

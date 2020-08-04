@@ -509,7 +509,7 @@ annfit = annotation('textbox',[0.575 0.175 0.2 0.1],'interpreter','latex',...
 formatFigure
 annfit.Position(2)=.175;
 
-%% Export figure to pdf
+%% Export figure
 % formatFigure;
 printPNG([todaystr '_TmVO4-RF-E_mfd@4000Oe']);
 % printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
