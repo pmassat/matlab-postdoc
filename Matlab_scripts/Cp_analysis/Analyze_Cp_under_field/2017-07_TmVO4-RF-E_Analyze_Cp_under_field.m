@@ -432,7 +432,9 @@ for j=1:length(Cpnum(i).t_phenomeno)
         Cph(col) = Cp_TFIM(Cpnum(i).t_phenomeno(j),Tmfd_RF.binCenters(row,col));
     end
     % Compute the corresponding value of heat capacity 
-    Cpnum(i).comsolpdf(j) = trapz(Tmfd_RF.binCenters(row,:),Cph.*Tmfd_RF.hc(row,:));
+%     Cpnum(i).comsolpdf(j) = trapz(Tmfd_RF.binCenters(row,:),Cph.*Tmfd_RF.hc(row,:));
+    Cpnum(i).comsolpdf(j) = sum(Tmfd_ndl.binWidths(row,:).*Cph.*...
+        Tmfd_ndl.hc(row,:));
 end
 
 %% Plot Cp for COMSOL distribution of fields

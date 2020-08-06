@@ -1,5 +1,5 @@
 Tc_ndl = 2.22;% transition temperature at zero field, in Kelvin units
-Hc = 5100;% critical field at zero temperature, in Oersted units
+Hc = 5000;% critical field at zero temperature, in Oersted units
 
 %% Import magnetic field distribution from CSV file
 cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-LS5200_HC2017-07\TmVO4-LS5200_HC2017-07_COMSOL_results'
@@ -25,9 +25,9 @@ for sidx=1:length(Smfd_ndl)
     % units, and convert it into a value of magnetic field, in Oersted units
     Smfd_ndl(sidx).Hext_Oe = str2double(TBextCell{circshift(TBextCell=="Bext",1)})*10^4;
     if sidx<=56
-        Smfd_ndl(i).label = 'needle1'
+        Smfd_ndl(sidx).label = 'needle1';
     else
-        Smfd_ndl(i).label = 'needle2'
+        Smfd_ndl(sidx).label = 'needle2';
     end
 end
 
@@ -46,8 +46,8 @@ figure;
 hold on
 needle_index = 1;% there are 2 needle-shaped samples 
 start_index = [0,56];% needle 1 data start at index 0+1, needle 2 data at 56+1
-param_index = 1;% 1 is constant T, 2 is constant Hext, see param_range
-param_range = {[3:8:56], [41:48]};% first range corresponds to a 
+param_index = 2;% 1 is constant T, 2 is constant Hext, see param_range
+param_range = {[3:8:56], 33+[0:7]};% first range corresponds to a 
 % field dependence at constant temp, second range corresponds to a 
 % temperature dependence at constant field
 rng = start_index(needle_index)  + param_range{param_index};
@@ -85,8 +85,9 @@ Tndl=Tndl(whichPoints);
 CpNdl=CpNdl(whichPoints);
 CpErrNdl=CpErrNdl(whichPoints);
 
-%% Plot 3D scatter
 hmax=5500;
+
+%% Plot 3D scatter
 scatter3(Hndl,Tndl,CpNdl,'.')
 xlim([0 hmax])
 ylim([0 3])
@@ -148,49 +149,6 @@ for i = 1:length(fieldsNdl)
     separatedNdlCpData(i).CpErr = separatedNdlCpData(i).CpErr(wo);
 end
 
-%% (Obsolete, replaced by following section) Average datapoints taken at any given temperature and field setpoint
-% % We want to compute the average of data points that are repetitions of the
-% % same measurement, i.e. with same temperature and field setpoints
-% Tsep = 6e-3;% Data points taken within an interval of Tsep are considered to be measured at the same temperature setpoint
-% % 6mK is an empirical estimate of the dispersion of data points taken consecutively at a given temperature. 
-% for i = 1:length(fields)
-%     T2 = repmat(separatedCpData(i).T,1);
-%     Tm = zeros(length(separatedCpData(i).T),1);
-%     Tsd = zeros(length(separatedCpData(i).T),1);
-%     Cpm = zeros(length(separatedCpData(i).Cp),1);
-%     Cpsd = zeros(length(separatedCpData(i).Cp),1);
-%     CpmErr = zeros(length(separatedCpData(i).Cp),1);
-%     for k = 1:length(T2)
-%         if T2(k)==0
-%             continue
-%         elseif length(T2(abs(T2-T2(k))<Tsep))>3
-%             Tsep2 = Tsep/2;% reduce the temperature interval
-% %             T2(abs(T2-T2(k))<Tsep2)%print out values of temperature which
-% %             verify the if statement
-%             Tm(k) = mean(T2(abs(T2-T2(k))<Tsep2));
-%             Tsd(k) = std(T2(abs(T2-T2(k))<Tsep2));
-%             Cpm(k) = mean(separatedCpData(i).Cp(abs(T2-T2(k))<Tsep2));
-%             Cpsd(k) = std(separatedCpData(i).Cp(abs(T2-T2(k))<Tsep2));
-%             CpmErr(k) = sum(separatedCpData(i).CpErr(abs(T2-T2(k))<Tsep2))/...
-%                 sqrt(length(separatedCpData(i).CpErr(abs(T2-T2(k))<Tsep2)));
-%             T2(abs(T2-T2(k))<Tsep2)=0;
-%         else
-%             Tm(k) = mean(T2(abs(T2-T2(k))<Tsep));
-%             Tsd(k) = std(T2(abs(T2-T2(k))<Tsep));
-%             Cpm(k) = mean(separatedCpData(i).Cp(abs(T2-T2(k))<Tsep));
-%             Cpsd(k) = std(separatedCpData(i).Cp(abs(T2-T2(k))<Tsep));
-%             CpmErr(k) = sum(separatedCpData(i).CpErr(abs(T2-T2(k))<Tsep))/...
-%                 sqrt(length(separatedCpData(i).CpErr(abs(T2-T2(k))<Tsep)));
-%             T2(abs(T2-T2(k))<Tsep)=0;
-%         end
-%     end
-%     separatedCpData(i).Hm = separatedCpData(i).H(Tm>0);
-%     avgNdlData(i).T = Tm(Tm>0);
-%     separatedCpData(i).Tsd = Tsd(Tm>0);
-%     avgNdlData(i).Cp = Cpm(Cpm>0);
-%     avgNdlData(i).CpFullErr = Cpsd(Cpm>0) + CpmErr(Cpm>0);
-% end
-
 %% Average datapoints taken at any given temperature and field setpoint
 % We want to compute the average of data points that are repetitions of the
 % same measurement, i.e. with same temperature and field setpoints
@@ -211,8 +169,7 @@ end
 
 %% Plot averaged data
 figure; hold on
-rng = [1:2:length(fieldsNdl)];
-for i=rng
+for i=1:2:length(fieldsNdl)
     errorbar(avgNdlData(i).T,avgNdlData(i).Cpel,avgNdlData(i).CpFullErr,'.','MarkerSize',18)
 end
 xlabel('Temperature (K)');
@@ -229,17 +186,17 @@ wghts1 = 1./Cp1Err;
 
 %% Plot averaged data at each field separately
 figure; hold on
-rng = 1:length(fieldsNdl)-1;
-clr = cell(size(rng));
-eb = cell(size(rng));
-for i=rng
-    fp = fplot(@(t) Cp_TFIM(t/Tc,fieldsNdl(i)/Hc),[0 3],'LineWidth',2);
-    clr{rng==i} = get(fp,'Color');
+rngAvg = 1:length(fieldsNdl)-1;
+clr = cell(size(rngAvg));
+eb = cell(size(rngAvg));
+for i=rngAvg
+    fp = fplot(@(t) Cp_TFIM(t/Tc_ndl,fieldsNdl(i)/Hc),[0 3],'LineWidth',2);
+    clr{rngAvg==i} = get(fp,'Color');
 end
-for i=rng
-    eb{rng==i} = errorbar(avgNdlData(i).T,avgNdlData(i).Cpelr,avgNdlData(i).CpelrErr,...
+for i=rngAvg
+    eb{rngAvg==i} = errorbar(avgNdlData(i).T,avgNdlData(i).Cpelr,avgNdlData(i).CpelrErr,...
         '.','MarkerSize',18,'DisplayName',num2str(fieldsNdl(i)/1e4,'%.2f T'),...
-        'Color',clr{rng==i},'LineWidth',2);
+        'Color',clr{rngAvg==i},'LineWidth',2);
 end
 xlabel('Temperature (K)'); 
 ylabel('C$_p/R$');
@@ -247,6 +204,142 @@ title('Heat capacity of needles of TmVO4 (no demag) at various fields')
 legend([eb{:}]);
 hold off
 
+
+
+%% Create table from structure
+Tmfd_ndl = struct2table(Smfd_ndl);% 
+utmfd = unique(Tmfd_ndl.T_K);
+uhmfd = unique(Tmfd_ndl.Hext_Oe);
+
+%% Compute Cp for Gaussian distribution of fields
+clear Cpnum
+% Hcnum=4900
+rngNum=1:8;
+for i=rngNum
+Cpnum(i).h = fieldsNdl(i)/Hc;
+Cpnum(i).t_single_h = linspace(0,1.5,601);% reduced temperature, T/Tc
+Cpnum(i).single_h = zeros(size(Cpnum(i).t_single_h));
+Cpnum(i).t_phenomeno = linspace(0,1.5,301);% reduced temperature, T/Tc
+Cpnum(i).comsolpdf = zeros(size(Cpnum(i).t_phenomeno));
+end
+
+for i=rngNum
+Cpnum(i).single_h = Cp_TFIM(Cpnum(i).t_single_h,Cpnum(i).h);
+end
+
+%% Garbage: For a given dataset, find closest values of temperature and field in COMSOL mfd
+i = 6;
+Cpnum(i).comsolpdf = zeros(size(Cpnum(i).t_phenomeno));
+[~,mfdhidx] = min(abs(Tmfd_ndl.Hext_Oe-fieldsNdl(i)));
+h = Tmfd_ndl.Hext_Oe(mfdhidx);
+tref = [0,0];
+t = zeros(2,length(Cpnum(i).t_phenomeno));
+wt = zeros(2,length(Cpnum(i).t_phenomeno));
+Trcomp = zeros(length(Tmfd_ndl.T_K),length(Cpnum(i).t_phenomeno));
+for j=1:length(Cpnum(i).t_phenomeno)
+    % Find values of temperature in COMSOL mfd closest to that of interest
+    Trcomp(:,j) = Tmfd_ndl.T_K/Tc_ndl-Cpnum(i).t_phenomeno(j);
+    [abst,mfdtidx] = unique(abs(Trcomp(:,j)));
+
+    % if the 2 closest temperatures are both above or below the one of
+    % interest, just use the single closest, otherwise use both
+    if sign(Trcomp(mfdtidx(1),j))==sign(Trcomp(mfdtidx(2),j))
+        t(:,j) = Tmfd_ndl.T_K(mfdtidx(1));
+        wt(:,j) = [1,0];
+    else
+        t(:,j) = Tmfd_ndl.T_K(mfdtidx(1:2));
+        wt(:,j) = 1-abst(1:2)/sum(abst(1:2));
+    end
+
+    if ~all(t(:,j)==tref)
+        sprintf('j=%i, T=%.2gK, Tref=[%.2g,%.2g]K',j,Cpnum(i).t_phenomeno(j)*Tc_ndl,t(:,j))
+        tref=t(:,j);
+    end
+    % Same for value of field
+    % Find the rows in Tmfd that matches both t and h 
+    rows = find(ismember(Tmfd_ndl.T_K,t(:,j)) & Tmfd_ndl.Hext_Oe==h);
+    ndl_temps = [rows(rows<=56),rows(rows>57)];
+    [ntemps,nsamples] = size(ndl_temps);
+    Cph = zeros(size(Tmfd_ndl.binCenters(rows,:)));
+    for ndl_idx=1:nsamples
+        for temp_idx=1:ntemps
+            for Hin=1:length(Tmfd_ndl.binCenters(ndl_temps(1,ndl_idx),:))
+                Cph(ndl_idx,Hin) = Cph(ndl_idx,Hin) +...
+                    Cp_TFIM(...
+                    Cpnum(i).t_phenomeno(j),...
+                    Tmfd_ndl.binCenters(ndl_temps(temp_idx,ndl_idx),Hin)...
+                    ).*...
+                    wt(temp_idx,j);
+            end
+        % Compute the corresponding value of heat capacity
+        Cpnum(i).comsolpdf(j) = Cpnum(i).comsolpdf(j) +...
+            sum(...
+            Cph(ndl_idx,:).*...
+            Tmfd_ndl.hc(ndl_temps(temp_idx,ndl_idx),:).*...
+            Tmfd_ndl.binWidths(ndl_temps(temp_idx,ndl_idx),:)...
+            )./...
+            prod(size(ndl_temps));
+        end
+    end
+%     Cph_ndl = mean(Cph,1);
+
+end
+
+%% For a given dataset, find closest values of temperature and field in COMSOL mfd
+i = 6;
+Hdata = unique(round(avgNdlData(i).H,-2));
+[~,mfdhidx] = min(abs(Tmfd_ndl.Hext_Oe-Hdata));
+h = Tmfd_ndl.Hext_Oe(mfdhidx);
+tref = 0;
+for j=1:length(Cpnum(i).t_phenomeno)
+    % Find value of temperature in COMSOL mfd closest to that of actual data
+    [~,mfdtidx] = min(abs(Tmfd_ndl.T_K/Tc_ndl-Cpnum(i).t_phenomeno(j)));
+    % Improvement note: use sort instead of min, to be able to interpolate...
+    t = Tmfd_ndl.T_K(mfdtidx);
+    if t ~= tref
+        sprintf('j=%i, T=%.2gK',j,t)
+        tref=t;
+    end
+    % Same for value of field
+    % Find the row in Tmfd that matches both t and h 
+    row = find(Tmfd_ndl.T_K==t & Tmfd_ndl.Hext_Oe==h);
+    ndl1_row = row(1);
+    Cph = zeros(size(Tmfd_ndl.binCenters(ndl1_row,:)));
+    for col=1:length(Tmfd_ndl.binCenters(ndl1_row,:))
+        Cph(col) = Cp_TFIM(Cpnum(i).t_phenomeno(j),Tmfd_ndl.binCenters(ndl1_row,col));
+    end
+    % Compute the corresponding value of heat capacity 
+%     Cpnum(i).comsolpdf(j) = trapz(Tmfd_ndl.binCenters(row,:),Cph.*Tmfd_ndl.hc(row,:));
+    Cpnum(i).comsolpdf(j) = sum(...
+        Tmfd_ndl.binWidths(ndl1_row,:).*Cph.*...
+        Tmfd_ndl.hc(ndl1_row,:));
+end
+
+%% Plot Cp for COMSOL distribution of fields
+figure
+plot(avgNdlData(i).T,avgNdlData(i).Cpelr,'.','DisplayName','data')
+hold on;
+plot(Cpnum(i).t_single_h*Tc_ndl,Cpnum(i).single_h,'DisplayName','MF');
+plot(Cpnum(i).t_phenomeno*Tc_ndl,Cpnum(i).comsolpdf,'DisplayName',sprintf('Hc=%.2dOe',h));
+title(['Cp mean-field vs COMSOL pdf $H_{\mathrm{ext}}=$' sprintf('%.0fOe',fieldsNdl(i))]);
+lgd = legend();% title(lgd,'TmVO4-Ndl-E');
+
+
+
+
+
+
+%% Export figure
+formatFigure;
+% printPNG([todaystr '_TmVO4-2017-07-needle2_mfd@H=4750Oe']);
+% printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
+
+
+
+
+
+
+%% Older data analysis: dCp/dT, phase boundary
 
 %% Gaussian convolution and computation of derivative of raw Cp
 tstep=0.025; 
@@ -289,16 +382,11 @@ legendCell = cellstr(num2str(fieldsNdl, '%-d Oe'));
 legend(legendCell)
 hold off
 
-%%
-% Commented out on 2019-03-18. Remove if never used.
-% x=separatedCpData(4).T;
-% y=separatedCpData(4).Cp;
-
-%%
+%% Fit data with smoothing spline
 figure
 for i=1:length(fieldsNdl)
     separatedNdlCpData(i).f=fitSpline(separatedNdlCpData(i).T,-separatedNdlCpData(i).Cp);
-%Is fitSpline a Matlab function? Cannot find it in the help.
+% fitSpline is a custom function? Press ctrl+D while cursor is on the name for more info
 %    separatedCpData(i).d2=differentiate(separatedCpData(i).f,separatedCpData(i).T);
     plot(separatedNdlCpData(i).f,'deriv1')
     hold on
@@ -410,11 +498,6 @@ cval = coeffvalues(fitresult);% extract fit parameter values
 cft=confint(fitresult);% extract confidence intervals from fit
 sprintf("Hc(T=0) = %.1d +- %.0e Oe",fitresult.Hc0,cval(1)-cft(1,1))% print out value of critical field, with error bars
 sprintf("Tc(H=0) = %.2f +- %.2f K",fitresult.Tc0,cval(2)-cft(1,2))% print out value of critical temperature, with error bars
-
-%% Export figure
-formatFigure;
-% printPNG([todaystr '_TmVO4-2017-07-needle2_mfd@H=4750Oe']);
-% printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
 
 
 
