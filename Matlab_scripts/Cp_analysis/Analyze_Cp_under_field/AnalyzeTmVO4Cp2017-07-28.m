@@ -131,7 +131,7 @@ ylabel('Temperature (K)')
 zlabel('-dCp/dT (uJ/K^2)')
 
 
-%%
+%% Separate data according to value of magnetic field
 clear separatedCpData
 
 fieldsNdl = unique(round(Hndl,-1));%[10,linspace(1000,4000,4),4500,4750,5000];
@@ -179,32 +179,17 @@ ylabel('$C_p$ (J/K/mol)')
 % Useful to use the curve fitting tool for quick look at the data
 index = 1;
 H1 = fieldsNdl(index);
-T1 = separatedNdlCpData(index).Tm;
-Cp1 = separatedNdlCpData(index).Cpm;
-Cp1Err = separatedNdlCpData(index).CpmFullErr;
+T1 = avgNdlData(index).T;
+Cp1 = avgNdlData(index).Cpelr;
+Cp1Err = avgNdlData(index).CpelrErr;
 wghts1 = 1./Cp1Err;
 
-%% Plot averaged data at each field separately
-figure; hold on
-rngAvg = 1:length(fieldsNdl)-1;
-clr = cell(size(rngAvg));
-eb = cell(size(rngAvg));
-for i=rngAvg
-    fp = fplot(@(t) Cp_TFIM(t/Tc_ndl,fieldsNdl(i)/Hc),[0 3],'LineWidth',2);
-    clr{rngAvg==i} = get(fp,'Color');
-end
-for i=rngAvg
-    eb{rngAvg==i} = errorbar(avgNdlData(i).T,avgNdlData(i).Cpelr,avgNdlData(i).CpelrErr,...
-        '.','MarkerSize',18,'DisplayName',num2str(fieldsNdl(i)/1e4,'%.2f T'),...
-        'Color',clr{rngAvg==i},'LineWidth',2);
-end
-xlabel('Temperature (K)'); 
-ylabel('C$_p/R$');
-title('Heat capacity of needles of TmVO4 (no demag) at various fields')
-legend([eb{:}]);
-hold off
-
-
+%% Longitudinal field value extracted from curve fitting Cp data at 10 Oe
+% Cp_LFIM(T/Tc,e) fit of data at 10 Oe (excluding datapoints at T=2.252K and above) yields:
+%        Tc =       2.199  (2.196, 2.203)
+%        e =    0.001087  (0.0008557, 0.001319)
+e = 1.1e-3;
+Tc0_ndl = 2.2;
 
 %% Create table from structure
 Tmfd_ndl = struct2table(Smfd_ndl);% 
@@ -218,27 +203,55 @@ rngNum=1:8;
 for i=rngNum
 Cpnum(i).h = fieldsNdl(i)/Hc;
 Cpnum(i).t_single_h = linspace(0,1.5,601);% reduced temperature, T/Tc
-Cpnum(i).single_h = zeros(size(Cpnum(i).t_single_h));
-Cpnum(i).t_phenomeno = linspace(0,1.5,301);% reduced temperature, T/Tc
-Cpnum(i).comsolpdf = zeros(size(Cpnum(i).t_phenomeno));
+Cpnum(i).single_h_no_e = zeros(size(Cpnum(i).t_single_h));
+Cpnum(i).single_h_w_e = zeros(size(Cpnum(i).t_single_h));
+Cpnum(i).t_h_dist = linspace(0,1.5,301);% reduced temperature, T/Tc
+Cpnum(i).comsolpdf_no_e = zeros(size(Cpnum(i).t_h_dist));
+Cpnum(i).comsolpdf_w_e = zeros(size(Cpnum(i).t_h_dist));
 end
 
+%% Compute Cp_TLFIM at single value of field
 for i=rngNum
-Cpnum(i).single_h = Cp_TFIM(Cpnum(i).t_single_h,Cpnum(i).h);
+Cpnum(i).single_h_no_e = Cp_TFIM(Cpnum(i).t_single_h,Cpnum(i).h);
+[~,~,Cpnum(i).single_h_w_e] = FSCp_TLFIM(Cpnum(i).t_single_h,Cpnum(i).h,e);
 end
+
+%% Plot averaged data at each field separately
+figure; hold on
+rngAvg = 1:length(fieldsNdl)-1;
+clr = cell(size(rngAvg));
+eb = cell(size(rngAvg));
+for i=rngAvg
+%     fp = fplot(@(t) Cp_TFIM(t/Tc_ndl,fieldsNdl(i)/Hc),[0 3],'LineWidth',2);
+    fp = plot(Cpnum(i).t_single_h(2:end-1)*Tc0_ndl,Cpnum(i).single_h_no_e,'DisplayName','MF');
+    clr{rngAvg==i} = get(fp,'Color');
+end
+for i=rngAvg
+    eb{rngAvg==i} = errorbar(avgNdlData(i).T,avgNdlData(i).Cpelr,avgNdlData(i).CpelrErr,...
+        '.','MarkerSize',18,'DisplayName',num2str(fieldsNdl(i)/1e4,'%.2f T'),...
+        'Color',clr{rngAvg==i},'LineWidth',2);
+end
+xlabel('Temperature (K)'); 
+ylabel('C$_p/R$');
+title('Heat capacity of needles of TmVO4 (no demag) at various fields')
+legend([eb{:}],'Location','best');
+hold off
+
+
+
 
 %% Garbage: For a given dataset, find closest values of temperature and field in COMSOL mfd
 i = 6;
-Cpnum(i).comsolpdf = zeros(size(Cpnum(i).t_phenomeno));
+Cpnum(i).comsolpdf_no_e = zeros(size(Cpnum(i).t_h_dist));
 [~,mfdhidx] = min(abs(Tmfd_ndl.Hext_Oe-fieldsNdl(i)));
 h = Tmfd_ndl.Hext_Oe(mfdhidx);
 tref = [0,0];
-t = zeros(2,length(Cpnum(i).t_phenomeno));
-wt = zeros(2,length(Cpnum(i).t_phenomeno));
-Trcomp = zeros(length(Tmfd_ndl.T_K),length(Cpnum(i).t_phenomeno));
-for j=1:length(Cpnum(i).t_phenomeno)
+t = zeros(2,length(Cpnum(i).t_h_dist));
+wt = zeros(2,length(Cpnum(i).t_h_dist));
+Trcomp = zeros(length(Tmfd_ndl.T_K),length(Cpnum(i).t_h_dist));
+for j=1:length(Cpnum(i).t_h_dist)
     % Find values of temperature in COMSOL mfd closest to that of interest
-    Trcomp(:,j) = Tmfd_ndl.T_K/Tc_ndl-Cpnum(i).t_phenomeno(j);
+    Trcomp(:,j) = Tmfd_ndl.T_K/Tc_ndl-Cpnum(i).t_h_dist(j);
     [abst,mfdtidx] = unique(abs(Trcomp(:,j)));
 
     % if the 2 closest temperatures are both above or below the one of
@@ -252,7 +265,7 @@ for j=1:length(Cpnum(i).t_phenomeno)
     end
 
     if ~all(t(:,j)==tref)
-        sprintf('j=%i, T=%.2gK, Tref=[%.2g,%.2g]K',j,Cpnum(i).t_phenomeno(j)*Tc_ndl,t(:,j))
+        sprintf('j=%i, T=%.2gK, Tref=[%.2g,%.2g]K',j,Cpnum(i).t_h_dist(j)*Tc_ndl,t(:,j))
         tref=t(:,j);
     end
     % Same for value of field
@@ -260,21 +273,21 @@ for j=1:length(Cpnum(i).t_phenomeno)
     rows = find(ismember(Tmfd_ndl.T_K,t(:,j)) & Tmfd_ndl.Hext_Oe==h);
     ndl_temps = [rows(rows<=56),rows(rows>57)];
     [ntemps,nsamples] = size(ndl_temps);
-    Cph = zeros(size(Tmfd_ndl.binCenters(rows,:)));
+    Cphnoe = zeros(size(Tmfd_ndl.binCenters(rows,:)));
     for ndl_idx=1:nsamples
         for temp_idx=1:ntemps
             for Hin=1:length(Tmfd_ndl.binCenters(ndl_temps(1,ndl_idx),:))
-                Cph(ndl_idx,Hin) = Cph(ndl_idx,Hin) +...
+                Cphnoe(ndl_idx,Hin) = Cphnoe(ndl_idx,Hin) +...
                     Cp_TFIM(...
-                    Cpnum(i).t_phenomeno(j),...
+                    Cpnum(i).t_h_dist(j),...
                     Tmfd_ndl.binCenters(ndl_temps(temp_idx,ndl_idx),Hin)...
                     ).*...
                     wt(temp_idx,j);
             end
         % Compute the corresponding value of heat capacity
-        Cpnum(i).comsolpdf(j) = Cpnum(i).comsolpdf(j) +...
+        Cpnum(i).comsolpdf_no_e(j) = Cpnum(i).comsolpdf_no_e(j) +...
             sum(...
-            Cph(ndl_idx,:).*...
+            Cphnoe(ndl_idx,:).*...
             Tmfd_ndl.hc(ndl_temps(temp_idx,ndl_idx),:).*...
             Tmfd_ndl.binWidths(ndl_temps(temp_idx,ndl_idx),:)...
             )./...
@@ -286,41 +299,67 @@ for j=1:length(Cpnum(i).t_phenomeno)
 end
 
 %% For a given dataset, find closest values of temperature and field in COMSOL mfd
-i = 6;
+i = 5;
 Hdata = unique(round(avgNdlData(i).H,-2));
 [~,mfdhidx] = min(abs(Tmfd_ndl.Hext_Oe-Hdata));
 h = Tmfd_ndl.Hext_Oe(mfdhidx);
 tref = 0;
-for j=1:length(Cpnum(i).t_phenomeno)
+% For the computations with longitudinal field, need to compute free
+% energy first, since there is no analytical formula for the heat capacity
+trange = 1:10:length(Cpnum(i).t_h_dist);
+Fwe = zeros(length(trange),1);
+
+for jt=trange
     % Find value of temperature in COMSOL mfd closest to that of actual data
-    [~,mfdtidx] = min(abs(Tmfd_ndl.T_K/Tc_ndl-Cpnum(i).t_phenomeno(j)));
+    [~,mfdtidx] = min(abs(Tmfd_ndl.T_K/Tc_ndl-Cpnum(i).t_h_dist(jt)));
     % Improvement note: use sort instead of min, to be able to interpolate...
     t = Tmfd_ndl.T_K(mfdtidx);
     if t ~= tref
-        sprintf('j=%i, T=%.2gK',j,t)
+        sprintf('j=%i, T=%.2gK',jt,t)
         tref=t;
     end
-    % Same for value of field
+
     % Find the row in Tmfd that matches both t and h 
     row = find(Tmfd_ndl.T_K==t & Tmfd_ndl.Hext_Oe==h);
+    % Work only with first needle, for now
     ndl1_row = row(1);
-    Cph = zeros(size(Tmfd_ndl.binCenters(ndl1_row,:)));
+
+    % Compute free energy, including longitudinal field
+    Fhwe = FSCp_TLFIM(Cpnum(i).t_h_dist(jt),Tmfd_ndl.binCenters(ndl1_row,:),e);
+    Fwe(find(trange==jt)) = sum(...
+        Tmfd_ndl.binWidths(ndl1_row,:).*...
+        Fhwe.*...
+        Tmfd_ndl.hc(ndl1_row,:)...
+        );
+
+    % Compute heat capacity without longitudinal field at each value of
+    % internal (transverse) magnetic field
+    Cphnoe = zeros(size(Tmfd_ndl.binCenters(ndl1_row,:)));
     for col=1:length(Tmfd_ndl.binCenters(ndl1_row,:))
-        Cph(col) = Cp_TFIM(Cpnum(i).t_phenomeno(j),Tmfd_ndl.binCenters(ndl1_row,col));
+        Cphnoe(col) = Cp_TFIM(Cpnum(i).t_h_dist(jt),Tmfd_ndl.binCenters(ndl1_row,col));
     end
     % Compute the corresponding value of heat capacity 
-%     Cpnum(i).comsolpdf(j) = trapz(Tmfd_ndl.binCenters(row,:),Cph.*Tmfd_ndl.hc(row,:));
-    Cpnum(i).comsolpdf(j) = sum(...
-        Tmfd_ndl.binWidths(ndl1_row,:).*Cph.*...
-        Tmfd_ndl.hc(ndl1_row,:));
+    Cpnum(i).comsolpdf_no_e(jt) = sum(...
+        Tmfd_ndl.binWidths(ndl1_row,:).*...
+        Cphnoe.*...
+        Tmfd_ndl.hc(ndl1_row,:)...
+        );
 end
+
+%% Compute entropy and heat capacity, with longitudinal fields, at each value of internal field
+twe = Cpnum(i).t_h_dist(trange)';
+dt = diff(twe);
+Swe = -diff(Fwe)./dt;% entropy
+dtm = 0.5*(dt(1:end-1)+dt(2:end));
+Cpwe = twe(2:end-1).*diff(Swe)./dtm;
 
 %% Plot Cp for COMSOL distribution of fields
 figure
 plot(avgNdlData(i).T,avgNdlData(i).Cpelr,'.','DisplayName','data')
 hold on;
-plot(Cpnum(i).t_single_h*Tc_ndl,Cpnum(i).single_h,'DisplayName','MF');
-plot(Cpnum(i).t_phenomeno*Tc_ndl,Cpnum(i).comsolpdf,'DisplayName',sprintf('Hc=%.2dOe',h));
+plot(Cpnum(i).t_single_h*Tc_ndl,Cpnum(i).single_h_no_e,'DisplayName','single MF (no long.)');% no longitudinal field
+plot(Cpnum(i).t_single_h(2:end-1)*Tc0_ndl,Cpnum(i).single_h_w_e,'DisplayName','single MF (with long.)');% with longitudinal field
+plot(Cpnum(i).t_h_dist*Tc_ndl,Cpnum(i).comsolpdf_no_e,'DisplayName','field distrib.');
 title(['Cp mean-field vs COMSOL pdf $H_{\mathrm{ext}}=$' sprintf('%.0fOe',fieldsNdl(i))]);
 lgd = legend();% title(lgd,'TmVO4-Ndl-E');
 
@@ -330,7 +369,7 @@ lgd = legend();% title(lgd,'TmVO4-Ndl-E');
 
 
 %% Export figure
-formatFigure;
+% formatFigure;
 % printPNG([todaystr '_TmVO4-2017-07-needle2_mfd@H=4750Oe']);
 % printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
 
