@@ -47,7 +47,7 @@ hold on
 needle_index = 1;% there are 2 needle-shaped samples 
 start_index = [0,56];% needle 1 data start at index 0+1, needle 2 data at 56+1
 param_index = 2;% 1 is constant T, 2 is constant Hext, see param_range
-param_range = {[3:8:56], 33+[0:7]};% first range corresponds to a 
+param_range = {[3:8:56], 3*8+[1:8]};% first range corresponds to a 
 % field dependence at constant temp, second range corresponds to a 
 % temperature dependence at constant field
 rng = start_index(needle_index)  + param_range{param_index};
@@ -223,7 +223,7 @@ clr = cell(size(rngAvg));
 eb = cell(size(rngAvg));
 for i=rngAvg
 %     fp = fplot(@(t) Cp_TFIM(t/Tc_ndl,fieldsNdl(i)/Hc),[0 3],'LineWidth',2);
-    fp = plot(Cpnum(i).t_single_h(2:end-1)*Tc0_ndl,Cpnum(i).single_h_no_e,'DisplayName','MF');
+    fp = plot(Cpnum(i).t_single_h(2:end-1)*Tc0_ndl,Cpnum(i).single_h_w_e,'DisplayName','MF');
     clr{rngAvg==i} = get(fp,'Color');
 end
 for i=rngAvg
@@ -231,9 +231,9 @@ for i=rngAvg
         '.','MarkerSize',18,'DisplayName',num2str(fieldsNdl(i)/1e4,'%.2f T'),...
         'Color',clr{rngAvg==i},'LineWidth',2);
 end
-xlabel('Temperature (K)'); 
-ylabel('C$_p/R$');
-title('Heat capacity of needles of TmVO4 (no demag) at various fields')
+xlabel('$T$ (K)'); 
+ylabel('$C_p/R$');
+title(['Heat capacity of needles of TmVO$_4$, $e=$ ' sprintf('%.2g',e)])
 legend([eb{:}],'Location','best');
 hold off
 
@@ -306,8 +306,9 @@ h = Tmfd_ndl.Hext_Oe(mfdhidx);
 tref = 0;
 % For the computations with longitudinal field, need to compute free
 % energy first, since there is no analytical formula for the heat capacity
-trange = 1:10:length(Cpnum(i).t_h_dist);
+trange = 1:length(Cpnum(i).t_h_dist);
 Fwe = zeros(length(trange),1);
+Cpnoe = zeros(length(trange),1);
 
 for jt=trange
     % Find value of temperature in COMSOL mfd closest to that of actual data
@@ -326,7 +327,8 @@ for jt=trange
 
     % Compute free energy, including longitudinal field
     Fhwe = FSCp_TLFIM(Cpnum(i).t_h_dist(jt),Tmfd_ndl.binCenters(ndl1_row,:),e);
-    Fwe(find(trange==jt)) = sum(...
+%     Fwe(trange==jt) = sum(...% Use this if trange does not cover the full range of Cpnum(i).t_h_dist
+    Fwe(jt) = sum(...
         Tmfd_ndl.binWidths(ndl1_row,:).*...
         Fhwe.*...
         Tmfd_ndl.hc(ndl1_row,:)...
@@ -339,7 +341,7 @@ for jt=trange
         Cphnoe(col) = Cp_TFIM(Cpnum(i).t_h_dist(jt),Tmfd_ndl.binCenters(ndl1_row,col));
     end
     % Compute the corresponding value of heat capacity 
-    Cpnum(i).comsolpdf_no_e(jt) = sum(...
+    Cpnoe(jt) = sum(...
         Tmfd_ndl.binWidths(ndl1_row,:).*...
         Cphnoe.*...
         Tmfd_ndl.hc(ndl1_row,:)...
@@ -353,15 +355,46 @@ Swe = -diff(Fwe)./dt;% entropy
 dtm = 0.5*(dt(1:end-1)+dt(2:end));
 Cpwe = twe(2:end-1).*diff(Swe)./dtm;
 
+%% Store results into Cpnum structure
+% Cpnum(i).comsolpdf_no_e = Cpnoe
+
+Cpnum(i).t_h_dist_w_e = twe(2:end-1)';
+Cpwe(abs(Cpwe)>2)=NaN;% Remove numerical aberrations
+Cpnum(i).comsolpdf_w_e = Cpwe';
+
+%%
+% t_h_dist = linspace(0,1.5,301);% reduced temperature, T/Tc
+
+%% Prepare data for plotting by removing NaN datapoints
+sel_no_e = ~isnan(Cpnum(i).comsolpdf_no_e);
+sel_w_e = ~isnan(Cpnum(i).comsolpdf_w_e);
+% Cpnum(i).t_h_dist_no_e = Cpnum(i).t_h_dist_no_e(sel_no_e);
+Cpnum(i).t_h_dist_w_e = Cpnum(i).t_h_dist_w_e(sel_w_e);
+% Cpnum(i).comsolpdf_no_e = Cpnum(i).comsolpdf_no_e(sel_no_e);
+Cpnum(i).comsolpdf_w_e  = Cpnum(i).comsolpdf_w_e(sel_w_e);
+
 %% Plot Cp for COMSOL distribution of fields
 figure
 plot(avgNdlData(i).T,avgNdlData(i).Cpelr,'.','DisplayName','data')
 hold on;
-plot(Cpnum(i).t_single_h*Tc_ndl,Cpnum(i).single_h_no_e,'DisplayName','single MF (no long.)');% no longitudinal field
-plot(Cpnum(i).t_single_h(2:end-1)*Tc0_ndl,Cpnum(i).single_h_w_e,'DisplayName','single MF (with long.)');% with longitudinal field
-plot(Cpnum(i).t_h_dist*Tc_ndl,Cpnum(i).comsolpdf_no_e,'DisplayName','field distrib.');
-title(['Cp mean-field vs COMSOL pdf $H_{\mathrm{ext}}=$' sprintf('%.0fOe',fieldsNdl(i))]);
-lgd = legend();% title(lgd,'TmVO4-Ndl-E');
+no_e_str = ' ($e=0$)';
+w_e_str = [' ($e=$ ' sprintf(' %.2g)',e)];
+
+% Plot results at single value of magnetic field
+single_str = '$H=H_{\mathrm{ext}}$';
+plot(Cpnum(i).t_single_h*Tc0_ndl,Cpnum(i).single_h_no_e,...
+    'DisplayName',[single_str no_e_str]);% no longitudinal field
+plot(Cpnum(i).t_single_h(2:end-1)*Tc0_ndl,Cpnum(i).single_h_w_e,...
+    'DisplayName',[single_str w_e_str]);% with longitudinal field
+
+% Plot results for distribution of magnetic fields as computed with COMSOL
+comsol_str = 'comsol pdf';
+plot(Cpnum(i).t_h_dist_no_e*Tc0_ndl,Cpnum(i).comsolpdf_no_e,...
+    'DisplayName',[comsol_str no_e_str]);
+plot(Cpnum(i).t_h_dist_w_e*Tc0_ndl,Cpnum(i).comsolpdf_w_e,...
+    'DisplayName',[comsol_str w_e_str]);
+title(['$C_p$ single field vs COMSOL PDF $H_{\mathrm{ext}}=$ ' sprintf('%.0f Oe',fieldsNdl(i))]);
+lgd = legend('Location','best');% title(lgd,'TmVO4-Ndl-E');
 
 
 
@@ -370,7 +403,7 @@ lgd = legend();% title(lgd,'TmVO4-Ndl-E');
 
 %% Export figure
 % formatFigure;
-% printPNG([todaystr '_TmVO4-2017-07-needle2_mfd@H=4750Oe']);
+printPNG([todaystr '_TmVO4-2017-07-needles_Cp_vs_T_@4000Oe_single-field_vs_comsol-pdf_fits']);
 % printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
 
 
