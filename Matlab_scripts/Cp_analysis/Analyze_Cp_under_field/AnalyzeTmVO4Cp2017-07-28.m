@@ -47,7 +47,7 @@ hold on
 needle_index = 1;% there are 2 needle-shaped samples 
 start_index = [0,56];% needle 1 data start at index 0+1, needle 2 data at 56+1
 param_index = 2;% 1 is constant T, 2 is constant Hext, see param_range
-param_range = {[3:8:56], 3*8+[1:8]};% first range corresponds to a 
+param_range = {[3:8:56], 4*8+[1:8]};% first range corresponds to a 
 % field dependence at constant temp, second range corresponds to a 
 % temperature dependence at constant field
 rng = start_index(needle_index)  + param_range{param_index};
@@ -57,9 +57,9 @@ Hext = Smfd_ndl(i).Hext_Oe;%
 p = plot(Smfd_ndl(i).binCenters, Smfd_ndl(i).hc, '.-', 'DisplayName', sprintf('%.2g, %.2g',Tndl/Tc_ndl,Hext/Hc));
 end
 lgd = legend('show','Location','northwest'); lgd.Title.String = '$T/T_c$, $H_{\mathrm{ext}}/H_c$';
-needle_title = sprintf('Distribution of fields in TmVO$_4$ needle %d', needle_index);
+needle_title = sprintf('Field distrib. in TmVO$_4$ needle %d', needle_index);
 param_title = {[', $T=$' sprintf('%.2g K',Tndl)],...
-    [', $H_{\mathrm{ext}}=$' sprintf('%.2d Oe',Hext)]};
+    [', $H_{\mathrm{ext}}=$ ' sprintf('%.2d Oe',Hext)]};
 title([needle_title param_title{param_index}])
 xlabel('$H_{\mathrm{in}}/H_{c}$')
 ylabel('Normalized PDF')
@@ -199,26 +199,26 @@ uhmfd = unique(Tmfd_ndl.Hext_Oe);
 %% Compute Cp for Gaussian distribution of fields
 clear Cpnum
 % Hcnum=4900
-rngNum=1:8;
+rngNum=1:3;
 for i=rngNum
 Cpnum(i).h = fieldsNdl(i)/Hc;
 Cpnum(i).t_single_h = linspace(0,1.5,601);% reduced temperature, T/Tc
 Cpnum(i).single_h_no_e = zeros(size(Cpnum(i).t_single_h));
 Cpnum(i).single_h_w_e = zeros(size(Cpnum(i).t_single_h));
-Cpnum(i).t_h_dist = linspace(0,1.5,301);% reduced temperature, T/Tc
-Cpnum(i).comsolpdf_no_e = zeros(size(Cpnum(i).t_h_dist));
-Cpnum(i).comsolpdf_w_e = zeros(size(Cpnum(i).t_h_dist));
+Cpnum(i).t_h_dist_no_e = [linspace(0.01,.5,50) linspace(0.505,1.1,120) linspace(1.11,1.5,40)];% reduced temperature, T/Tc
+Cpnum(i).comsolpdf_no_e = zeros(size(Cpnum(i).t_h_dist_no_e));
+Cpnum(i).comsolpdf_w_e = zeros(size(Cpnum(i).t_h_dist_no_e));
 end
 
 %% Compute Cp_TLFIM at single value of field
 for i=rngNum
 Cpnum(i).single_h_no_e = Cp_TFIM(Cpnum(i).t_single_h,Cpnum(i).h);
-[~,~,Cpnum(i).single_h_w_e] = FSCp_TLFIM(Cpnum(i).t_single_h,Cpnum(i).h,e);
+[~,~,Cpnum(i).single_h_w_e] = FSCp_TLFIM(Cpnum(i).t_single_h,Cpnum(i).h,e)';
 end
 
 %% Plot averaged data at each field separately
 figure; hold on
-rngAvg = 1:length(fieldsNdl)-1;
+rngAvg = 1:length(fieldsNdl);
 clr = cell(size(rngAvg));
 eb = cell(size(rngAvg));
 for i=rngAvg
@@ -228,7 +228,7 @@ for i=rngAvg
 end
 for i=rngAvg
     eb{rngAvg==i} = errorbar(avgNdlData(i).T,avgNdlData(i).Cpelr,avgNdlData(i).CpelrErr,...
-        '.','MarkerSize',18,'DisplayName',num2str(fieldsNdl(i)/1e4,'%.2f T'),...
+        '.','MarkerSize',18,'DisplayName',sprintf('%.2d Oe',fieldsNdl(i)),...
         'Color',clr{rngAvg==i},'LineWidth',2);
 end
 xlabel('$T$ (K)'); 
@@ -242,16 +242,16 @@ hold off
 
 %% Garbage: For a given dataset, find closest values of temperature and field in COMSOL mfd
 i = 6;
-Cpnum(i).comsolpdf_no_e = zeros(size(Cpnum(i).t_h_dist));
+Cpnum(i).comsolpdf_no_e = zeros(size(Cpnum(i).t_h_dist_no_e));
 [~,mfdhidx] = min(abs(Tmfd_ndl.Hext_Oe-fieldsNdl(i)));
 h = Tmfd_ndl.Hext_Oe(mfdhidx);
 tref = [0,0];
-t = zeros(2,length(Cpnum(i).t_h_dist));
-wt = zeros(2,length(Cpnum(i).t_h_dist));
-Trcomp = zeros(length(Tmfd_ndl.T_K),length(Cpnum(i).t_h_dist));
-for j=1:length(Cpnum(i).t_h_dist)
+t = zeros(2,length(Cpnum(i).t_h_dist_no_e));
+wt = zeros(2,length(Cpnum(i).t_h_dist_no_e));
+Trcomp = zeros(length(Tmfd_ndl.T_K),length(Cpnum(i).t_h_dist_no_e));
+for j=1:length(Cpnum(i).t_h_dist_no_e)
     % Find values of temperature in COMSOL mfd closest to that of interest
-    Trcomp(:,j) = Tmfd_ndl.T_K/Tc_ndl-Cpnum(i).t_h_dist(j);
+    Trcomp(:,j) = Tmfd_ndl.T_K/Tc_ndl-Cpnum(i).t_h_dist_no_e(j);
     [abst,mfdtidx] = unique(abs(Trcomp(:,j)));
 
     % if the 2 closest temperatures are both above or below the one of
@@ -265,7 +265,7 @@ for j=1:length(Cpnum(i).t_h_dist)
     end
 
     if ~all(t(:,j)==tref)
-        sprintf('j=%i, T=%.2gK, Tref=[%.2g,%.2g]K',j,Cpnum(i).t_h_dist(j)*Tc_ndl,t(:,j))
+        sprintf('j=%i, T=%.2gK, Tref=[%.2g,%.2g]K',j,Cpnum(i).t_h_dist_no_e(j)*Tc_ndl,t(:,j))
         tref=t(:,j);
     end
     % Same for value of field
@@ -279,7 +279,7 @@ for j=1:length(Cpnum(i).t_h_dist)
             for Hin=1:length(Tmfd_ndl.binCenters(ndl_temps(1,ndl_idx),:))
                 Cphnoe(ndl_idx,Hin) = Cphnoe(ndl_idx,Hin) +...
                     Cp_TFIM(...
-                    Cpnum(i).t_h_dist(j),...
+                    Cpnum(i).t_h_dist_no_e(j),...
                     Tmfd_ndl.binCenters(ndl_temps(temp_idx,ndl_idx),Hin)...
                     ).*...
                     wt(temp_idx,j);
@@ -299,20 +299,20 @@ for j=1:length(Cpnum(i).t_h_dist)
 end
 
 %% For a given dataset, find closest values of temperature and field in COMSOL mfd
-i = 5;
+i = 2;
 Hdata = unique(round(avgNdlData(i).H,-2));
 [~,mfdhidx] = min(abs(Tmfd_ndl.Hext_Oe-Hdata));
 h = Tmfd_ndl.Hext_Oe(mfdhidx);
 tref = 0;
 % For the computations with longitudinal field, need to compute free
 % energy first, since there is no analytical formula for the heat capacity
-trange = 1:length(Cpnum(i).t_h_dist);
+trange = 1:length(Cpnum(i).t_h_dist_no_e);
 Fwe = zeros(length(trange),1);
 Cpnoe = zeros(length(trange),1);
 
 for jt=trange
     % Find value of temperature in COMSOL mfd closest to that of actual data
-    [~,mfdtidx] = min(abs(Tmfd_ndl.T_K/Tc_ndl-Cpnum(i).t_h_dist(jt)));
+    [~,mfdtidx] = min(abs(Tmfd_ndl.T_K/Tc_ndl-Cpnum(i).t_h_dist_no_e(jt)));
     % Improvement note: use sort instead of min, to be able to interpolate...
     t = Tmfd_ndl.T_K(mfdtidx);
     if t ~= tref
@@ -326,8 +326,8 @@ for jt=trange
     ndl1_row = row(1);
 
     % Compute free energy, including longitudinal field
-    Fhwe = FSCp_TLFIM(Cpnum(i).t_h_dist(jt),Tmfd_ndl.binCenters(ndl1_row,:),e);
-%     Fwe(trange==jt) = sum(...% Use this if trange does not cover the full range of Cpnum(i).t_h_dist
+    Fhwe = FSCp_TLFIM(Cpnum(i).t_h_dist_no_e(jt),Tmfd_ndl.binCenters(ndl1_row,:),e);
+%     Fwe(trange==jt) = sum(...% Use this if trange does not cover the full range of Cpnum(i).t_h_dist_no_e
     Fwe(jt) = sum(...
         Tmfd_ndl.binWidths(ndl1_row,:).*...
         Fhwe.*...
@@ -338,7 +338,7 @@ for jt=trange
     % internal (transverse) magnetic field
     Cphnoe = zeros(size(Tmfd_ndl.binCenters(ndl1_row,:)));
     for col=1:length(Tmfd_ndl.binCenters(ndl1_row,:))
-        Cphnoe(col) = Cp_TFIM(Cpnum(i).t_h_dist(jt),Tmfd_ndl.binCenters(ndl1_row,col));
+        Cphnoe(col) = Cp_TFIM(Cpnum(i).t_h_dist_no_e(jt),Tmfd_ndl.binCenters(ndl1_row,col));
     end
     % Compute the corresponding value of heat capacity 
     Cpnoe(jt) = sum(...
@@ -348,40 +348,44 @@ for jt=trange
         );
 end
 
+%%
+% Cpnum(i).t_h_dist_no_e = linspace(0.1,1.5,150);% reduced temperature, T/Tc
+
 %% Compute entropy and heat capacity, with longitudinal fields, at each value of internal field
-twe = Cpnum(i).t_h_dist(trange)';
+twe = Cpnum(i).t_h_dist_no_e(trange)';
 dt = diff(twe);
 Swe = -diff(Fwe)./dt;% entropy
 dtm = 0.5*(dt(1:end-1)+dt(2:end));
 Cpwe = twe(2:end-1).*diff(Swe)./dtm;
 
 %% Store results into Cpnum structure
-% Cpnum(i).comsolpdf_no_e = Cpnoe
+Cpnum(i).comsolpdf_no_e = Cpnoe';
 
 Cpnum(i).t_h_dist_w_e = twe(2:end-1)';
-Cpwe(abs(Cpwe)>2)=NaN;% Remove numerical aberrations
+Cpwe(abs(Cpwe)>1.2*max(avgNdlData(i).Cpelr))=NaN;% Remove numerical aberrations
+Cpwe(Cpwe<0)=NaN;% Remove numerical aberrations
 Cpnum(i).comsolpdf_w_e = Cpwe';
-
-%%
-% t_h_dist = linspace(0,1.5,301);% reduced temperature, T/Tc
 
 %% Prepare data for plotting by removing NaN datapoints
 sel_no_e = ~isnan(Cpnum(i).comsolpdf_no_e);
 sel_w_e = ~isnan(Cpnum(i).comsolpdf_w_e);
-% Cpnum(i).t_h_dist_no_e = Cpnum(i).t_h_dist_no_e(sel_no_e);
+Cpnum(i).t_h_dist_no_e = Cpnum(i).t_h_dist_no_e(sel_no_e);
 Cpnum(i).t_h_dist_w_e = Cpnum(i).t_h_dist_w_e(sel_w_e);
-% Cpnum(i).comsolpdf_no_e = Cpnum(i).comsolpdf_no_e(sel_no_e);
+Cpnum(i).comsolpdf_no_e = Cpnum(i).comsolpdf_no_e(sel_no_e);
 Cpnum(i).comsolpdf_w_e  = Cpnum(i).comsolpdf_w_e(sel_w_e);
 
 %% Plot Cp for COMSOL distribution of fields
+single_str = '$H=H_{\mathrm{ext}}$';
 figure
-plot(avgNdlData(i).T,avgNdlData(i).Cpelr,'.','DisplayName','data')
+% plot(avgNdlData(i).T,avgNdlData(i).Cpelr,'.','DisplayName','data')
+eb{rngAvg==i} = errorbar(avgNdlData(i).T,avgNdlData(i).Cpelr,avgNdlData(i).CpelrErr,...
+    '.','MarkerSize',18,'DisplayName',['Data at ' single_str],...
+    'LineWidth',2);
 hold on;
 no_e_str = ' ($e=0$)';
 w_e_str = [' ($e=$ ' sprintf(' %.2g)',e)];
 
 % Plot results at single value of magnetic field
-single_str = '$H=H_{\mathrm{ext}}$';
 plot(Cpnum(i).t_single_h*Tc0_ndl,Cpnum(i).single_h_no_e,...
     'DisplayName',[single_str no_e_str]);% no longitudinal field
 plot(Cpnum(i).t_single_h(2:end-1)*Tc0_ndl,Cpnum(i).single_h_w_e,...
@@ -396,17 +400,43 @@ plot(Cpnum(i).t_h_dist_w_e*Tc0_ndl,Cpnum(i).comsolpdf_w_e,...
 title(['$C_p$ single field vs COMSOL PDF $H_{\mathrm{ext}}=$ ' sprintf('%.0f Oe',fieldsNdl(i))]);
 lgd = legend('Location','best');% title(lgd,'TmVO4-Ndl-E');
 
-
-
+xlabel('$T$ (K)')
+ylabel('$C_p/R$')
 
 
 
 %% Export figure
-% formatFigure;
-printPNG([todaystr '_TmVO4-2017-07-needles_Cp_vs_T_@4000Oe_single-field_vs_comsol-pdf_fits']);
+formatFigure;
+% printPNG([todaystr...
+%     sprintf('_TmVO4-2017-07-needles_Cp_vs_T_@%iOe_single-field_vs_comsol-pdf_fits',...
+%     fieldsNdl(i))]);
 % printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
 
+%% Export results to .dat file
+% cd '2020-08-10_Full_Cpnum_COMSOL_PDF_w_e_data'
+for i=3
+    A = [Cpnum(i).t_h_dist_w_e', Cpnum(i).comsolpdf_w_e'];
+    col_headers = ['T/Tc, Cp/R'];
+    file_description = {...
+        [sprintf('Heat capacity at Hext = %d Oe, computed numerically ',fieldsNdl(i))...
+        'for the largest needle of the TmVO4 "mosaic" measured on 2017-07-28.'];
+        ['The computation took into account the distribution of magnetic fields '...
+        'computed using COMSOL on 2020-07-31, as well as the rounding '...
+        'of the transition due to a constant longitudinal field (strain) '...
+        'of e = 1.1e-3 as obtained from fitting the data at zero field.'];
+        ['The zero field transition temperature obtained from the same fit '...
+        'was Tc(H=0) = 2.20K.'];
+        'Any missing data is due to removal of NaN and computational aberrations.'};
 
+    fname = [todaystr...
+        sprintf('_TmVO4-2017-07-needles_Cpnum_comsol_pdf_@%dOe.dat',...
+        fieldsNdl(i))];
+    fileID = fopen(fname,'w');
+    fprintf(fileID, '# %s\n', file_description{:});
+    fprintf(fileID, '%s\n', col_headers);
+    fclose(fileID);
+    dlmwrite(fname, A, '-append')
+end
 
 
 
