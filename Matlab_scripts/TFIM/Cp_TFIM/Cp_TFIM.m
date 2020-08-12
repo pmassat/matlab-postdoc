@@ -13,10 +13,10 @@ for i=1:length(t)
     elseif t(i)<tc
 %         r = order_parameter(t(i))./t(i);% ratio of reduced order_parameter to reduced temperature
         r = order_parameter(t(i))./t(i);% ratio of reduced order_parameter to reduced temperature
-        y(i) = r^2.*sech(r)^2 ./ (1 - 1./t(i).*sech(r)^2);% mean-field heat capacity in the ordered phase
+        y(i) = r.^2.*sech(r).^2 ./ (1 - 1./t(i).*sech(r).^2);% mean-field heat capacity in the ordered phase
     else
         r = h./t(i);
-        y(i) = r^2.*sech(r)^2;% mean-field heat capacity in the disordered phase
+        y(i) = r.^2.*sech(r).^2;% mean-field heat capacity in the disordered phase
     end
 end
 end

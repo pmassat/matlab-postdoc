@@ -197,15 +197,15 @@ utmfd = unique(Tmfd_ndl.T_K);
 uhmfd = unique(Tmfd_ndl.Hext_Oe);
 
 %% Compute Cp for Gaussian distribution of fields
-clear Cpnum
+% clear Cpnum
 % Hcnum=4900
-rngNum=1:3;
+rngNum = 1:length(fieldsNdl);
 for i=rngNum
 Cpnum(i).h = fieldsNdl(i)/Hc;
 Cpnum(i).t_single_h = linspace(0,1.5,601);% reduced temperature, T/Tc
 Cpnum(i).single_h_no_e = zeros(size(Cpnum(i).t_single_h));
 Cpnum(i).single_h_w_e = zeros(size(Cpnum(i).t_single_h));
-Cpnum(i).t_h_dist_no_e = [linspace(0.01,.5,50) linspace(0.505,1.1,120) linspace(1.11,1.5,40)];% reduced temperature, T/Tc
+Cpnum(i).t_h_dist_no_e = [linspace(0.01,.5,50) linspace(0.505,1.1,120) linspace(1.11,1.4,30)];% reduced temperature, T/Tc
 Cpnum(i).comsolpdf_no_e = zeros(size(Cpnum(i).t_h_dist_no_e));
 Cpnum(i).comsolpdf_w_e = zeros(size(Cpnum(i).t_h_dist_no_e));
 end
@@ -213,12 +213,13 @@ end
 %% Compute Cp_TLFIM at single value of field
 for i=rngNum
 Cpnum(i).single_h_no_e = Cp_TFIM(Cpnum(i).t_single_h,Cpnum(i).h);
-[~,~,Cpnum(i).single_h_w_e] = FSCp_TLFIM(Cpnum(i).t_single_h,Cpnum(i).h,e)';
+[~,~,Cpnum(i).single_h_w_e] = FSCp_TLFIM(Cpnum(i).t_single_h,Cpnum(i).h,e);
+Cpnum(i).single_h_w_e = Cpnum(i).single_h_w_e';
 end
 
 %% Plot averaged data at each field separately
 figure; hold on
-rngAvg = 1:length(fieldsNdl);
+rngAvg = rngNum;%1:length(fieldsNdl);
 clr = cell(size(rngAvg));
 eb = cell(size(rngAvg));
 for i=rngAvg
@@ -303,6 +304,81 @@ i = 2;
 Hdata = unique(round(avgNdlData(i).H,-2));
 [~,mfdhidx] = min(abs(Tmfd_ndl.Hext_Oe-Hdata));
 h = Tmfd_ndl.Hext_Oe(mfdhidx);
+tref = [0,0];% tref = 0;
+% For the computations with longitudinal field, need to compute free
+% energy first, since there is no analytical formula for the heat capacity
+trange = 1:length(Cpnum(i).t_h_dist_no_e);
+Fwe = zeros(length(trange),1);
+Cpnoe = zeros(2,length(trange));
+t = zeros(2,length(Cpnum(i).t_h_dist_no_e));% array that will contain two closest values of temperature
+wt = zeros(2,length(Cpnum(i).t_h_dist_no_e));% array that will contain weights attributed to closest temperatures
+
+for jt=trange
+    % Find value of temperature in COMSOL mfd closest to that of actual data
+%     [~,mfdtidx] = min(abs(Tmfd_ndl.T_K/Tc_ndl-Cpnum(i).t_h_dist_no_e(jt)));
+    Trcomp = utmfd/Tc0_ndl-Cpnum(i).t_h_dist_no_e(jt);
+    [abst,mfdtidx] = sort(abs(Trcomp));
+
+    % if the 2 closest temperatures are both above or below the one of
+    % interest, just use the single closest, otherwise use both
+    if sign(Trcomp(mfdtidx(1)))==sign(Trcomp(mfdtidx(2)))
+        t(:,jt) = utmfd(mfdtidx(1));
+        wt(:,jt) = [1,0];
+    else
+        t(:,jt) = utmfd(mfdtidx(1:2));% 2 closest temperatures
+        wt(:,jt) = 1-abst(1:2)/sum(abst(1:2));% weight is 1 minus relative difference in temperature
+    end
+
+    if ~all(t(:,jt)==tref)
+        sprintf('jt=%i, T=%.2gK, Tref=[%.2g,%.2g]K',...
+            jt, Cpnum(i).t_h_dist_no_e(jt)*Tc0_ndl, t(:,jt))
+        tref=t(:,jt);
+    end
+
+    % Find the row in Tmfd that matches both t and h 
+    rows = find(ismember(Tmfd_ndl.T_K,t(:,jt)) & Tmfd_ndl.Hext_Oe==h);
+    % Work only with first needle, for now
+    ndl1_rows = rows(rows<=56);
+
+    % if a row contains NaN, ignore this row, i.e. give it a weight of zero
+    % and only use the other closest temperature
+    if any(isnan(Tmfd_ndl.hc(ndl1_rows,:)),'all')
+        ndl1_rows = ndl1_rows(~any(isnan(Tmfd_ndl.hc(ndl1_rows,:)),2));
+        wt(:,jt) = [1,0];
+    end
+
+    % Compute free energy, including longitudinal field
+%     Fhwe = FSCp_TLFIM(Cpnum(i).t_h_dist_no_e(jt),Tmfd_ndl.binCenters(ndl1_row,:),e);
+%     Fwe(trange==jt) = sum(...% Use this if trange does not cover the full range of Cpnum(i).t_h_dist_no_e
+%     Fwe(jt) = sum(...
+%         Tmfd_ndl.binWidths(ndl1_row,:).*...
+%         Fhwe.*...
+%         Tmfd_ndl.hc(ndl1_row,:)...
+%         );
+
+    % Compute heat capacity without longitudinal field at each value of
+    % internal (transverse) magnetic field
+    Cphnoe = zeros(size(Tmfd_ndl.binCenters(ndl1_rows,:)));
+    for jr=1:length(ndl1_rows)
+        for col=1:length(Tmfd_ndl.binCenters(ndl1_rows,:))
+            Cphnoe(jr,col) = Cp_TFIM(Cpnum(i).t_h_dist_no_e(jt),...
+                Tmfd_ndl.binCenters(ndl1_rows(jr),col));
+        end
+    
+    % Compute the corresponding value of heat capacity 
+    Cpnoe(jr,jt) = wt(jr,jt)*sum(...
+        Tmfd_ndl.binWidths(ndl1_rows(jr),:).*...
+        Cphnoe(jr,:).*...
+        Tmfd_ndl.hc(ndl1_rows(jr),:)...
+        );
+    end
+end
+
+%% For a given dataset, find closest values of temperature and field in COMSOL mfd
+i = 2;
+Hdata = unique(round(avgNdlData(i).H,-2));
+[~,mfdhidx] = min(abs(Tmfd_ndl.Hext_Oe-Hdata));
+h = Tmfd_ndl.Hext_Oe(mfdhidx);
 tref = 0;
 % For the computations with longitudinal field, need to compute free
 % energy first, since there is no analytical formula for the heat capacity
@@ -323,29 +399,29 @@ for jt=trange
     % Find the row in Tmfd that matches both t and h 
     row = find(Tmfd_ndl.T_K==t & Tmfd_ndl.Hext_Oe==h);
     % Work only with first needle, for now
-    ndl1_row = row(1);
+    ndl1_rows = row(1);
 
     % Compute free energy, including longitudinal field
-    Fhwe = FSCp_TLFIM(Cpnum(i).t_h_dist_no_e(jt),Tmfd_ndl.binCenters(ndl1_row,:),e);
+    Fhwe = FSCp_TLFIM(Cpnum(i).t_h_dist_no_e(jt),Tmfd_ndl.binCenters(ndl1_rows,:),e);
 %     Fwe(trange==jt) = sum(...% Use this if trange does not cover the full range of Cpnum(i).t_h_dist_no_e
     Fwe(jt) = sum(...
-        Tmfd_ndl.binWidths(ndl1_row,:).*...
+        Tmfd_ndl.binWidths(ndl1_rows,:).*...
         Fhwe.*...
-        Tmfd_ndl.hc(ndl1_row,:)...
+        Tmfd_ndl.hc(ndl1_rows,:)...
         );
 
     % Compute heat capacity without longitudinal field at each value of
     % internal (transverse) magnetic field
-    Cphnoe = zeros(size(Tmfd_ndl.binCenters(ndl1_row,:)));
-    for col=1:length(Tmfd_ndl.binCenters(ndl1_row,:))
-        Cphnoe(col) = Cp_TFIM(Cpnum(i).t_h_dist_no_e(jt),Tmfd_ndl.binCenters(ndl1_row,col));
+    Cphnoe = zeros(size(Tmfd_ndl.binCenters(ndl1_rows,:)));
+    for col=1:length(Tmfd_ndl.binCenters(ndl1_rows,:))
+        Cphnoe(col) = Cp_TFIM(Cpnum(i).t_h_dist_no_e(jt),Tmfd_ndl.binCenters(ndl1_rows,col));
     end
     % Compute the corresponding value of heat capacity 
     % ** add weights based on two closest temperature values of comsol pdf **
     Cpnoe(jt) = sum(...
-        Tmfd_ndl.binWidths(ndl1_row,:).*...
+        Tmfd_ndl.binWidths(ndl1_rows,:).*...
         Cphnoe.*...
-        Tmfd_ndl.hc(ndl1_row,:)...
+        Tmfd_ndl.hc(ndl1_rows,:)...
         );
 end
 
