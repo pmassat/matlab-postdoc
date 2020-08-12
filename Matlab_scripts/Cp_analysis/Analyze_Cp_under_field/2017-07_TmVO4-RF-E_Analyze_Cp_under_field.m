@@ -3,7 +3,9 @@ m = 0.25e-3;% mass of sample, in g
 M = 283.87;% molar mass of TmVO4, in g/mol
 Tc0 = 2.126;% Value of transition temperature in this sample, in Kelvin units
 Tcnum = 2.15;% in Kelvin units
-Hc = 5100;% in Oersted units
+Hc = 5000;% in Oersted units; see data taken on needles of TmVO4-LS5200 in July 2017
+e = 1.5e-3;% constant longitudinal field
+% Results for Tmaxfit = 2.15;% Tc = 2.126  (2.122, 2.129);% e = 0.001474 (0.001085, 0.001862);
 
 %% Import magnetic field distribution from TXT file
 % cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-RF-E_HC2017-07'
@@ -12,12 +14,14 @@ Hc = 5100;% in Oersted units
 
 %% Import magnetic field distribution from CSV file
 cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-RF-E_HC2017-07'
-mfdRFfname = cell(1,2);
-Srf = cell(1,2);
-mfdRFfname{1} = '2020-07-27_TmVO4-RF-E_COMSOL_mfd_mesh=finer-out+max20um-in_T=p001-1K_H=all.csv';
-mfdRFfname{2} = '2020-07-27_TmVO4-RF-E_COMSOL_mfd_mesh=finer-out+max20um-in_T=2-3K_H=all.csv';
-for ic=1:length(Srf)
-    Srf{ic} = importfielddistrib_csv(mfdRFfname{ic}, 28);
+% mfdRFfname = cell(1,2);
+% Srf = cell(1,2);
+% % mfdRFf{1} = {'2020-07-27_TmVO4-RF-E_COMSOL_mfd_mesh=finer-out+max20um-in_T=p001-1K_H=all.csv',28};
+% mfdRFf{2} = {'2020-07-27_TmVO4-RF-E_COMSOL_mfd_mesh=finer-out+max20um-in_T=2-3K_H=all.csv',28};
+% mfdRFf{3} = {'2020-08-11_TmVO4-RF-E_COMSOL_mfd_mesh=max20um-in_T=p5-1-1p5K_H=p1-p1-p8.csv',24};
+mfdRFf{1} = {'2020-08-11_TmVO4-RF-E_COMSOL_mfd_mesh=max20um-in_T=p3-p4-3p1K_H=p1-p1-p8T.csv',64};
+for ic=length(mfdRFf):-1:1
+    Srf{ic} = importfielddistrib_csv(mfdRFf{ic}{1}, mfdRFf{ic}{2});
 end
 
 %% Extract values of temperature and external magnetic field from structure header
@@ -49,9 +53,9 @@ end
 figure;
 hold on
 param_index = 1;% 1 is constant T, 2 is constant Hext, see param_range
-temp_index = 1;% determines temperature of data to plot, taken among [1e-3, 1, 2, 3]K
+temp_index = 8;% determines temperature of data to plot, taken among [1e-3, 1, 2, 3]K
 field_index = 4;% determines field of data to plot from [.1,.2,.3,.4,.45,.5,.55,.6,.62,.63,.65,.67,.7,.8]T
-param_range = {temp_index*14+[1:2:14], [field_index:14:56]};% first range corresponds to a 
+param_range = {(temp_index-1)*8+[1:1:8], field_index+[0:8:56]};% first range corresponds to a 
 % field dependence at constant temp, second range corresponds to a 
 % temperature dependence at constant field
 rng = param_range{param_index};
@@ -60,12 +64,31 @@ T = Smfd_RF(i).T_K;%
 Hext = Smfd_RF(i).Hext_Oe;%
 p = plot(Smfd_RF(i).binCenters, Smfd_RF(i).hc, '.-', 'DisplayName', sprintf('%.2g, %.2g',T/Tcnum,Hext/Hc));
 end
-lgd = legend('show'); lgd.Title.String = '$T/T_c$, $H_{\mathrm{ext}}/H_c$';
-param_title = {[', $T=$' sprintf('%.2g K',T)],...
-    [', $H_{\mathrm{ext}}=$' sprintf('%.2d Oe',Hext)]};
+lgd = legend('show'); lgd.Title.String = '$T/T_c$, $H_{\mathrm{ext}}/H_c(T=0)$';
+param_title = {[', $T=$ ' sprintf('%.2g K',T)],...
+    [', $H_{\mathrm{ext}}=$ ' sprintf('%.2d Oe',Hext)]};
 title(['Distribution of fields in TmVO$_4$-RF-E' param_title{param_index}])
 xlabel('$H_{\mathrm{in}}/H_{\mathrm{c}}$')
 ylabel('Normalized PDF')
+
+%% Compute the average value of ratio of internal to external magnetic field 
+for i=1:length(Smfd_RF)
+Smfd_RF(i).Hinm_Oe = round(...
+    sum(...
+    Smfd_RF(i).binCenters.*Smfd_RF(i).hc.*Smfd_RF(i).binWidths...
+    )*Hc...
+    );
+end
+
+%% Check results for given range of temperatures/field
+% idx = 1; rng = (idx-1)*8+[1:8]; [Smfd_RF(rng).T_K;Smfd_RF(rng).Hinm_Oe]
+
+% % Check that the ratio of Hinm/Hext is roughly constant inside the
+% % ordered phase, thus allowing to use the value at 0.3 K and 1000 Oe as a proxy
+% for i=rng
+%     sprintf('%d',Smfd_RF(i).Hinm/Smfd_RF(i).Hext_Oe)
+% end
+rescaling = Smfd_RF(1).Hinm_Oe/Smfd_RF(1).Hext_Oe;%Hc0/0.69;% rescaling factor, due to demag; 
 
 %% Compute the relative difference between curves at 1000 Oe and 7000 Oe
 mfd_diff(113).abs_diff = abs(Smfd_RF(1).hc);%-Smfd(13).hc);
@@ -78,11 +101,6 @@ cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2017-07_TmVO4_Cp_M
 RFDATA=ImportTmVO4Cp(filename);% Use this data to plot color map of phase diagram
 
 %% Assign data to variables
-Hc0 = 0.51;% value in Tesla units of the critical field at zero temperature
-% in the absence of demagnetizing factor
-% see data taken on needles of TmVO4-LS5200 in July 2017
-rescaling = Hc0/0.69;% rescaling factor, due to demag; 
-% obtained from fit using normal PDF of fields close to Hc; see below
 H=[RFDATA.FieldOersted];%*rescaling;
 T=[RFDATA.SampleTempKelvin];
 Cp=[RFDATA.SampHCJmoleK];
@@ -231,8 +249,10 @@ fn = fieldnames(avgRFData);
 for i=1:numel(fn)
     avgtbl.(fn{i}) = cell2mat( arrayfun(@(c) c.(fn{i})(:), avgRFData(1:length(avgRFData)).', 'Uniform', 0) );
 end
+
 %% Add stuff to the table
 % tbl.comments(1) = string(filename);
+
 %% Export table of averaged data
 %writetable(tbl,'2019-05-02_TmVO4-RF-E_Cp_avgData');
 
@@ -313,43 +333,6 @@ Tmaxfit = 2.15;
 % Results for Tmaxfit = 2.142; Tc = 2.128  (2.124, 2.132); e = 0.001947  (0.00129, 0.002604);
 % Results for Tmaxfit = 2.15;% Tc = 2.126  (2.122, 2.129);% e = 0.001474 (0.001085, 0.001862);
 
-%% Plot averaged data at each field separately
-figure; hold on
-rng = [1:2:13];% [1 5 7 9 13];
-clr = lines(length(rng));
-eb = cell(size(rng));
-% for i=1:length(rng)
-%     fp = plot(Ttlf(2:end-1)*Tc,Cptlf(:,i));% requires computing Cptlf in 'F_S_Cp_TLFIM_compute.m'
-% end
-maxTplot = 3.2;%
-for i=rng
-    fp = fplot(@(t)Cp_TFIM(t/Tc0,uhrf(i)*rescaling/(Hc0*1e4)),[0 maxTplot],'LineWidth',2);
-%     fp = fplot(@(t)Cp_TFIM_offset_strain(t/2.125,uh(i)/(5.1e3),1.5e-3),[0 4],'LineWidth',2);
-% Fit parameters on data at H=0: Tc=2.125(3), e=1.5(4)e-3
-% Note: the values of amplitude coefficient and Tc extracted from fit 
-% in curve fitting tool using Cp_TFIM (no offset strain) are A=7.35 and Tc=2.142K
-%     clr{rng==i} = get(fp,'Color');
-end
-for i=rng
-    eb{rng==i} = errorbar(avgRFData(i).T,avgRFData(i).Cpelr,avgRFData(i).CpFullErr/R,...
-        '.','MarkerSize',18,'DisplayName',num2str(uhrf(i)/(Hc0*1e4),'%.2f'),...
-        'Color',clr(rng==i,:),'LineWidth',2);
-end
-xlabel('Temperature (K)'); ylabel('C$_p$/R');%ylabel('C$_p$ (JK$^{-1}$mol$^{-1}$)');
-xlim([0 maxTplot])
-% title('Heat capacity of TmVO4 at various fields')
-% title([sprintf('h=H/Hc*%.3g, e=',factor) mat2str(e,2)])
-lgd = legend([eb{:}]); lgd.Title.String = '$H_{\mathrm{ext}}/H_c$';
-% legendCell = cellstr(num2str(uh, '%-d Oe')); legend(legendCell)
-ax = gca; ax.YMinorTick = 'on';% Add minor ticks on Y axis
-grid on;%
-hold off
-
-%% Export figure 
-formatFigure; 
-% printPNG('2020-01-08_TmVO4-RF-E_CpTFIM_normpdf_4580Oe')
-% printPDF('2019-08-21_TmVO4-RF-E_Cp_vs_T_5H_theory_e-propto-h-cube')
-
 %% Prepare fit of Cp vs Temperature 
 i = 9;
 % Use these variables in Curve fitting tool
@@ -362,31 +345,57 @@ fitwghts = 1./fitCpErr;
 
 %% Compute Cp for Gaussian distribution of fields
 clear Cpnum
-for i=rng
+rngNum = 1:15;
+for i=rngNum
 Cpnum(i).h = uhrf(i)*rescaling/Hc;
-Cpnum(i).rhsgm = 0.09;
-Cpnum(i).sgm = Cpnum(i).h*Cpnum(i).rhsgm;
+% Cpnum(i).rhsgm = 0.09;
+% Cpnum(i).sgm = Cpnum(i).h*Cpnum(i).rhsgm;
 Cpnum(i).t_single_h = linspace(0,1.5,601);% reduced temperature, T/Tc
-Cpnum(i).single_h = zeros(size(Cpnum(i).t_single_h));
-Cpnum(i).t_phenomeno = linspace(0,1.5,301);% reduced temperature, T/Tc
-Cpnum(i).normpdf = zeros(size(Cpnum(i).t_phenomeno));
+Cpnum(i).single_h_no_e = zeros(size(Cpnum(i).t_single_h));
+Cpnum(i).single_h_w_e = zeros(size(Cpnum(i).t_single_h));
+Cpnum(i).t_h_dist = linspace(0,1.5,301);% reduced temperature, T/Tc
+Cpnum(i).normpdf = zeros(size(Cpnum(i).t_h_dist));
+Cpnum(i).comsolpdf_no_e = zeros(size(Cpnum(i).t_h_dist));
+Cpnum(i).comsolpdf_w_e = zeros(size(Cpnum(i).t_h_dist));
 end
-i = 1;
-Cpnum(i).single_h = Cp_TFIM(Cpnum(i).t_single_h,Cpnum(i).h);
-Cpnum(i).normpdf = Cp_LFIM(Cpnum(i).t_phenomeno,1.5e-3);
 % Fit parameters on data at H=0: Tc=2.125(3), e=1.5(4)e-3
-% Cp_LFIM(h=0)
-for i=rng(2:end)
-Cpnum(i).single_h = Cp_TFIM(Cpnum(i).t_single_h,Cpnum(i).h);
-    for j=2:length(Cpnum(i).t_phenomeno)
-    Cpnum(i).normpdf(j) = CpTFIM_normpdf(Cpnum(i).t_phenomeno(j),Cpnum(i).h,Cpnum(i).sgm);
-    end
+%     for j=2:length(Cpnum(i).t_h_dist)
+%     Cpnum(i).normpdf(j) = CpTFIM_normpdf(Cpnum(i).t_h_dist(j),Cpnum(i).h,Cpnum(i).sgm);
+%     end
+
+%% Compute Cp_TLFIM at single value of field
+for i=rngNum%(2:end)
+Cpnum(i).single_h_no_e = Cp_TFIM(Cpnum(i).t_single_h,Cpnum(i).h);
+[~,~,Cpnum(i).single_h_w_e] = FSCp_TLFIM(Cpnum(i).t_single_h,Cpnum(i).h,e);
+Cpnum(i).single_h_w_e = Cpnum(i).single_h_w_e';
 end
 
-%% Compute Cp for COMSOL distribution of fields
-for i=1
-Cpnum(i).comsolpdf = zeros(size(Cpnum(i).t_phenomeno));
+%% Plot averaged data at each field separately
+figure; hold on
+rng = [1:2:13];% [1 5 7 9 13];
+clr = lines(length(rng));
+eb = cell(size(rng));
+maxTplot = 3.2;%
+for i=rng
+    fp = plot(Cpnum(i).t_single_h(2:end-1)*Tc0,Cpnum(i).single_h_w_e,'DisplayName','MF');
+%     fp = fplot(@(t) Cp_TFIM(t/Tc0,uhrf(i)*rescaling/(Hc0*1e4)),[0 maxTplot],'LineWidth',2);
+% Fit parameters on data at H=0: Tc=2.125(3), e=1.5(4)e-3
+% Note: the values of amplitude coefficient and Tc extracted from fit 
+% in curve fitting tool using Cp_TFIM (no offset strain) are A=7.35 and Tc=2.142K
+%     clr{rng==i} = get(fp,'Color');
 end
+for i=rng
+    eb{rng==i} = errorbar(avgRFData(i).T,avgRFData(i).Cpelr,avgRFData(i).CpFullErr/R,...
+        '.','MarkerSize',18,'DisplayName',num2str(uhrf(i)/(Hc0*1e4),'%.2f'),...
+        'Color',clr(rng==i,:),'LineWidth',2);
+end
+xlabel('Temperature (K)'); ylabel('C$_p$/R');%ylabel('C$_p$ (JK$^{-1}$mol$^{-1}$)');
+xlim([0 maxTplot])
+title('Heat capacity of TmVO4-RF-E')
+lgd = legend([eb{:}]); lgd.Title.String = '$H_{\mathrm{ext}}/H_c$';
+ax = gca; ax.YMinorTick = 'on';% Add minor ticks on Y axis
+grid on;%
+hold off
 
 %% Gaussian function (see normpdf.m)
 mu = .58; 
@@ -415,9 +424,9 @@ Hdata = unique(round(avgRFData(i).H,-2));
 [~,mfdhidx] = min(abs(Tmfd_RF.Hext_Oe-Hdata));
 h = Tmfd_RF.Hext_Oe(mfdhidx);
 tref = 0;
-for j=1:length(Cpnum(i).t_phenomeno)
+for j=1:length(Cpnum(i).t_h_dist)
     % Find value of temperature in COMSOL mfd closest to that of actual data
-    [~,mfdtidx] = min(abs(Tmfd_RF.T_K/Tcnum-Cpnum(i).t_phenomeno(j)));
+    [~,mfdtidx] = min(abs(Tmfd_RF.T_K/Tcnum-Cpnum(i).t_h_dist(j)));
     % Improvement note: use sort instead of min, to be able to interpolate...
     t = Tmfd_RF.T_K(mfdtidx);
     if t ~= tref
@@ -429,7 +438,7 @@ for j=1:length(Cpnum(i).t_phenomeno)
     row = find(Tmfd_RF.T_K==t & Tmfd_RF.Hext_Oe==h);
     Cph = zeros(size(Tmfd_RF.binCenters(row,:)));
     for col=1:length(Tmfd_RF.binCenters(row,:))
-        Cph(col) = Cp_TFIM(Cpnum(i).t_phenomeno(j),Tmfd_RF.binCenters(row,col));
+        Cph(col) = Cp_TFIM(Cpnum(i).t_h_dist(j),Tmfd_RF.binCenters(row,col));
     end
     % Compute the corresponding value of heat capacity 
 %     Cpnum(i).comsolpdf(j) = trapz(Tmfd_RF.binCenters(row,:),Cph.*Tmfd_RF.hc(row,:));
@@ -441,17 +450,31 @@ end
 figure
 plot(avgRFData(i).T,avgRFData(i).Cpelr,'.','DisplayName','data')
 hold on;
-plot(Cpnum(i).t_single_h*Tc0,Cpnum(i).single_h,'DisplayName','MF');
-plot(Cpnum(i).t_phenomeno*Tc0,Cpnum(i).comsolpdf,'DisplayName',sprintf('Hc=%.2dOe',Hcnum));
+plot(Cpnum(i).t_single_h*Tc0,Cpnum(i).single_h_no_e,'DisplayName','MF');
+plot(Cpnum(i).t_h_dist*Tc0,Cpnum(i).comsolpdf,'DisplayName',sprintf('Hc=%.2dOe',Hcnum));
 title(['Cp mean-field vs COMSOL pdf $H_{\mathrm{ext}}=$' sprintf('%.0fOe',uhrf(i))]);
 lgd = legend();% title(lgd,'TmVO4-RF-E');
+
+%% Export figure
+% formatFigure;
+printPNG([todaystr '_TmVO4-RF-E_mfd@4000Oe']);
+% printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
+
+
+
+
+
+
+
+
+
 
 %% Plot Cp for Gaussian distribution of fields
 figure
 plot(avgRFData(i).T,avgRFData(i).Cpelr,'.','DisplayName','data')
 hold on;
-plot(Cpnum(i).t_single_h*Tc0,Cpnum(i).single_h,'DisplayName','MF');
-plot(Cpnum(i).t_phenomeno*Tc0,Cpnum(i).normpdf,'DisplayName','Gauss');
+plot(Cpnum(i).t_single_h*Tc0,Cpnum(i).single_h_no_e,'DisplayName','MF');
+plot(Cpnum(i).t_h_dist*Tc0,Cpnum(i).normpdf,'DisplayName','Gauss');
 title(['Cp mean-field vs normal pdf $H_{\mathrm{ext}}=$' sprintf('%.0fOe',uhrf(i))]);
 lgd = legend();% title(lgd,'TmVO4-RF-E');
 
@@ -461,8 +484,8 @@ clr = lines(length(rng));
 eb = cell(size(rng));
 for i=rng
 % fp = fplot(@(t)Cp_TFIM(t/Tc0,Cptheo(i).h),[0 3.2],'--','LineWidth',2,'Color',clr(rng==i,:));
-plot(Cpnum(i).t_single_h*Tc0,Cpnum(i).single_h,'--','Color',clr(rng==i,:),'DisplayName',sprintf('h=%.2f',Cpnum(i).h));
-plot(Cpnum(i).t_phenomeno*Tc0,Cpnum(i).normpdf,'Color',clr(rng==i,:),'DisplayName',...
+plot(Cpnum(i).t_single_h*Tc0,Cpnum(i).single_h_no_e,'--','Color',clr(rng==i,:),'DisplayName',sprintf('h=%.2f',Cpnum(i).h));
+plot(Cpnum(i).t_h_dist*Tc0,Cpnum(i).normpdf,'Color',clr(rng==i,:),'DisplayName',...
     sprintf('h=%.2f,r=%.1e',Cpnum(i).h,Cpnum(i).rhsgm));
 end
 for i=rng
@@ -522,11 +545,6 @@ annfit = annotation('textbox',[0.575 0.175 0.2 0.1],'interpreter','latex',...
     'FitBoxToText','on','LineWidth',1,'BackgroundColor','w','Color','k');% add annotation
 formatFigure
 annfit.Position(2)=.175;
-
-%% Export figure
-% formatFigure;
-printPNG([todaystr '_TmVO4-RF-E_mfd@4000Oe']);
-% printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
 
 
 
