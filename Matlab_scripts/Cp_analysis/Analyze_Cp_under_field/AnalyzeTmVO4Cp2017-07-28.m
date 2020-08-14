@@ -192,9 +192,9 @@ e = 1.1e-3;
 Tc0_ndl = 2.2;
 
 %% Create table from structure
-Tmfd_ndl = struct2table(Smfd_ndl);% 
-utmfd = unique(Tmfd_ndl.T_K);
-uhmfd = unique(Tmfd_ndl.Hext_Oe);
+Tmfd_ndl1 = struct2table(Smfd_ndl(1:56));% 
+utmfd1 = unique(Tmfd_ndl1.T_K);
+uhmfd1 = unique(Tmfd_ndl1.Hext_Oe);
 
 %% Compute Cp for Gaussian distribution of fields
 % clear Cpnum
@@ -244,24 +244,24 @@ hold off
 %% Garbage: For a given dataset, find closest values of temperature and field in COMSOL mfd
 i = 6;
 Cpnum(i).comsolpdf_no_e = zeros(size(Cpnum(i).t_h_dist_no_e));
-[~,mfdhidx] = min(abs(Tmfd_ndl.Hext_Oe-fieldsNdl(i)));
-h = Tmfd_ndl.Hext_Oe(mfdhidx);
+[~,mfdhidx] = min(abs(Tmfd_ndl1.Hext_Oe-fieldsNdl(i)));
+Hext_mfd = Tmfd_ndl1.Hext_Oe(mfdhidx);
 tref = [0,0];
 t = zeros(2,length(Cpnum(i).t_h_dist_no_e));
 wt = zeros(2,length(Cpnum(i).t_h_dist_no_e));
-Trcomp = zeros(length(Tmfd_ndl.T_K),length(Cpnum(i).t_h_dist_no_e));
+Trcomp = zeros(length(Tmfd_ndl1.T_K),length(Cpnum(i).t_h_dist_no_e));
 for j=1:length(Cpnum(i).t_h_dist_no_e)
     % Find values of temperature in COMSOL mfd closest to that of interest
-    Trcomp(:,j) = Tmfd_ndl.T_K/Tc_ndl-Cpnum(i).t_h_dist_no_e(j);
+    Trcomp(:,j) = Tmfd_ndl1.T_K/Tc_ndl-Cpnum(i).t_h_dist_no_e(j);
     [abst,mfdtidx] = unique(abs(Trcomp(:,j)));
 
     % if the 2 closest temperatures are both above or below the one of
     % interest, just use the single closest, otherwise use both
     if sign(Trcomp(mfdtidx(1),j))==sign(Trcomp(mfdtidx(2),j))
-        t(:,j) = Tmfd_ndl.T_K(mfdtidx(1));
+        t(:,j) = Tmfd_ndl1.T_K(mfdtidx(1));
         wt(:,j) = [1,0];
     else
-        t(:,j) = Tmfd_ndl.T_K(mfdtidx(1:2));
+        t(:,j) = Tmfd_ndl1.T_K(mfdtidx(1:2));
         wt(:,j) = 1-abst(1:2)/sum(abst(1:2));
     end
 
@@ -271,17 +271,17 @@ for j=1:length(Cpnum(i).t_h_dist_no_e)
     end
     % Same for value of field
     % Find the rows in Tmfd that matches both t and h 
-    rows = find(ismember(Tmfd_ndl.T_K,t(:,j)) & Tmfd_ndl.Hext_Oe==h);
+    rows = find(ismember(Tmfd_ndl1.T_K,t(:,j)) & Tmfd_ndl1.Hext_Oe==Hext_mfd);
     ndl_temps = [rows(rows<=56),rows(rows>57)];
     [ntemps,nsamples] = size(ndl_temps);
-    Cphnoe = zeros(size(Tmfd_ndl.binCenters(rows,:)));
+    Cphnoe = zeros(size(Tmfd_ndl1.binCenters(rows,:)));
     for ndl_idx=1:nsamples
         for temp_idx=1:ntemps
-            for Hin=1:length(Tmfd_ndl.binCenters(ndl_temps(1,ndl_idx),:))
+            for Hin=1:length(Tmfd_ndl1.binCenters(ndl_temps(1,ndl_idx),:))
                 Cphnoe(ndl_idx,Hin) = Cphnoe(ndl_idx,Hin) +...
                     Cp_TFIM(...
                     Cpnum(i).t_h_dist_no_e(j),...
-                    Tmfd_ndl.binCenters(ndl_temps(temp_idx,ndl_idx),Hin)...
+                    Tmfd_ndl1.binCenters(ndl_temps(temp_idx,ndl_idx),Hin)...
                     ).*...
                     wt(temp_idx,j);
             end
@@ -289,8 +289,8 @@ for j=1:length(Cpnum(i).t_h_dist_no_e)
         Cpnum(i).comsolpdf_no_e(j) = Cpnum(i).comsolpdf_no_e(j) +...
             sum(...
             Cphnoe(ndl_idx,:).*...
-            Tmfd_ndl.hc(ndl_temps(temp_idx,ndl_idx),:).*...
-            Tmfd_ndl.binWidths(ndl_temps(temp_idx,ndl_idx),:)...
+            Tmfd_ndl1.hc(ndl_temps(temp_idx,ndl_idx),:).*...
+            Tmfd_ndl1.binWidths(ndl_temps(temp_idx,ndl_idx),:)...
             )./...
             prod(size(ndl_temps));
         end
@@ -301,51 +301,25 @@ end
 
 %% For a given dataset, find closest values of temperature and field in COMSOL mfd
 i = 2;
-Hdata = unique(round(avgNdlData(i).H,-2));
-[~,mfdhidx] = min(abs(Tmfd_ndl.Hext_Oe-Hdata));
-h = Tmfd_ndl.Hext_Oe(mfdhidx);
-tref = [0,0];% tref = 0;
+Hext_data = unique(round(avgNdlData(i).H,-1));
+[~,mfdhidx] = min(abs(Tmfd_ndl1.Hext_Oe-Hext_data));
+Hext_mfd = Tmfd_ndl1.Hext_Oe(mfdhidx);
+tref = [0,0];% Not even necessary given the the function find_mfd_temp_rows() includes [0 0] as default values for tref
 % For the computations with longitudinal field, need to compute free
 % energy first, since there is no analytical formula for the heat capacity
 trange = 1:length(Cpnum(i).t_h_dist_no_e);
 Fwe = zeros(length(trange),1);
 Cpnoe = zeros(2,length(trange));
-t = zeros(2,length(Cpnum(i).t_h_dist_no_e));% array that will contain two closest values of temperature
-wt = zeros(2,length(Cpnum(i).t_h_dist_no_e));% array that will contain weights attributed to closest temperatures
+% t = zeros(2,length(Cpnum(i).t_h_dist_no_e));% array that will contain two closest values of temperature
+% wt = zeros(2,length(Cpnum(i).t_h_dist_no_e));% array that will contain weights attributed to closest temperatures
 
 for jt=trange
-    % Find value of temperature in COMSOL mfd closest to that of actual data
-%     [~,mfdtidx] = min(abs(Tmfd_ndl.T_K/Tc_ndl-Cpnum(i).t_h_dist_no_e(jt)));
-    Trcomp = utmfd/Tc0_ndl-Cpnum(i).t_h_dist_no_e(jt);
-    [abst,mfdtidx] = sort(abs(Trcomp));
-
-    % if the 2 closest temperatures are both above or below the one of
-    % interest, just use the single closest, otherwise use both
-    if sign(Trcomp(mfdtidx(1)))==sign(Trcomp(mfdtidx(2)))
-        t(:,jt) = utmfd(mfdtidx(1));
-        wt(:,jt) = [1,0];
-    else
-        t(:,jt) = utmfd(mfdtidx(1:2));% 2 closest temperatures
-        wt(:,jt) = 1-abst(1:2)/sum(abst(1:2));% weight is 1 minus relative difference in temperature
-    end
-
-    if ~all(t(:,jt)==tref)
-        sprintf('jt=%i, T=%.2gK, Tref=[%.2g,%.2g]K',...
-            jt, Cpnum(i).t_h_dist_no_e(jt)*Tc0_ndl, t(:,jt))
-        tref=t(:,jt);
-    end
-
-    % Find the row in Tmfd that matches both t and h 
-    rows = find(ismember(Tmfd_ndl.T_K,t(:,jt)) & Tmfd_ndl.Hext_Oe==h);
-    % Work only with first needle, for now
-    ndl1_rows = rows(rows<=56);
-
-    % if a row contains NaN, ignore this row, i.e. give it a weight of zero
-    % and only use the other closest temperature
-    if any(isnan(Tmfd_ndl.hc(ndl1_rows,:)),'all')
-        ndl1_rows = ndl1_rows(~any(isnan(Tmfd_ndl.hc(ndl1_rows,:)),2));
-        wt(:,jt) = [1,0];
-    end
+    [ndl1_rows, wt] = find_mfd_temp_rows(Cpnum(i).t_h_dist_no_e(jt),...
+        utmfd1, Tc0_ndl, Tmfd_ndl1, Hext_mfd );
+%     % tref as input and output is used to check that the function finds
+%     % the correct temperatures to compute Cpnum
+%     [ndl1_rows, wt, tref] = find_mfd_temp_rows(Cpnum(i).t_h_dist_no_e(jt),...
+%         utmfd1, Tc0_ndl, Tmfd_ndl1, Hext_mfd, tref, 'printTref', true );
 
     % Compute free energy, including longitudinal field
 %     Fhwe = FSCp_TLFIM(Cpnum(i).t_h_dist_no_e(jt),Tmfd_ndl.binCenters(ndl1_row,:),e);
@@ -358,71 +332,21 @@ for jt=trange
 
     % Compute heat capacity without longitudinal field at each value of
     % internal (transverse) magnetic field
-    Cphnoe = zeros(size(Tmfd_ndl.binCenters(ndl1_rows,:)));
+    Cphnoe = zeros(size(Tmfd_ndl1.binCenters(ndl1_rows,:)));
     for jr=1:length(ndl1_rows)
-        for col=1:length(Tmfd_ndl.binCenters(ndl1_rows,:))
+        for col=1:length(Tmfd_ndl1.binCenters(ndl1_rows,:))
             Cphnoe(jr,col) = Cp_TFIM(Cpnum(i).t_h_dist_no_e(jt),...
-                Tmfd_ndl.binCenters(ndl1_rows(jr),col));
+                Tmfd_ndl1.binCenters(ndl1_rows(jr),col));
         end
     
     % Compute the corresponding value of heat capacity 
-    Cpnoe(jr,jt) = wt(jr,jt)*sum(...
-        Tmfd_ndl.binWidths(ndl1_rows(jr),:).*...
-        Cphnoe(jr,:).*...
-        Tmfd_ndl.hc(ndl1_rows(jr),:)...
-        );
+%        Cpnoe(jr,jt) = wt(jr,jt)*sum(...
+        Cpnoe(jr,jt) = wt(jr)*sum(...
+            Tmfd_ndl1.binWidths(ndl1_rows(jr),:).*...
+            Cphnoe(jr,:).*...
+            Tmfd_ndl1.hc(ndl1_rows(jr),:)...
+            );
     end
-end
-
-%% For a given dataset, find closest values of temperature and field in COMSOL mfd
-i = 2;
-Hdata = unique(round(avgNdlData(i).H,-2));
-[~,mfdhidx] = min(abs(Tmfd_ndl.Hext_Oe-Hdata));
-h = Tmfd_ndl.Hext_Oe(mfdhidx);
-tref = 0;
-% For the computations with longitudinal field, need to compute free
-% energy first, since there is no analytical formula for the heat capacity
-trange = 1:length(Cpnum(i).t_h_dist_no_e);
-Fwe = zeros(length(trange),1);
-Cpnoe = zeros(length(trange),1);
-
-for jt=trange
-    % Find value of temperature in COMSOL mfd closest to that of actual data
-    [~,mfdtidx] = min(abs(Tmfd_ndl.T_K/Tc_ndl-Cpnum(i).t_h_dist_no_e(jt)));
-    % Improvement note: use sort instead of min, to be able to interpolate...
-    t = Tmfd_ndl.T_K(mfdtidx);
-    if t ~= tref
-        sprintf('j=%i, T=%.2gK',jt,t)
-        tref=t;
-    end
-
-    % Find the row in Tmfd that matches both t and h 
-    row = find(Tmfd_ndl.T_K==t & Tmfd_ndl.Hext_Oe==h);
-    % Work only with first needle, for now
-    ndl1_rows = row(1);
-
-    % Compute free energy, including longitudinal field
-    Fhwe = FSCp_TLFIM(Cpnum(i).t_h_dist_no_e(jt),Tmfd_ndl.binCenters(ndl1_rows,:),e);
-%     Fwe(trange==jt) = sum(...% Use this if trange does not cover the full range of Cpnum(i).t_h_dist_no_e
-    Fwe(jt) = sum(...
-        Tmfd_ndl.binWidths(ndl1_rows,:).*...
-        Fhwe.*...
-        Tmfd_ndl.hc(ndl1_rows,:)...
-        );
-
-    % Compute heat capacity without longitudinal field at each value of
-    % internal (transverse) magnetic field
-    Cphnoe = zeros(size(Tmfd_ndl.binCenters(ndl1_rows,:)));
-    for col=1:length(Tmfd_ndl.binCenters(ndl1_rows,:))
-        Cphnoe(col) = Cp_TFIM(Cpnum(i).t_h_dist_no_e(jt),Tmfd_ndl.binCenters(ndl1_rows,col));
-    end
-    % Compute the corresponding value of heat capacity 
-    % ** add weights based on two closest temperature values of comsol pdf **
-    Cpnoe(jt) = sum(...
-        Tmfd_ndl.binWidths(ndl1_rows,:).*...
-        Cphnoe.*...
-        Tmfd_ndl.hc(ndl1_rows,:)...
-        );
 end
 
 %%
