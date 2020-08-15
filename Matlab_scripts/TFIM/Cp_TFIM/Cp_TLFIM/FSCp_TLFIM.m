@@ -1,6 +1,6 @@
 function [F,S,Cp] = FSCp_TLFIM(t,h,e)
     x = OP_TFIM_array(t,h,e);
-    gamma = sqrt((x+e).^2+h.^2);
+    gamma = sqrt((x+e).^2 + h.^2);
     F = 0.5*x.^2 - t'.*log(2*cosh(gamma./t'));
     dt = diff(t');
     try
