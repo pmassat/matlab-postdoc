@@ -211,11 +211,13 @@ Cpnum(i).comsolpdf_w_e = zeros(size(Cpnum(i).t_h_dist_no_e));
 end
 
 %% Compute Cp_TLFIM at single value of field
+tic
 for i=rngNum
 Cpnum(i).single_h_no_e = Cp_TFIM(Cpnum(i).t_single_h,Cpnum(i).h);
 [~,~,Cpnum(i).single_h_w_e] = FSCp_TLFIM(Cpnum(i).t_single_h,Cpnum(i).h,e);
 Cpnum(i).single_h_w_e = Cpnum(i).single_h_w_e';
 end
+toc
 
 %% Plot averaged data at each field separately
 figure; hold on
@@ -300,89 +302,115 @@ for j=1:length(Cpnum(i).t_h_dist_no_e)
 end
 
 %% For a given dataset, find closest values of temperature and field in COMSOL mfd
-i = 2;
-Hext_data = unique(round(avgNdlData(i).H,-1));
-[~,mfdhidx] = min(abs(Tmfd_ndl1.Hext_Oe-Hext_data));
-Hext_mfd = Tmfd_ndl1.Hext_Oe(mfdhidx);
-tref = [0,0];% Not even necessary given the the function find_mfd_temp_rows() includes [0 0] as default values for tref
-% For the computations with longitudinal field, need to compute free
-% energy first, since there is no analytical formula for the heat capacity
-trange = 1:length(Cpnum(i).t_h_dist_no_e);
-Fwewt = zeros(2,length(trange));% Initialize array of weighted partial free energies
-Cpnoewt = zeros(2,length(trange));% Initialize array of weighted partial heat capacities (w/o longitudinal strain)
-% t = zeros(2,length(Cpnum(i).t_h_dist_no_e));% array that will contain two closest values of temperature
-wt = zeros(2,length(Cpnum(i).t_h_dist_no_e));% array that will contain weights attributed to closest temperatures
+tic
 
-for jt=trange
-%     [ndl1_rows, wt(:,jt)] = find_mfd_temp_rows(Cpnum(i).t_h_dist_no_e(jt),...
-%         utmfd1, Tc0_ndl, Tmfd_ndl1, Hext_mfd );
-    % add tref as input and output of function find_mfd_temp_rows() to check 
-    % that the function finds the correct temperatures to compute Cpnum
-    [ndl1_rows, wt(:,jt), tref] = find_mfd_temp_rows(Cpnum(i).t_h_dist_no_e(jt),...
-        utmfd1, Tc0_ndl, Tmfd_ndl1, Hext_mfd, tref, 'printTref', true );
-
-    % Compute free energy, including longitudinal field
-    Fhwe = FSCp_TLFIM(Cpnum(i).t_h_dist_no_e(jt),Tmfd_ndl1.binCenters(ndl1_rows,:),e);
-%     Fwewt(:,jt) = sum(...
-    Fwewt(:,trange==jt) = sum(...% Use this if trange does not cover the full range of Cpnum(i).t_h_dist_no_e
-        Tmfd_ndl1.binWidths(ndl1_rows,:).*...
-        Fhwe.*...
-        Tmfd_ndl1.hc(ndl1_rows,:),...
-        2);
-
-    % Compute heat capacity without longitudinal field at each value of
-    % internal (transverse) magnetic field
-    Cphnoe = zeros(size(Tmfd_ndl1.binCenters(ndl1_rows,:)));
-    for jr=1:length(ndl1_rows)
-        for col=1:length(Tmfd_ndl1.binCenters(ndl1_rows,:))
-            Cphnoe(jr,col) = Cp_TFIM(Cpnum(i).t_h_dist_no_e(jt),...
-                Tmfd_ndl1.binCenters(ndl1_rows(jr),col));
-        end
+% for i=2%rngNum(3:end)
     
-    % Compute the corresponding value of heat capacity 
-%        Cpnoe(jr,jt) = wt(jr,jt)*sum(...
-        Cpnoewt(jr,jt) = wt(jr,jt).*sum(...
-            Tmfd_ndl1.binWidths(ndl1_rows(jr),:).*...
-            Cphnoe(jr,:).*...
-            Tmfd_ndl1.hc(ndl1_rows(jr),:)...
-            );
+    Hext_data = unique(round(avgNdlData(i).H,-1));
+    [~,mfdhidx] = min(abs(Tmfd_ndl1.Hext_Oe-Hext_data));
+    Hext_mfd = Tmfd_ndl1.Hext_Oe(mfdhidx);
+    trange = Cpnum(i).t_h_dist_no_e;
+    tref = zeros(2,length(trange)+1);% Not even necessary given the the function find_mfd_temp_rows() includes [0 0] as default values for tref
+    % For the computations with longitudinal field, need to compute free
+    % energy first, since there is no analytical formula for the heat capacity
+    Fwewt = zeros(2,length(trange));% Initialize array of weighted partial free energies
+    Cpnoewt = zeros(2,length(trange));% Initialize array of weighted partial heat capacities (w/o longitudinal strain)
+    % t = zeros(2,length(Cpnum(i).t_h_dist_no_e));% array that will contain two closest values of temperature
+    wt = zeros(2,length(trange));% array that will contain weights attributed to closest temperatures
+    ndl_rows = zeros(2,length(trange));
+
+    for jt=1:length(trange)
+    %     [ndl1_rows, wt(:,jt)] = find_mfd_temp_rows(trange(jt),...
+    %         utmfd1, Tc0_ndl, Tmfd_ndl1, Hext_mfd );
+        % add tref as input and output of function find_mfd_temp_rows() to check 
+        % that the function finds the correct temperatures to compute Cpnum
+        [ndl1_rows, wt(:,jt), tref(:,jt+1)] = find_mfd_temp_rows(trange(jt),...
+            utmfd1, Tc0_ndl, Tmfd_ndl1, Hext_mfd, tref(:,jt), 'printTref', true );
+
+        ndl_rows(:,jt) = ndl1_rows;
+
+        % Compute heat capacity without longitudinal field at each value of
+        % internal (transverse) magnetic field
+        Cphnoe = zeros(size(Tmfd_ndl1.binCenters(ndl1_rows,:)));
+        for jr=1:length(ndl1_rows)
+
+            % Compute free energy, including longitudinal field
+            % Note: it is important to compute this array line by line using
+            % the for loop over jr, because the computation over the entire
+            % array at once induces computation errors, which are hard to
+            % spot at first, because they only arise at the 5th significant
+            % digit, but this is enough to make a big difference in the computation
+            % of the second derivative, i.e. the heat capacity
+            Fhwe(jr,:) = FSCp_TLFIM(trange(jt),Tmfd_ndl1.binCenters(ndl1_rows(jr),:),e);
+
+            % Compute Cp without longitudinal field, for each value of internal field
+            for col=1:length(Tmfd_ndl1.binCenters(ndl1_rows,:))
+                Cphnoe(jr,col) = Cp_TFIM(trange(jt),...
+                    Tmfd_ndl1.binCenters(ndl1_rows(jr),col));
+            end
+
+            % Sum over all internal fields to get the total heat capacity at
+            % the temperature associated with jt
+    %        Cpnoe(jr,jt) = wt(jr,jt)*sum(...
+            Cpnoewt(jr,jt) = wt(jr,jt).*sum(...
+                Tmfd_ndl1.binWidths(ndl1_rows(jr),:).*...
+                Cphnoe(jr,:).*...
+                Tmfd_ndl1.hc(ndl1_rows(jr),:)...
+                );
+        end
+
+        % Sum the free energy over all internal fields to get the total free energy at
+        % the temperature associated with jt
+    %     Fwewt(:,jt) = sum(...
+        Fwewt(:,jt) = sum(...% Use this if trange does not cover the full range of Cpnum(i).t_h_dist_no_e
+            Tmfd_ndl1.binWidths(ndl1_rows,:).*...
+            Fhwe.*...
+            Tmfd_ndl1.hc(ndl1_rows,:),...
+            2);
+
     end
-end
 
-%%
-% Cpnum(i).t_h_dist_no_e = linspace(0.1,1.5,150);% reduced temperature, T/Tc
-Cpnoe = sum(Cpnoewt);
+    toc
+    
+    %%
+    % Cpnum(i).t_h_dist_no_e = linspace(0.1,1.5,150);% reduced temperature, T/Tc
+    Cpnoe = sum(Cpnoewt);
 
-%% Compute entropy and heat capacity, with longitudinal fields, at each value of internal field
-twe = Cpnum(i).t_h_dist_no_e(trange);
-dt = diff(twe);
-Swewt = -diff(Fwewt,1,2)./dt;% entropy
-dtm = 0.5*(dt(1:end-1)+dt(2:end));
-Cpwewt = twe(2:end-1).*diff(Swewt,1,2)./dtm;
+    %% Compute entropy and heat capacity, with longitudinal fields, at each value of internal field
+    twe = trange;
+    dt = diff(twe);
+    Swewt = -diff(Fwewt,1,2)./dt;% entropy
+    dtm = 0.5*(dt(1:end-1)+dt(2:end));
+    Cpwewt = twe(2:end-1).*diff(Swewt,1,2)./dtm;
 
-%% Remove spikes
-% spikes = abs(Cpwewt(2,:))>1.2*max(avgNdlData(i).Cpelr) | Cpwewt(2,:)<0;
-% Cpwewt(:,spikes)=NaN;% Remove numerical aberrations
-Cpwewt(abs(Cpwewt)>1.2*max(avgNdlData(i).Cpelr)) = NaN;% Remove numerical aberrations
-Cpwewt(Cpwewt<0) = NaN;% Remove numerical aberrations
+    %% Remove spikes
+    % spikes = abs(Cpwewt(2,:))>1.2*max(avgNdlData(i).Cpelr) | Cpwewt(2,:)<0;
+    % Cpwewt(:,spikes)=NaN;% Remove numerical aberrations
+    Cpwewt(abs(Cpwewt)>1.2*max(avgNdlData(i).Cpelr)) = NaN;% Remove numerical aberrations
+    Cpwewt(Cpwewt<0) = NaN;% Remove numerical aberrations
 
-%% Compute free energy as sum of weighted partial free energies
-Cpwe = sum(wt(:,2:end-1).*Cpwewt);
+    %% Compute free energy as sum of weighted partial free energies
+    Cpwe = sum(wt(:,2:end-1).*Cpwewt);
 
-%% Store results into Cpnum structure
-Cpnum(i).t_h_dist_w_e = twe(2:end-1)';
-Cpnum(i).comsolpdf_no_e = Cpnoe;
-Cpnum(i).comsolpdf_w_e = Cpwe;
+    %% Store results into Cpnum structure
+    Cpnum(i).t_h_dist_w_e = twe(2:end-1)';
+    Cpnum(i).comsolpdf_no_e = Cpnoe;
+    Cpnum(i).comsolpdf_w_e = Cpwe;
 
-%% Prepare data for plotting by removing NaN datapoints
-sel_no_e = ~isnan(Cpnum(i).comsolpdf_no_e);
-sel_w_e = ~isnan(Cpnum(i).comsolpdf_w_e);
-Cpnum(i).t_h_dist_no_e = Cpnum(i).t_h_dist_no_e(sel_no_e);
-Cpnum(i).t_h_dist_w_e = Cpnum(i).t_h_dist_w_e(sel_w_e);
-Cpnum(i).comsolpdf_no_e = Cpnum(i).comsolpdf_no_e(sel_no_e);
-Cpnum(i).comsolpdf_w_e  = Cpnum(i).comsolpdf_w_e(sel_w_e);
+    %% Prepare data for plotting by removing NaN datapoints
+    sel_no_e = ~isnan(Cpnum(i).comsolpdf_no_e);
+    sel_w_e = ~isnan(Cpnum(i).comsolpdf_w_e);
+    Cpnum(i).t_h_dist_no_e = Cpnum(i).t_h_dist_no_e(sel_no_e);
+    Cpnum(i).t_h_dist_w_e = Cpnum(i).t_h_dist_w_e(sel_w_e);
+    Cpnum(i).comsolpdf_no_e = Cpnum(i).comsolpdf_no_e(sel_no_e);
+    Cpnum(i).comsolpdf_w_e  = Cpnum(i).comsolpdf_w_e(sel_w_e);
+
+% end
+
+% toc 
 
 %% Plot Cp for COMSOL distribution of fields
+i=7;
 single_str = '$H=H_{\mathrm{ext}}$';
 figure
 % plot(avgNdlData(i).T,avgNdlData(i).Cpelr,'.','DisplayName','data')
@@ -421,9 +449,9 @@ formatFigure;
 % printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
 
 %% Export results to .dat file
-% cd '2020-08-10_Full_Cpnum_COMSOL_PDF_w_e_data'
-for i=3
-    A = [Cpnum(i).t_h_dist_w_e', Cpnum(i).comsolpdf_w_e'];
+cd '2020-08_Full_Cpnum_COMSOL_PDF_w_e_data'
+for i=3:8
+    A = cat(2,Cpnum(i).t_h_dist_w_e, Cpnum(i).comsolpdf_w_e');
     col_headers = ['T/Tc, Cp/R'];
     file_description = {...
         [sprintf('Heat capacity at Hext = %d Oe, computed numerically ',fieldsNdl(i))...
@@ -432,6 +460,9 @@ for i=3
         'computed using COMSOL on 2020-07-31, as well as the rounding '...
         'of the transition due to a constant longitudinal field (strain) '...
         'of e = 1.1e-3 as obtained from fitting the data at zero field.'];
+        ['The computed heat capacity is a weighted sum of the heat capacity '...
+        'at the two closest temperatures at which the distribution of magnetic '...
+        'fields was computed in COMSOL'];
         ['The zero field transition temperature obtained from the same fit '...
         'was Tc(H=0) = 2.20K.'];
         'Any missing data is due to removal of NaN and computational aberrations.'};
