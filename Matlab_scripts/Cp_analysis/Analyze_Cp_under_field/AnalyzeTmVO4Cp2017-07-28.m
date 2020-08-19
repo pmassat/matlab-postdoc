@@ -318,6 +318,7 @@ tic
     % t = zeros(2,length(Cpnum(i).t_h_dist_no_e));% array that will contain two closest values of temperature
     wt = zeros(2,length(trange));% array that will contain weights attributed to closest temperatures
     ndl_rows = zeros(2,length(trange));
+    Cphnoe = zeros(size(Tmfd_ndl1.binCenters(1,:)));
 
     for jt=1:length(trange)
     %     [ndl1_rows, wt(:,jt)] = find_mfd_temp_rows(trange(jt),...
@@ -329,9 +330,8 @@ tic
 
         ndl_rows(:,jt) = ndl1_rows;
 
-        % Compute heat capacity without longitudinal field at each value of
-        % internal (transverse) magnetic field
-        Cphnoe = zeros(size(Tmfd_ndl1.binCenters(ndl1_rows,:)));
+        % Compute heat capacity at each value of internal (transverse) 
+        % magnetic field for both nearest temperatures
         for jr=1:length(ndl1_rows)
 
             % Compute free energy, including longitudinal field
@@ -383,11 +383,22 @@ tic
     dtm = 0.5*(dt(1:end-1)+dt(2:end));
     Cpwewt = twe(2:end-1).*diff(Swewt,1,2)./dtm;
 
-    %% Remove spikes
-    % spikes = abs(Cpwewt(2,:))>1.2*max(avgNdlData(i).Cpelr) | Cpwewt(2,:)<0;
-    % Cpwewt(:,spikes)=NaN;% Remove numerical aberrations
-    Cpwewt(abs(Cpwewt)>1.2*max(avgNdlData(i).Cpelr)) = NaN;% Remove numerical aberrations
-    Cpwewt(Cpwewt<0) = NaN;% Remove numerical aberrations
+    %% Identify and remove spikes
+    % Spikes result from numerical aberrations, most likely due to
+    % significant changes in the MFD at "high" temperatures, i.e. close to
+    % and above Tc(H=0)
+    
+    % Identify spikes
+    spikes = abs(Cpwewt)>1.2*max(avgRFData(i).Cpelr) | Cpwewt<0;% 
+%     Cpwewt(abs(Cpwewt)>1.2*max(avgRFData(i).Cpelr)) = NaN;% Remove numerical aberrations
+%     Cpwewt(Cpwewt<0) = NaN;% Remove numerical aberrations
+
+    % Convert spikes appearing in both computed Cp curves into NaN for both curves
+    Cpwewt(:,spikes(1,:)&spikes(2,:)) = NaN;
+    
+    % For those spikes appearing in Cp of second closest temperature
+    % only, replace them with the values of the closest temperature
+    Cpwewt(2,~spikes(1,:)&spikes(2,:)) = Cpwewt(1,~spikes(1,:)&spikes(2,:));
 
     %% Compute free energy as sum of weighted partial free energies
     Cpwe = sum(wt(:,2:end-1).*Cpwewt);

@@ -1,9 +1,9 @@
 %% Sample properties
 m = 0.25e-3;% mass of sample, in g
 M = 283.87;% molar mass of TmVO4, in g/mol
-Tc0 = 2.126;% Value of transition temperature in this sample, in Kelvin units
+Tc0rf = 2.126;% Value of transition temperature in this sample, in Kelvin units
 Tcnum = 2.15;% in Kelvin units
-Hc = 5000;% in Oersted units; see data taken on needles of TmVO4-LS5200 in July 2017
+Hc = 5500;% in Oersted units; see data taken on needles of TmVO4-LS5200 in July 2017
 e = 1.5e-3;% constant longitudinal field
 % Results for Tmaxfit = 2.15;% Tc = 2.126  (2.122, 2.129);% e = 0.001474 (0.001085, 0.001862);
 
@@ -53,7 +53,7 @@ end
 figure;
 hold on
 param_index = 1;% 1 is constant T, 2 is constant Hext, see param_range
-temp_index = 8;% determines temperature of data to plot, taken among [1e-3, 1, 2, 3]K
+temp_index = 4;% determines temperature of data to plot, taken among [.3:.4:3.1]K
 field_index = 4;% determines field of data to plot from [.1,.2,.3,.4,.45,.5,.55,.6,.62,.63,.65,.67,.7,.8]T
 param_range = {(temp_index-1)*8+[1:1:8], field_index+[0:8:56]};% first range corresponds to a 
 % field dependence at constant temp, second range corresponds to a 
@@ -64,7 +64,7 @@ T = Smfd_RF(i).T_K;%
 Hext = Smfd_RF(i).Hext_Oe;%
 p = plot(Smfd_RF(i).binCenters, Smfd_RF(i).hc, '.-', 'DisplayName', sprintf('%.2g, %.2g',T/Tcnum,Hext/Hc));
 end
-lgd = legend('show'); lgd.Title.String = '$T/T_c$, $H_{\mathrm{ext}}/H_c(T=0)$';
+lgd = legend('show'); lgd.Title.String = '$T/T_{c,0}$, $H_{\mathrm{ext}}/H_{c,0}$';
 param_title = {[', $T=$ ' sprintf('%.2g K',T)],...
     [', $H_{\mathrm{ext}}=$ ' sprintf('%.2d Oe',Hext)]};
 title(['Distribution of fields in TmVO$_4$-RF-E' param_title{param_index}])
@@ -268,7 +268,7 @@ d1Cpgm = conv2(Cpgm,d1Gaussian','same');
 % from 'AnalyzeMCEinDR_TmVO4-LS5228-DR-HC180731.m'
 figure
 n = 300;
-contourf(Hgm./5100,Tgm/Tc0,-d1Cpgm,n,'EdgeColor','none');
+contourf(Hgm./5100,Tgm/Tc0rf,-d1Cpgm,n,'EdgeColor','none');
 hold on;
 fplt = fplot(@(h)h/atanh(h),[0 1.1],'Color','k','LineWidth',1);
 xlabel('$H / H_c(T=0)$'); ylabel('$T / T_D(H=0)$');
@@ -290,7 +290,7 @@ fclose(fid);
 
 %% Export X and Y axes values of above matrix
 Hgmr = Hgm(1,:)./5100;
-Tgmr = Tgm(:,1)/Tc0;
+Tgmr = Tgm(:,1)/Tc0rf;
 % Hgmr and Tgmr exported manually on 2019-07-29 by copying from Matlab 
 % variables and pasting into worksheet of TmVO4_phase_diagram_Cp_MCE.opju
 
@@ -343,32 +343,34 @@ fitCpErr = avgRFData(i).CpFullErr/R;
 fitwghts = 1./fitCpErr;
 % Tc = 2.15;
 
-%% Compute Cp for Gaussian distribution of fields
-clear Cpnum
+%% Compute Cp for distribution of fields
+clear CpnumRF
 rngNum = 1:15;
 for i=rngNum
-Cpnum(i).h = uhrf(i)*rescaling/Hc;
-% Cpnum(i).rhsgm = 0.09;
-% Cpnum(i).sgm = Cpnum(i).h*Cpnum(i).rhsgm;
-Cpnum(i).t_single_h = linspace(0,1.5,601);% reduced temperature, T/Tc
-Cpnum(i).single_h_no_e = zeros(size(Cpnum(i).t_single_h));
-Cpnum(i).single_h_w_e = zeros(size(Cpnum(i).t_single_h));
-Cpnum(i).t_h_dist = linspace(0,1.5,301);% reduced temperature, T/Tc
-Cpnum(i).normpdf = zeros(size(Cpnum(i).t_h_dist));
-Cpnum(i).comsolpdf_no_e = zeros(size(Cpnum(i).t_h_dist));
-Cpnum(i).comsolpdf_w_e = zeros(size(Cpnum(i).t_h_dist));
+CpnumRF(i).h = uhrf(i)*rescaling/Hc;
+% CpnumRF(i).rhsgm = 0.09;
+% CpnumRF(i).sgm = CpnumRF(i).h*CpnumRF(i).rhsgm;
+CpnumRF(i).t_single_h = linspace(0,1.5,601);% reduced temperature, T/Tc
+CpnumRF(i).single_h_no_e = zeros(size(CpnumRF(i).t_single_h));
+CpnumRF(i).single_h_w_e = zeros(size(CpnumRF(i).t_single_h));
+CpnumRF(i).t_h_dist_noe = [linspace(0.01,.5,50) linspace(0.505,1.1,120) linspace(1.11,1.4,30)];% reduced temperature, T/Tc
+CpnumRF(i).normpdf = zeros(size(CpnumRF(i).t_h_dist_noe));
+CpnumRF(i).comsolpdf_no_e = zeros(size(CpnumRF(i).t_h_dist_noe));
+CpnumRF(i).comsolpdf_w_e = zeros(size(CpnumRF(i).t_h_dist_noe));
 end
 % Fit parameters on data at H=0: Tc=2.125(3), e=1.5(4)e-3
-%     for j=2:length(Cpnum(i).t_h_dist)
-%     Cpnum(i).normpdf(j) = CpTFIM_normpdf(Cpnum(i).t_h_dist(j),Cpnum(i).h,Cpnum(i).sgm);
+%     for j=2:length(CpnumRF(i).t_h_dist_noe)
+%     CpnumRF(i).normpdf(j) = CpTFIM_normpdf(CpnumRF(i).t_h_dist_noe(j),CpnumRF(i).h,CpnumRF(i).sgm);
 %     end
 
 %% Compute Cp_TLFIM at single value of field
+tic
 for i=rngNum%(2:end)
-Cpnum(i).single_h_no_e = Cp_TFIM(Cpnum(i).t_single_h,Cpnum(i).h);
-[~,~,Cpnum(i).single_h_w_e] = FSCp_TLFIM(Cpnum(i).t_single_h,Cpnum(i).h,e);
-Cpnum(i).single_h_w_e = Cpnum(i).single_h_w_e';
+CpnumRF(i).single_h_no_e = Cp_TFIM(CpnumRF(i).t_single_h,CpnumRF(i).h);
+[~,~,CpnumRF(i).single_h_w_e] = FSCp_TLFIM(CpnumRF(i).t_single_h,CpnumRF(i).h,e);
+CpnumRF(i).single_h_w_e = CpnumRF(i).single_h_w_e';
 end
+toc 
 
 %% Plot averaged data at each field separately
 figure; hold on
@@ -377,8 +379,8 @@ clr = lines(length(rng));
 eb = cell(size(rng));
 maxTplot = 3.2;%
 for i=rng
-    fp = plot(Cpnum(i).t_single_h(2:end-1)*Tc0,Cpnum(i).single_h_w_e,'DisplayName','MF');
-%     fp = fplot(@(t) Cp_TFIM(t/Tc0,uhrf(i)*rescaling/(Hc0*1e4)),[0 maxTplot],'LineWidth',2);
+    fp = plot(CpnumRF(i).t_single_h(2:end-1)*Tc0rf,CpnumRF(i).single_h_w_e,'DisplayName','MF');
+%     fp = fplot(@(t) Cp_TFIM(t/Tc0rf,uhrf(i)*rescaling/(Hc0*1e4)),[0 maxTplot],'LineWidth',2);
 % Fit parameters on data at H=0: Tc=2.125(3), e=1.5(4)e-3
 % Note: the values of amplitude coefficient and Tc extracted from fit 
 % in curve fitting tool using Cp_TFIM (no offset strain) are A=7.35 and Tc=2.142K
@@ -386,7 +388,7 @@ for i=rng
 end
 for i=rng
     eb{rng==i} = errorbar(avgRFData(i).T,avgRFData(i).Cpelr,avgRFData(i).CpFullErr/R,...
-        '.','MarkerSize',18,'DisplayName',num2str(uhrf(i)/(Hc0*1e4),'%.2f'),...
+        '.','MarkerSize',18,'DisplayName',num2str(uhrf(i)/Hc,'%.2f'),...
         'Color',clr(rng==i,:),'LineWidth',2);
 end
 xlabel('Temperature (K)'); ylabel('C$_p$/R');%ylabel('C$_p$ (JK$^{-1}$mol$^{-1}$)');
@@ -403,7 +405,7 @@ sigma =.09*mu;
 gauss = @(x) exp(-0.5 * ((x - mu)./sigma).^2) ./ (sqrt(2*pi) .* sigma);
 
 %% Compute probability distribution of fields at a given value of T and Hext
-Hcnum = 5500;
+Hcnum = Hc;
 for mfdidx=4:14:56
 mfd = Smfd_RF(mfdidx).mfd(Smfd_RF(mfdidx).mfd>0)/Hcnum;% create distribution from non-zero values
 % h = histogram(mfd, 'Normalization', 'pdf');% plot histogram of distribution
@@ -415,18 +417,18 @@ end
 
 %% Create table from structure
 Tmfd_RF = struct2table(Smfd_RF);% 
-utmfd = unique(Tmfd_RF.T_K);
-uhmfd = unique(Tmfd_RF.Hext_Oe);
+utmfdrf = unique(Tmfd_RF.T_K);
+uhmfdrf = unique(Tmfd_RF.Hext_Oe);
 
-%% For a given dataset, find closest values of temperature and field in COMSOL mfd
+%% Outdated; For a given dataset, find closest values of temperature and field in COMSOL mfd
 i = 5;
 Hdata = unique(round(avgRFData(i).H,-2));
 [~,mfdhidx] = min(abs(Tmfd_RF.Hext_Oe-Hdata));
 h = Tmfd_RF.Hext_Oe(mfdhidx);
 tref = 0;
-for j=1:length(Cpnum(i).t_h_dist)
+for j=1:length(CpnumRF(i).t_h_dist_noe)
     % Find value of temperature in COMSOL mfd closest to that of actual data
-    [~,mfdtidx] = min(abs(Tmfd_RF.T_K/Tcnum-Cpnum(i).t_h_dist(j)));
+    [~,mfdtidx] = min(abs(Tmfd_RF.T_K/Tcnum-CpnumRF(i).t_h_dist_noe(j)));
     % Improvement note: use sort instead of min, to be able to interpolate...
     t = Tmfd_RF.T_K(mfdtidx);
     if t ~= tref
@@ -438,22 +440,164 @@ for j=1:length(Cpnum(i).t_h_dist)
     row = find(Tmfd_RF.T_K==t & Tmfd_RF.Hext_Oe==h);
     Cph = zeros(size(Tmfd_RF.binCenters(row,:)));
     for col=1:length(Tmfd_RF.binCenters(row,:))
-        Cph(col) = Cp_TFIM(Cpnum(i).t_h_dist(j),Tmfd_RF.binCenters(row,col));
+        Cph(col) = Cp_TFIM(CpnumRF(i).t_h_dist_noe(j),Tmfd_RF.binCenters(row,col));
     end
     % Compute the corresponding value of heat capacity 
-%     Cpnum(i).comsolpdf(j) = trapz(Tmfd_RF.binCenters(row,:),Cph.*Tmfd_RF.hc(row,:));
-    Cpnum(i).comsolpdf(j) = sum(Tmfd_ndl.binWidths(row,:).*Cph.*...
+%     CpnumRF(i).comsolpdf(j) = trapz(Tmfd_RF.binCenters(row,:),Cph.*Tmfd_RF.hc(row,:));
+    CpnumRF(i).comsolpdf(j) = sum(Tmfd_ndl.binWidths(row,:).*Cph.*...
         Tmfd_ndl.hc(row,:));
 end
 
+%% For a given dataset, compute Cp with and without longitudinal field
+% for the two closest values of temperature and field in COMSOL mfd
+tic% start clock to measure computation time
+
+i=2;%rngNum(3:end)
+    
+    Hext_data = unique(round(avgRFData(i).H,-1));
+    [~,mfdhidx] = min(abs(Tmfd_RF.Hext_Oe-Hext_data));
+    Hext_mfd = Tmfd_RF.Hext_Oe(mfdhidx);
+    trange = CpnumRF(i).t_h_dist_noe(1:end);
+    tref = zeros(2,length(trange)+1);% Not even necessary given the the function find_mfd_temp_rows() includes [0 0] as default values for tref
+    % For the computations with longitudinal field, need to compute free
+    % energy first, since there is no analytical formula for the heat capacity
+    Fwewt = zeros(2,length(trange));% Initialize array of weighted partial free energies
+    Cpnoewt = zeros(2,length(trange));% Initialize array of weighted partial heat capacities (w/o longitudinal strain)
+    % t = zeros(2,length(CpnumRF(i).t_h_dist_noe));% array that will contain two closest values of temperature
+    wt = zeros(2,length(trange));% array that will contain weights attributed to closest temperatures
+    rf_rows = zeros(2,length(trange));
+    Cphnoe = zeros(size(Tmfd_RF.binCenters(1,:)));
+
+    for jt=1:length(trange)
+    %     [rows, wt(:,jt)] = find_mfd_temp_rows(trange(jt),...
+    %         utmfd1, Tc0rf, Tmfd_RF, Hext_mfd );
+        % add tref as input and output of function find_mfd_temp_rows() to check 
+        % that the function finds the correct temperatures to compute CpnumRF
+        [rows, wt(:,jt), tref(:,jt+1)] = find_mfd_temp_rows(trange(jt),...
+            utmfdrf, Tc0rf, Tmfd_RF, Hext_mfd, tref(:,jt), 'printTref', true );
+
+        rf_rows(:,jt) = rows;
+
+        % Compute heat capacity at each value of internal (transverse) 
+        % magnetic field for both nearest temperatures
+        for jr=1:length(rows)
+
+            % Compute free energy, including longitudinal field
+            % Note: it is important to compute this array line by line using
+            % the for loop over jr, because the computation over the entire
+            % array at once induces computation errors, which are hard to
+            % spot at first, because they only arise at the 5th significant
+            % digit, but this is enough to make a big difference in the computation
+            % of the second derivative, i.e. the heat capacity
+            Fhwe(jr,:) = FSCp_TLFIM(trange(jt),Tmfd_RF.binCenters(rows(jr),:),e);
+
+            % Compute Cp without longitudinal field, for each value of internal field
+            for col=1:length(Tmfd_RF.binCenters(rows,:))
+                Cphnoe(jr,col) = Cp_TFIM(trange(jt),...
+                    Tmfd_RF.binCenters(rows(jr),col));
+            end
+
+            % Sum over all internal fields to get the total heat capacity at
+            % the temperature associated with jt
+    %        Cpnoe(jr,jt) = wt(jr,jt)*sum(...
+            Cpnoewt(jr,jt) = wt(jr,jt).*sum(...
+                Tmfd_RF.binWidths(rows(jr),:).*...
+                Cphnoe(jr,:).*...
+                Tmfd_RF.hc(rows(jr),:)...
+                );
+        end
+
+        % Sum the free energy over all internal fields to get the total free energy at
+        % the temperature associated with jt
+    %     Fwewt(:,jt) = sum(...
+        Fwewt(:,jt) = sum(...% Use this if trange does not cover the full range of CpnumRF(i).t_h_dist_noe
+            Tmfd_RF.binWidths(rows,:).*...
+            Fhwe.*...
+            Tmfd_RF.hc(rows,:),...
+            2);
+
+    end
+
+    toc
+    
+    %%
+    % CpnumRF(i).t_h_dist_noe = linspace(0.1,1.5,150);% reduced temperature, T/Tc
+    Cpnoe = sum(Cpnoewt);
+
+    %% Compute entropy and heat capacity, with longitudinal fields, at each value of internal field
+    twe = trange;
+    dt = diff(twe);
+    Swewt = -diff(Fwewt,1,2)./dt;% entropy
+    dtm = 0.5*(dt(1:end-1)+dt(2:end));
+    Cpwewt = twe(2:end-1).*diff(Swewt,1,2)./dtm;
+
+    %% Identify and remove spikes
+    % Spikes result from numerical aberrations, most likely due to
+    % significant changes in the MFD at "high" temperatures, i.e. close to
+    % and above Tc(H=0)
+    
+    % Identify spikes
+    spikes = abs(Cpwewt)>1.2*max(avgRFData(i).Cpelr) | Cpwewt<0;% 
+%     Cpwewt(abs(Cpwewt)>1.2*max(avgRFData(i).Cpelr)) = NaN;% Remove numerical aberrations
+%     Cpwewt(Cpwewt<0) = NaN;% Remove numerical aberrations
+
+    % Convert spikes appearing in both computed Cp curves into NaN for both curves
+    Cpwewt(:,spikes(1,:)&spikes(2,:)) = NaN;
+    
+    % For those spikes appearing in Cp of second closest temperature
+    % only, replace them with the values of the closest temperature
+    Cpwewt(2,~spikes(1,:)&spikes(2,:)) = Cpwewt(1,~spikes(1,:)&spikes(2,:));
+
+    %% Compute free energy as sum of weighted partial free energies
+    Cpwe = sum(wt(:,2:end-1).*Cpwewt);
+
+    %% Store results into CpnumRF structure
+    CpnumRF(i).t_h_dist_w_e = twe(2:end-1);
+    CpnumRF(i).comsolpdf_no_e = Cpnoe;
+    CpnumRF(i).comsolpdf_w_e = Cpwe;
+
+    %% Prepare data for plotting by removing NaN datapoints
+    sel_no_e = ~isnan(CpnumRF(i).comsolpdf_no_e);
+    sel_w_e = ~isnan(CpnumRF(i).comsolpdf_w_e);
+    CpnumRF(i).t_h_dist_noe = CpnumRF(i).t_h_dist_noe(sel_no_e);
+    CpnumRF(i).t_h_dist_w_e = CpnumRF(i).t_h_dist_w_e(sel_w_e);
+    CpnumRF(i).comsolpdf_no_e = CpnumRF(i).comsolpdf_no_e(sel_no_e);
+    CpnumRF(i).comsolpdf_w_e  = CpnumRF(i).comsolpdf_w_e(sel_w_e);
+
+% end
+
+% toc 
+
 %% Plot Cp for COMSOL distribution of fields
+for i=4:15
+single_str = '$H=H_{\mathrm{ext}}$';
 figure
-plot(avgRFData(i).T,avgRFData(i).Cpelr,'.','DisplayName','data')
+% plot(avgRFData(i).T,avgRFData(i).Cpelr,'.','DisplayName','data')
+eb{rngNum==i} = errorbar(avgRFData(i).T,avgRFData(i).Cpelr,avgRFData(i).CpelrErr,...
+    '.','MarkerSize',18,'DisplayName',['Data at ' single_str],...
+    'LineWidth',2);
 hold on;
-plot(Cpnum(i).t_single_h*Tc0,Cpnum(i).single_h_no_e,'DisplayName','MF');
-plot(Cpnum(i).t_h_dist*Tc0,Cpnum(i).comsolpdf,'DisplayName',sprintf('Hc=%.2dOe',Hcnum));
-title(['Cp mean-field vs COMSOL pdf $H_{\mathrm{ext}}=$' sprintf('%.0fOe',uhrf(i))]);
-lgd = legend();% title(lgd,'TmVO4-RF-E');
+no_e_str = ' ($e=0$)';
+w_e_str = [' ($e=$ ' sprintf(' %.2g)',e)];
+
+% Plot results at single value of magnetic field
+plot(CpnumRF(i).t_single_h*Tc0rf,CpnumRF(i).single_h_no_e,...
+    'DisplayName',[single_str no_e_str]);% no longitudinal field
+plot(CpnumRF(i).t_single_h(2:end-1)*Tc0rf,CpnumRF(i).single_h_w_e,...
+    'DisplayName',[single_str w_e_str]);% with longitudinal field
+
+% Plot results for distribution of magnetic fields as computed with COMSOL
+comsol_str = 'comsol pdf';
+plot(CpnumRF(i).t_h_dist_noe*Tc0rf,CpnumRF(i).comsolpdf_no_e,...
+    'DisplayName',[comsol_str no_e_str]);
+plot(CpnumRF(i).t_h_dist_w_e*Tc0rf,CpnumRF(i).comsolpdf_w_e,...
+    'DisplayName',[comsol_str w_e_str]);
+title(['$C_p$ single field vs COMSOL PDF $H_{\mathrm{ext}}=$ ' sprintf('%.0f Oe',uhrf(i))]);
+lgd = legend('Location','best');% title(lgd,'TmVO4-Ndl-E');
+
+xlabel('$T$ (K)')
+ylabel('$C_p/R$')
+end
 
 %% Export figure
 % formatFigure;
@@ -473,8 +617,8 @@ printPNG([todaystr '_TmVO4-RF-E_mfd@4000Oe']);
 figure
 plot(avgRFData(i).T,avgRFData(i).Cpelr,'.','DisplayName','data')
 hold on;
-plot(Cpnum(i).t_single_h*Tc0,Cpnum(i).single_h_no_e,'DisplayName','MF');
-plot(Cpnum(i).t_h_dist*Tc0,Cpnum(i).normpdf,'DisplayName','Gauss');
+plot(CpnumRF(i).t_single_h*Tc0rf,CpnumRF(i).single_h_no_e,'DisplayName','MF');
+plot(CpnumRF(i).t_h_dist_noe*Tc0rf,CpnumRF(i).normpdf,'DisplayName','Gauss');
 title(['Cp mean-field vs normal pdf $H_{\mathrm{ext}}=$' sprintf('%.0fOe',uhrf(i))]);
 lgd = legend();% title(lgd,'TmVO4-RF-E');
 
@@ -483,10 +627,10 @@ figure; hold on
 clr = lines(length(rng));
 eb = cell(size(rng));
 for i=rng
-% fp = fplot(@(t)Cp_TFIM(t/Tc0,Cptheo(i).h),[0 3.2],'--','LineWidth',2,'Color',clr(rng==i,:));
-plot(Cpnum(i).t_single_h*Tc0,Cpnum(i).single_h_no_e,'--','Color',clr(rng==i,:),'DisplayName',sprintf('h=%.2f',Cpnum(i).h));
-plot(Cpnum(i).t_h_dist*Tc0,Cpnum(i).normpdf,'Color',clr(rng==i,:),'DisplayName',...
-    sprintf('h=%.2f,r=%.1e',Cpnum(i).h,Cpnum(i).rhsgm));
+% fp = fplot(@(t)Cp_TFIM(t/Tc0rf,Cptheo(i).h),[0 3.2],'--','LineWidth',2,'Color',clr(rng==i,:));
+plot(CpnumRF(i).t_single_h*Tc0rf,CpnumRF(i).single_h_no_e,'--','Color',clr(rng==i,:),'DisplayName',sprintf('h=%.2f',CpnumRF(i).h));
+plot(CpnumRF(i).t_h_dist_noe*Tc0rf,CpnumRF(i).normpdf,'Color',clr(rng==i,:),'DisplayName',...
+    sprintf('h=%.2f,r=%.1e',CpnumRF(i).h,CpnumRF(i).rhsgm));
 end
 for i=rng
 eb{rng==i} = errorbar(avgRFData(i).T,avgRFData(i).Cpelr,avgRFData(i).CpFullErr/R,...
@@ -494,7 +638,7 @@ eb{rng==i} = errorbar(avgRFData(i).T,avgRFData(i).Cpelr,avgRFData(i).CpFullErr/R
     'Color',clr(rng==i,:),'LineWidth',2);
 end
 xlabel('$T$ (K)'); ylabel('$C_p/R$');%ylabel('C$_p$ (JK$^{-1}$mol$^{-1}$)');
-xlim([0 max(Cpnum(rng(1)).t_single_h*Tc0)]);
+xlim([0 max(CpnumRF(rng(1)).t_single_h*Tc0rf)]);
 lgd = legend([eb{:}]); lgd.Title.String = '$H/H_c$';
 ax = gca; ax.YMinorTick = 'on';% Add minor ticks on Y axis
 anntheo = annotation('textbox',[0.13 0.83 0.2 0.1],'interpreter','latex',...
@@ -510,16 +654,16 @@ hold off
 
 %% Compute additional Cp for Gaussian distribution of fields
 % Cptheo(i).h = 0.87;
-Cpnum(i).rhsgm = 0.1;
-Cpnum(i).sgm = Cpnum(i).h*Cpnum(i).rhsgm;
-for j=1:length(Cpnum(i).t)
-    Cpnum(i).normpdf(j) = CpTFIM_normpdf(Cpnum(i).t(j),Cpnum(i).h,Cpnum(i).sgm);
+CpnumRF(i).rhsgm = 0.1;
+CpnumRF(i).sgm = CpnumRF(i).h*CpnumRF(i).rhsgm;
+for j=1:length(CpnumRF(i).t)
+    CpnumRF(i).normpdf(j) = CpTFIM_normpdf(CpnumRF(i).t(j),CpnumRF(i).h,CpnumRF(i).sgm);
 end
-plot(Cpnum(i).t*Tc0,Cpnum(i).normpdf,'DisplayName',sprintf('h=%.2f,r=%.1e',Cpnum(i).h,Cpnum(i).rhsgm));
+plot(CpnumRF(i).t*Tc0rf,CpnumRF(i).normpdf,'DisplayName',sprintf('h=%.2f,r=%.1e',CpnumRF(i).h,CpnumRF(i).rhsgm));
 
 %% Plot additional Cp for Gaussian distribution of fields
 offset = 0.01;
-plot(Cpnum(i).t*Tc0,Cpnum(i).normpdf+offset,'DisplayName',sprintf('h=%.2f,r=%.1e',Cpnum(i).h,Cpnum(i).rhsgm));
+plot(CpnumRF(i).t*Tc0rf,CpnumRF(i).normpdf+offset,'DisplayName',sprintf('h=%.2f,r=%.1e',CpnumRF(i).h,CpnumRF(i).rhsgm));
 
 %% Prepare MF fit of Cp vs Temperature under field
 index = 15;
