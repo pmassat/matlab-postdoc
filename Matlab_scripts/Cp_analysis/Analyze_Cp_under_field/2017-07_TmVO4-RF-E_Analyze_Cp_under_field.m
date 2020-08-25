@@ -3,7 +3,7 @@ m = 0.25e-3;% mass of sample, in g
 M = 283.87;% molar mass of TmVO4, in g/mol
 Tc0rf = 2.126;% Value of transition temperature in this sample, in Kelvin units
 Tcnum = 2.15;% in Kelvin units
-Hc = 5500;% in Oersted units; see data taken on needles of TmVO4-LS5200 in July 2017
+Hc = 5000;% in Oersted units; see data taken on needles of TmVO4-LS5200 in July 2017
 e = 1.5e-3;% constant longitudinal field
 % Results for Tmaxfit = 2.15;% Tc = 2.126  (2.122, 2.129);% e = 0.001474 (0.001085, 0.001862);
 
@@ -13,13 +13,13 @@ e = 1.5e-3;% constant longitudinal field
 % Smfd = importfielddistrib(mfdRFfname, 15);
 
 %% Import magnetic field distribution from CSV file
-cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-RF-E_HC2017-07'
+cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-RF-E_HC2017-07\TmVO4-RF-E_magnetic_field_distribution_data'
 % mfdRFfname = cell(1,2);
 % Srf = cell(1,2);
 % % mfdRFf{1} = {'2020-07-27_TmVO4-RF-E_COMSOL_mfd_mesh=finer-out+max20um-in_T=p001-1K_H=all.csv',28};
 % mfdRFf{2} = {'2020-07-27_TmVO4-RF-E_COMSOL_mfd_mesh=finer-out+max20um-in_T=2-3K_H=all.csv',28};
 % mfdRFf{3} = {'2020-08-11_TmVO4-RF-E_COMSOL_mfd_mesh=max20um-in_T=p5-1-1p5K_H=p1-p1-p8.csv',24};
-mfdRFf{1} = {'2020-08-11_TmVO4-RF-E_COMSOL_mfd_mesh=max20um-in_T=p3-p4-3p1K_H=p1-p1-p8T.csv',64};
+mfdRFf{1} = {'2020-08-25_TmVO4-RF-E_COMSOL_mfd_mesh=max20um-in_T=p3-p4-3p1K_H=p1-p1-p8T.csv',64};
 for ic=length(mfdRFf):-1:1
     Srf{ic} = importfielddistrib_csv(mfdRFf{ic}{1}, mfdRFf{ic}{2});
 end
@@ -452,7 +452,7 @@ end
 % for the two closest values of temperature and field in COMSOL mfd
 tic% start clock to measure computation time
 
-i=2;%rngNum(3:end)
+i=7;%rngNum(3:end)
     
     Hext_data = unique(round(avgRFData(i).H,-1));
     [~,mfdhidx] = min(abs(Tmfd_RF.Hext_Oe-Hext_data));
@@ -569,7 +569,7 @@ i=2;%rngNum(3:end)
 % toc 
 
 %% Plot Cp for COMSOL distribution of fields
-for i=4:15
+for i=7
 single_str = '$H=H_{\mathrm{ext}}$';
 figure
 % plot(avgRFData(i).T,avgRFData(i).Cpelr,'.','DisplayName','data')
