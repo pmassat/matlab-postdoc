@@ -19,7 +19,8 @@ cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-RF-E_HC2017-07\TmVO4-R
 % % mfdRFf{1} = {'2020-07-27_TmVO4-RF-E_COMSOL_mfd_mesh=finer-out+max20um-in_T=p001-1K_H=all.csv',28};
 % mfdRFf{2} = {'2020-07-27_TmVO4-RF-E_COMSOL_mfd_mesh=finer-out+max20um-in_T=2-3K_H=all.csv',28};
 % mfdRFf{3} = {'2020-08-11_TmVO4-RF-E_COMSOL_mfd_mesh=max20um-in_T=p5-1-1p5K_H=p1-p1-p8.csv',24};
-mfdRFf{1} = {'2020-08-25_TmVO4-RF-E_COMSOL_mfd_mesh=max20um-in_T=p3-p4-3p1K_H=p1-p1-p8T.csv',64};
+% mfdRFf{1} = {'2020-08-25_TmVO4-RF-E_COMSOL_mfd_mesh=max20um-in_T=p3-p4-3p1K_H=p1-p1-p8T.csv',64};
+mfdRFf{1} = {'2020-08-28_TmVO4-RF-E_COMSOL_comp2_Lz=L_asym_mfd_mesh=max20um-in_T=p4-p5-2p9K_H=5kOe.csv',6};
 for ic=length(mfdRFf):-1:1
     Srf{ic} = importfielddistrib_csv(mfdRFf{ic}{1}, mfdRFf{ic}{2});
 end
@@ -29,13 +30,27 @@ Smfd_RF = [Srf{1,:}];% concatenate cell arrays into structure
 for sidx=1:length(Smfd_RF)
     % split each header into a cell array of strings, using whitespace and '=' sign as separators
     TBextCell = strsplit(Smfd_RF(sidx).T_Bext,{' ','='});
+    
     % Find the index of the string cell containing "T" (temperature), and
     % convert the following string cell (which contains the value of temperature) into a number
     % Note: circshift(A,1) shifts the index of elements of array A by 1 to the right
-    Smfd_RF(sidx).T_K = str2double(TBextCell{circshift(TBextCell=="T",1)});
+    try
+        Smfd_RF(sidx).T_K = str2double(TBextCell{circshift(TBextCell=="T",1)});
+    catch
+        user_temp = 1;% K
+        Smfd_RF(sidx).T_K = user_temp;
+        warning(sprintf('No temperature values found. Using user value: %.2g K',user_temp))
+    end
+    
     % Same with "Bext", which is the external magnetic flux density, in Tesla
     % units, and convert it into a value of magnetic field, in Oersted units
-    Smfd_RF(sidx).Hext_Oe = str2double(TBextCell{circshift(TBextCell=="Bext",1)})*10^4;
+    try
+        Smfd_RF(sidx).Hext_Oe = str2double(TBextCell{circshift(TBextCell=="Bext",1)})*10^4;
+    catch
+        user_mag = 5000;% Oe
+        Smfd_RF(sidx).Hext_Oe = user_mag;
+        warning(sprintf('No magnetic field values found. Using user value: %i Oe',user_mag))
+    end
 end
 
 %% Compute probability distribution of fields at a given value of T and Hext
@@ -52,10 +67,11 @@ end
 %% Plot distribution of fields at a given value of T and Hext
 figure;
 hold on
+Ntemp = 6;
 param_index = 1;% 1 is constant T, 2 is constant Hext, see param_range
-temp_index = 4;% determines temperature of data to plot, taken among [.3:.4:3.1]K
-field_index = 4;% determines field of data to plot from [.1,.2,.3,.4,.45,.5,.55,.6,.62,.63,.65,.67,.7,.8]T
-param_range = {(temp_index-1)*8+[1:1:8], field_index+[0:8:56]};% first range corresponds to a 
+temp_index = 1;% determines temperature of data to plot, taken among [.3:.4:3.1]K
+field_index = 1;% determines field of data to plot from [.1,.2,.3,.4,.45,.5,.55,.6,.62,.63,.65,.67,.7,.8]T
+param_range = {(temp_index-1)*Ntemp+[1:1:Ntemp], field_index+[0:Ntemp:56]};% first range corresponds to a 
 % field dependence at constant temp, second range corresponds to a 
 % temperature dependence at constant field
 rng = param_range{param_index};
@@ -345,7 +361,7 @@ fitwghts = 1./fitCpErr;
 
 %% Compute Cp for distribution of fields
 clear CpnumRF
-rngNum = 1:15;
+rngNum = 7;
 for i=rngNum
 CpnumRF(i).h = uhrf(i)*rescaling/Hc;
 % CpnumRF(i).rhsgm = 0.09;
@@ -374,7 +390,7 @@ toc
 
 %% Plot averaged data at each field separately
 figure; hold on
-rng = [1:2:13];% [1 5 7 9 13];
+rng = rngNum;% [1 5 7 9 13];
 clr = lines(length(rng));
 eb = cell(size(rng));
 maxTplot = 3.2;%
@@ -570,11 +586,11 @@ i=7;%rngNum(3:end)
 
 %% Plot Cp for COMSOL distribution of fields
 for i=7
-single_str = '$H=H_{\mathrm{ext}}$';
+single_str = ['$H_{\mathrm{ext}}\times$' sprintf('%.2g',rescaling)];
 figure
 % plot(avgRFData(i).T,avgRFData(i).Cpelr,'.','DisplayName','data')
 eb{rngNum==i} = errorbar(avgRFData(i).T,avgRFData(i).Cpelr,avgRFData(i).CpelrErr,...
-    '.','MarkerSize',18,'DisplayName',['Data at ' single_str],...
+    '.','MarkerSize',18,'DisplayName',['Data at $H=H_{\mathrm{ext}}$'],...
     'LineWidth',2);
 hold on;
 no_e_str = ' ($e=0$)';
@@ -601,7 +617,7 @@ end
 
 %% Export figure
 % formatFigure;
-printPNG([todaystr '_TmVO4-RF-E_mfd@4000Oe']);
+printPNG([todaystr '_TmVO4-RF-E_Cp_fits_Hext=5000Oe_Comsol-Lz=L_asym']);
 % printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
 
 
