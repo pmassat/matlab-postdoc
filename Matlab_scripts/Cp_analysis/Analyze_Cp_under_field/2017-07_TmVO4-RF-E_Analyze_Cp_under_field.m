@@ -20,7 +20,7 @@ cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-RF-E_HC2017-07\TmVO4-R
 % mfdRFf{2} = {'2020-07-27_TmVO4-RF-E_COMSOL_mfd_mesh=finer-out+max20um-in_T=2-3K_H=all.csv',28};
 % mfdRFf{3} = {'2020-08-11_TmVO4-RF-E_COMSOL_mfd_mesh=max20um-in_T=p5-1-1p5K_H=p1-p1-p8.csv',24};
 % mfdRFf{1} = {'2020-08-25_TmVO4-RF-E_COMSOL_mfd_mesh=max20um-in_T=p3-p4-3p1K_H=p1-p1-p8T.csv',64};
-mfdRFf{1} = {'2020-08-28_TmVO4-RF-E_COMSOL_comp2_Lz=L_asym_mfd_mesh=max20um-in_T=p4-p5-2p9K_H=5kOe.csv',6};
+mfdRFf{1} = {'2020-09-01_TmVO4-RF-E_COMSOL_comp2_Lz=L_asym_mfd_mesh=max20um-in_T=p3-p4-3K_H=5kOe.csv',8};
 for ic=length(mfdRFf):-1:1
     Srf{ic} = importfielddistrib_csv(mfdRFf{ic}{1}, mfdRFf{ic}{2});
 end
@@ -617,7 +617,7 @@ end
 
 %% Export figure
 % formatFigure;
-printPNG([todaystr '_TmVO4-RF-E_Cp_fits_Hext=5000Oe_Comsol-Lz=L_asym']);
+printPNG([todaystr '_TmVO4-RF-E_Cp_fits_Hext=5000Oe_Comsol-Lz=L_V=Vexp']);
 % printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
 
 
