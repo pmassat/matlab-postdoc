@@ -20,9 +20,11 @@ cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-RF-E_HC2017-07\TmVO4-R
 % mfdRFf{2} = {'2020-07-27_TmVO4-RF-E_COMSOL_mfd_mesh=finer-out+max20um-in_T=2-3K_H=all.csv',28};
 % mfdRFf{3} = {'2020-08-11_TmVO4-RF-E_COMSOL_mfd_mesh=max20um-in_T=p5-1-1p5K_H=p1-p1-p8.csv',24};
 % mfdRFf{1} = {'2020-08-25_TmVO4-RF-E_COMSOL_mfd_mesh=max20um-in_T=p3-p4-3p1K_H=p1-p1-p8T.csv',64};
-mfdRFf{1} = {'2020-09-01_TmVO4-RF-E_COMSOL_comp2_Lz=L_asym_mfd_mesh=max20um-in_T=p3-p4-3K_H=5kOe.csv',8};
-for ic=length(mfdRFf):-1:1
-    Srf{ic} = importfielddistrib_csv(mfdRFf{ic}{1}, mfdRFf{ic}{2});
+Ntemp = 7;
+Nfields = 1;
+mfdRF{1} = {'2020-09-02_TmVO4-RF-E_COMSOL_comp2_V=4p29e-11m3_Hzinm=0p71556_mfd-mesh=max20um-in_T=p3-3K-7val_H=5kOe.csv',Ntemp*Nfields};
+for ic=length(mfdRF):-1:1
+    Srf{ic} = importfielddistrib_csv(mfdRF{ic}{1}, mfdRF{ic}{2}, 'compNum', 2);
 end
 
 %% Extract values of temperature and external magnetic field from structure header
@@ -67,7 +69,7 @@ end
 %% Plot distribution of fields at a given value of T and Hext
 figure;
 hold on
-Ntemp = 6;
+% Ntemp = 7;
 param_index = 1;% 1 is constant T, 2 is constant Hext, see param_range
 temp_index = 1;% determines temperature of data to plot, taken among [.3:.4:3.1]K
 field_index = 1;% determines field of data to plot from [.1,.2,.3,.4,.45,.5,.55,.6,.62,.63,.65,.67,.7,.8]T
@@ -609,15 +611,17 @@ plot(CpnumRF(i).t_h_dist_noe*Tc0rf,CpnumRF(i).comsolpdf_no_e,...
 plot(CpnumRF(i).t_h_dist_w_e*Tc0rf,CpnumRF(i).comsolpdf_w_e,...
     'DisplayName',[comsol_str w_e_str]);
 title(['$C_p$ single field vs COMSOL PDF $H_{\mathrm{ext}}=$ ' sprintf('%.0f Oe',uhrf(i))]);
-lgd = legend('Location','best');% title(lgd,'TmVO4-Ndl-E');
+lgd = legend('Location','northeast');% title(lgd,'TmVO4-Ndl-E');
+lgd.FontSize = 14;
 
 xlabel('$T$ (K)')
 ylabel('$C_p/R$')
 end
 
 %% Export figure
+% cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2017-07_TmVO4_Cp_MCE\2017-07-20_Cp\2017-07-20_TmVO4_Cp_analysis'
 % formatFigure;
-printPNG([todaystr '_TmVO4-RF-E_Cp_fits_Hext=5000Oe_Comsol-Lz=L_V=Vexp']);
+printPNG([todaystr '_TmVO4-RF-E_Cp_fits_Hext=5000Oe_Comsol_V=4p29e-11m3_Hzinm=p71556']);
 % printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
 
 

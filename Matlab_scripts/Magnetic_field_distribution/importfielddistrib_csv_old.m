@@ -16,7 +16,7 @@ function S = importfielddistrib_csv(filename, varargin)
 
 %% Parse function arguments
     defaultNumFields = 1;
-    defaultCompNum = NaN;
+    defaultDomainNum = 2;
     defaultStartRow = 10;
     defaultEndRow = inf;
     validLiteral = @(x) isstring(x) || ischar(x);
@@ -27,14 +27,14 @@ function S = importfielddistrib_csv(filename, varargin)
     addOptional(p, 'numfields', defaultNumFields, validScalarPosNum);
     addParameter(p, 'startRow', defaultStartRow, validScalarPosNum);
     addParameter(p, 'endRow', defaultEndRow, validScalarPosNum);
-    addParameter(p, 'compNum', defaultCompNum, validScalarPosNum);
+    addParameter(p, 'domainNum', defaultDomainNum, validScalarPosNum);
 
     parse(p, filename, varargin{:});
     
     numfields = p.Results.numfields;
     startRow = p.Results.startRow;
     endRow = p.Results.endRow;
-    compNum = p.Results.compNum;
+    domainNum = p.Results.domainNum;
 
 %% Initialize variables.
 % if nargin<=3
@@ -52,15 +52,9 @@ formatSpec = strcat(data_format,'%[^\n\r]');
 fileID = fopen(filename,'r');
 
 %% (Edit) Read header
-if isnan(compNum)
-    delim_str = ',mfnc.Hz (Oe) @ ';
-else
-    delim_str = sprintf(',mfnc%d.Hz (Oe) @ ',compNum);
-end
-    
 headerFormatSpec = '%s';
 header = textscan(fileID, headerFormatSpec, numfields+1, 'TextType', 'string',...
-    'Delimiter', {delim_str},...
+    'Delimiter', {sprintf(',if(dom==%d,mfnc2.Hz,0) (Oe) @ ', domainNum)},...
     'HeaderLines', startRow(1)-2, 'ReturnOnError', false, 'EndOfLine', '\r\n');
 frewind(fileID);
 hdr = cell(1,numfields);% header contains field values
