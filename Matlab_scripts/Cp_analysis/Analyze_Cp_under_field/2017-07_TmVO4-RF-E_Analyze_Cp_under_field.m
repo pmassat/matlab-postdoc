@@ -13,7 +13,8 @@ e = 1.5e-3;% constant longitudinal field
 % Smfd = importfielddistrib(mfdRFfname, 15);
 
 %% Import magnetic field distribution from CSV file
-cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-RF-E_HC2017-07\TmVO4-RF-E_magnetic_field_distribution_data'
+% cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-RF-E_HC2017-07\TmVO4-RF-E_magnetic_field_distribution_data'
+cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4_basic_shapes\TmVO4_basic_shapes_MFD_data'
 % mfdRFfname = cell(1,2);
 % Srf = cell(1,2);
 % % mfdRFf{1} = {'2020-07-27_TmVO4-RF-E_COMSOL_mfd_mesh=finer-out+max20um-in_T=p001-1K_H=all.csv',28};
@@ -22,7 +23,7 @@ cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-RF-E_HC2017-07\TmVO4-R
 % mfdRFf{1} = {'2020-08-25_TmVO4-RF-E_COMSOL_mfd_mesh=max20um-in_T=p3-p4-3p1K_H=p1-p1-p8T.csv',64};
 Ntemp = 6;
 Nfields = 1;
-mfdRF{1} = {'2020-09-03_TmVO4-RF-E_COMSOL_comp3_V=4p1699e-11m3_Hzinm=0p74062_mfd-mesh=max20um-in_T=p2-p5-3K_H=5kOe.csv',Ntemp*Nfields};
+mfdRF{1} = {'2020-09-08_TmVO4_half-diamond+front-cut_V=Vsample_Hzm=0p71513_mesh=max20um-in_comsol-mfd_T=p3-3K-6values_H=5kOe.csv',Ntemp*Nfields};
 for ic=length(mfdRF):-1:1
 %     Srf{ic} = importfielddistrib_csv(mfdRF{ic}{1}, mfdRF{ic}{2}, 'compNum', 2);
     Srf{ic} = importfielddistrib_csv(mfdRF{ic}{1}, mfdRF{ic}{2});
@@ -622,7 +623,7 @@ end
 %% Export figure
 % cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2017-07_TmVO4_Cp_MCE\2017-07-20_Cp\2017-07-20_TmVO4_Cp_analysis'
 formatFigure;
-% printPNG([todaystr '_TmVO4-RF-E_Cp_fits_Hext=5000Oe_Comsol_comp3_V=4p17e-11m3_Hzinm=p74062']);
+% printPNG([todaystr '_TmVO4_half-diamond+front-cut_Cp_fits_Hext=5kOe_Comsol_V=Vsample_Hzm=p71513']);
 % printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
 
 
