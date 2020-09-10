@@ -7,9 +7,9 @@ function [F,S,Cp] = FSCp_TLFIM(t,h,e)
         S = -diff(F)./dt;% entropy
         dtm = 0.5*(dt(1:end-1)+dt(2:end));
         Cp = t(2:end-1)'.*diff(S)./dtm;
-    catch
-        warning(['Unable to compute entropy and heat capacity.'...
-            newline...
-            'Check dimensions of temperature array if that is not expected.'])
+%     catch
+%         warning(['Unable to compute entropy and heat capacity.'...
+%             newline...
+%             'Check dimensions of temperature array if that is not expected.'])
     end
 end

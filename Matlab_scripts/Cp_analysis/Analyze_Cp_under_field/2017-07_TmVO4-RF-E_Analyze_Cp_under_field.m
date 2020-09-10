@@ -12,25 +12,36 @@ e = 1.5e-3;% constant longitudinal field
 % mfdRFfname = '2020-07-21_TmVO4-RF-E_zero-temp-magnetization_mag-field_distrib.txt';
 % Smfd = importfielddistrib(mfdRFfname, 15);
 
-%% Import magnetic field distribution from CSV file
+%% Create list of files containing magnetic field distribution 
+% Change directory
 % cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-RF-E_HC2017-07\TmVO4-RF-E_magnetic_field_distribution_data'
 cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4_basic_shapes\TmVO4_basic_shapes_MFD_data'
+
+% Find all files matching the desired pattern
+files = glob('2020-09-09_TmVO4_half-diamond+front-cut_V=Vsample_Hzm=0p71513_mesh=max20um-in_comsol-mfd_*');
+
+% Insert file for 5 kOe between those containing data at 4 kOe and 6 kOe
+files(4:5) = files(3:4);% Shift file index 
+files(3) = {'2020-09-08_TmVO4_half-diamond+front-cut_V=Vsample_Hzm=0p71513_mesh=max20um-in_comsol-mfd_T=p3-3K-6values_H=5kOe.csv'};
+Ntemp = 6;
+Nsubfields = [1,3,1,2,1];
+Nparams = Ntemp*Nsubfields;
+Nfields = sum(Nsubfields);
+
+%% Import magnetic field distribution from CSV file
 % mfdRFfname = cell(1,2);
 % Srf = cell(1,2);
-% % mfdRFf{1} = {'2020-07-27_TmVO4-RF-E_COMSOL_mfd_mesh=finer-out+max20um-in_T=p001-1K_H=all.csv',28};
-% mfdRFf{2} = {'2020-07-27_TmVO4-RF-E_COMSOL_mfd_mesh=finer-out+max20um-in_T=2-3K_H=all.csv',28};
 % mfdRFf{3} = {'2020-08-11_TmVO4-RF-E_COMSOL_mfd_mesh=max20um-in_T=p5-1-1p5K_H=p1-p1-p8.csv',24};
 % mfdRFf{1} = {'2020-08-25_TmVO4-RF-E_COMSOL_mfd_mesh=max20um-in_T=p3-p4-3p1K_H=p1-p1-p8T.csv',64};
-Ntemp = 6;
-Nfields = 1;
-mfdRF{1} = {'2020-09-08_TmVO4_half-diamond+front-cut_V=Vsample_Hzm=0p71513_mesh=max20um-in_comsol-mfd_T=p3-3K-6values_H=5kOe.csv',Ntemp*Nfields};
-for ic=length(mfdRF):-1:1
+% mfdRF{1} = {'2020-09-08_TmVO4_half-diamond+front-cut_V=Vsample_Hzm=0p71513_mesh=max20um-in_comsol-mfd_T=p3-3K-6values_H=5kOe.csv',Ntemp*Nfields};
+for ic=length(files):-1:1
 %     Srf{ic} = importfielddistrib_csv(mfdRF{ic}{1}, mfdRF{ic}{2}, 'compNum', 2);
-    Srf{ic} = importfielddistrib_csv(mfdRF{ic}{1}, mfdRF{ic}{2});
+    Srf{ic} = importfielddistrib_csv(files{ic}, Nparams(ic));
 end
 
 %% Extract values of temperature and external magnetic field from structure header
 Smfd_RF = [Srf{1,:}];% concatenate cell arrays into structure
+user_mag = [1000*ones(Ntemp,1); NaN*ones(Ntemp*Nsubfields(2),1); 5000*ones(Ntemp,1)];% Oe
 for sidx=1:length(Smfd_RF)
     % split each header into a cell array of strings, using whitespace and '=' sign as separators
     TBextCell = strsplit(Smfd_RF(sidx).T_Bext,{' ','='});
@@ -51,9 +62,8 @@ for sidx=1:length(Smfd_RF)
     try
         Smfd_RF(sidx).Hext_Oe = str2double(TBextCell{circshift(TBextCell=="Bext",1)})*10^4;
     catch
-        user_mag = 5000;% Oe
-        Smfd_RF(sidx).Hext_Oe = user_mag;
-        warning(sprintf('No magnetic field values found. Using user value: %i Oe',user_mag))
+        Smfd_RF(sidx).Hext_Oe = user_mag(sidx);
+        warning(sprintf('No magnetic field values found. Using user value: %i Oe',user_mag(sidx)))
     end
 end
 
@@ -72,22 +82,22 @@ end
 figure;
 hold on
 % Ntemp = 7;
-param_index = 1;% 1 is constant T, 2 is constant Hext, see param_range
+param_select = 1;% 1 is constant Hext, 2 is constant T, see param_range
 temp_index = 1;% determines temperature of data to plot, taken among [.3:.4:3.1]K
-field_index = 1;% determines field of data to plot from [.1,.2,.3,.4,.45,.5,.55,.6,.62,.63,.65,.67,.7,.8]T
-param_range = {(temp_index-1)*Ntemp+[1:1:Ntemp], field_index+[0:Ntemp:56]};% first range corresponds to a 
+field_index = 5;% determines field of data to plot from [.1,.2,.3,.4,.45,.5,.55,.6,.62,.63,.65,.67,.7,.8]T
+param_range = {(field_index-1)*Ntemp+[1:1:Ntemp], temp_index+[0:Ntemp:Ntemp*(Nfields-1)]};% first range corresponds to a 
 % field dependence at constant temp, second range corresponds to a 
 % temperature dependence at constant field
-rng = param_range{param_index};
+rng = param_range{param_select};
 for i=rng
 T = Smfd_RF(i).T_K;%
 Hext = Smfd_RF(i).Hext_Oe;%
-p = plot(Smfd_RF(i).binCenters, Smfd_RF(i).hc, '.-', 'DisplayName', sprintf('%.2g, %.2g',T/Tcnum,Hext/Hc));
+p = plot(Smfd_RF(i).binCenters, Smfd_RF(i).hc, '.-', 'DisplayName', sprintf('%.2g, %.2g',T/Tc0rf,Hext/Hc));
 end
 lgd = legend('show'); lgd.Title.String = '$T/T_{c,0}$, $H_{\mathrm{ext}}/H_{c,0}$';
-param_title = {[', $T=$ ' sprintf('%.2g K',T)],...
-    [', $H_{\mathrm{ext}}=$ ' sprintf('%.2d Oe',Hext)]};
-title(['Distribution of fields in TmVO$_4$-RF-E' param_title{param_index}])
+param_title = {[', $H_{\mathrm{ext}}=$ ' sprintf('%.2d Oe',Hext)],...
+    [', $T=$ ' sprintf('%.2g K',T)]};
+title(['Distribution of fields in TmVO$_4$-RF-E' param_title{param_select}])
 xlabel('$H_{\mathrm{in}}/H_{\mathrm{c}}$')
 ylabel('Normalized PDF')
 
@@ -314,7 +324,6 @@ Tgmr = Tgm(:,1)/Tc0rf;
 % Hgmr and Tgmr exported manually on 2019-07-29 by copying from Matlab 
 % variables and pasting into worksheet of TmVO4_phase_diagram_Cp_MCE.opju
 
-
 %% Plot errorbar plot of Hc(T) from xls file
 % Need to import table from xls file first, e.g.
 % '2019-05-21_TmVO4-LS5228-DR-HC180731_MCE_Hc_vs_T.xlsx'
@@ -365,7 +374,7 @@ fitwghts = 1./fitCpErr;
 
 %% Compute Cp for distribution of fields
 clear CpnumRF
-rngNum = 7;
+rngNum = 1:length(uhrf);
 for i=rngNum
 CpnumRF(i).h = uhrf(i)*rescaling/Hc;
 % CpnumRF(i).rhsgm = 0.09;
@@ -437,7 +446,6 @@ end
 
 %% Create table from structure
 Tmfd_RF = struct2table(Smfd_RF);% 
-utmfdrf = unique(Tmfd_RF.T_K);
 uhmfdrf = unique(Tmfd_RF.Hext_Oe);
 
 %% Outdated; For a given dataset, find closest values of temperature and field in COMSOL mfd
@@ -448,7 +456,7 @@ h = Tmfd_RF.Hext_Oe(mfdhidx);
 tref = 0;
 for j=1:length(CpnumRF(i).t_h_dist_noe)
     % Find value of temperature in COMSOL mfd closest to that of actual data
-    [~,mfdtidx] = min(abs(Tmfd_RF.T_K/Tcnum-CpnumRF(i).t_h_dist_noe(j)));
+    [~,mfdtidx] = min(abs(Tmfd_RF.T_K/Tc0rf-CpnumRF(i).t_h_dist_noe(j)));
     % Improvement note: use sort instead of min, to be able to interpolate...
     t = Tmfd_RF.T_K(mfdtidx);
     if t ~= tref
@@ -471,12 +479,16 @@ end
 %% For a given dataset, compute Cp with and without longitudinal field
 % for the two closest values of temperature and field in COMSOL mfd
 tic% start clock to measure computation time
+rngMFD = find(ismember(uhrf,10^3*[1:8]));
 
-i=7;%rngNum(3:end)
+for idx=length(rngMFD);%rngNum(3:end)
+% idx = 8
+    i = rngMFD(idx)
     
     Hext_data = unique(round(avgRFData(i).H,-1));
     [~,mfdhidx] = min(abs(Tmfd_RF.Hext_Oe-Hext_data));
-    Hext_mfd = Tmfd_RF.Hext_Oe(mfdhidx);
+    Hext_mfd = Tmfd_RF.Hext_Oe(mfdhidx)
+    utmfdrf = unique(Tmfd_RF.T_K(Tmfd_RF.Hext_Oe==Hext_mfd));
     trange = CpnumRF(i).t_h_dist_noe(1:end);
     tref = zeros(2,length(trange)+1);% Not even necessary given the the function find_mfd_temp_rows() includes [0 0] as default values for tref
     % For the computations with longitudinal field, need to compute free
@@ -538,7 +550,7 @@ i=7;%rngNum(3:end)
 
     end
 
-    toc
+%     toc
     
     %%
     % CpnumRF(i).t_h_dist_noe = linspace(0.1,1.5,150);% reduced temperature, T/Tc
@@ -584,50 +596,68 @@ i=7;%rngNum(3:end)
     CpnumRF(i).comsolpdf_no_e = CpnumRF(i).comsolpdf_no_e(sel_no_e);
     CpnumRF(i).comsolpdf_w_e  = CpnumRF(i).comsolpdf_w_e(sel_w_e);
 
-% end
+end
 
-% toc 
+toc 
+
+%% Prepare exportation of results
+mfd_ID = 'TmVO4_half-diamond+front-cut_V=Vsample_Hzm=0p71513_mesh=max20um-in_comsol-mfd';
 
 %% Plot Cp for COMSOL distribution of fields
-for i=7
-single_str = ['$H_{\mathrm{ext}}\times$' sprintf('%.2g',rescaling)];
-figure
-% plot(avgRFData(i).T,avgRFData(i).Cpelr,'.','DisplayName','data')
-eb{rngNum==i} = errorbar(avgRFData(i).T,avgRFData(i).Cpelr,avgRFData(i).CpelrErr,...
-    '.','MarkerSize',18,'DisplayName',['Data at $H=H_{\mathrm{ext}}$'],...
-    'LineWidth',2);
-hold on;
-no_e_str = ' ($e=0$)';
-w_e_str = [' ($e=$ ' sprintf(' %.2g)',e)];
 
-% Plot results at single value of magnetic field
-plot(CpnumRF(i).t_single_h*Tc0rf,CpnumRF(i).single_h_no_e,...
-    'DisplayName',[single_str no_e_str]);% no longitudinal field
-plot(CpnumRF(i).t_single_h(2:end-1)*Tc0rf,CpnumRF(i).single_h_w_e,...
-    'DisplayName',[single_str w_e_str]);% with longitudinal field
+for idx=1%:length(rngMFD)
+    i = rngMFD(idx);
+    single_str = ['$H_{\mathrm{ext}}\times$' sprintf('%.2g',rescaling)];
+    figure
+    % plot(avgRFData(i).T,avgRFData(i).Cpelr,'.','DisplayName','data')
+    eb{rngNum==i} = errorbar(avgRFData(i).T,avgRFData(i).Cpelr,avgRFData(i).CpelrErr,...
+        '.','MarkerSize',18,'DisplayName',['Data at $H=H_{\mathrm{ext}}$'],...
+        'LineWidth',2);
+    hold on;
+    no_e_str = ' ($e=0$)';
+    w_e_str = [' ($e=$ ' sprintf(' %.2g)',e)];
 
-% Plot results for distribution of magnetic fields as computed with COMSOL
-comsol_str = 'comsol pdf';
-plot(CpnumRF(i).t_h_dist_noe*Tc0rf,CpnumRF(i).comsolpdf_no_e,...
-    'DisplayName',[comsol_str no_e_str]);
-plot(CpnumRF(i).t_h_dist_w_e*Tc0rf,CpnumRF(i).comsolpdf_w_e,...
-    'DisplayName',[comsol_str w_e_str]);
-title(['$C_p$ single field vs COMSOL PDF $H_{\mathrm{ext}}=$ ' sprintf('%.0f Oe',uhrf(i))]);
-lgd = legend('Location','northeast');% title(lgd,'TmVO4-Ndl-E');
-lgd.FontSize = 14;
+    % Plot results at single value of magnetic field
+    plot(CpnumRF(i).t_single_h*Tc0rf,CpnumRF(i).single_h_no_e,...
+        'DisplayName',[single_str no_e_str]);% no longitudinal field
+    plot(CpnumRF(i).t_single_h(2:end-1)*Tc0rf,CpnumRF(i).single_h_w_e,...
+        'DisplayName',[single_str w_e_str]);% with longitudinal field
 
-xlabel('$T$ (K)')
-ylabel('$C_p/R$')
+    % Plot results for distribution of magnetic fields as computed with COMSOL
+    comsol_str = 'comsol pdf';
+    plot(CpnumRF(i).t_h_dist_noe*Tc0rf,CpnumRF(i).comsolpdf_no_e,...
+        'DisplayName',[comsol_str no_e_str]);
+    plot(CpnumRF(i).t_h_dist_w_e*Tc0rf,CpnumRF(i).comsolpdf_w_e,...
+        'DisplayName',[comsol_str w_e_str]);
+    title(['$C_p$ single field vs COMSOL PDF $H_{\mathrm{ext}}=$ ' sprintf('%.0f Oe',uhrf(i))]);
+    lgd = legend('Location','northwest');% title(lgd,'TmVO4-Ndl-E');
+    lgd.FontSize = 14;
+
+    xlabel('$T$ (K)')
+    ylabel('$C_p/R$')
+    
+    xlim([0 3.2])
 end
 
 %% Export figure
+% Place cursor on this line to run loop containing subsections
+% for idx=1:4%length(rngMFD)
+% i=rngMFD(idx)
+
 % cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2017-07_TmVO4_Cp_MCE\2017-07-20_Cp\2017-07-20_TmVO4_Cp_analysis'
 formatFigure;
-% printPNG([todaystr '_TmVO4_half-diamond+front-cut_Cp_fits_Hext=5kOe_Comsol_V=Vsample_Hzm=p71513']);
+export_name{i} = sprintf('_%s_Cpnum_Hext=%dkOe', mfd_ID, uhrf(i)/10^3);
+printPNG([todaystr export_name{i}])
 % printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
+% end
 
-
-
+%% Export results to .dat file
+% Note: in order to run a for loop that contains subsections like this
+% one, the cursor has to be outside the loop when executing the run command
+dat_name = [todaystr export_name{i} '.dat'];
+% save_Cpnum_data(CpnumRF(i), uhrf(i)/10^3, mfd_ID, e, Tc0rf, dat_name);
+    
+% end
 
 
 

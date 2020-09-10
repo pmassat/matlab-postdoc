@@ -8,6 +8,15 @@
 % diary off
 % diary on
 
+%% Running for loop containing subsections
+% In order to run a for loop that contains subsections like this
+% one, the cursor has to be outside the loop when executing the run command
+for idx=1:4
+    stuff = idx
+    %% Subsection
+    more_stuff = -idx
+end
+
 %% Parse function arguments
 % See https://www.mathworks.com/help/matlab/ref/inputparser.html
 
