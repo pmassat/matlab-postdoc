@@ -379,8 +379,9 @@ for i=rngNum
 CpnumRF(i).h = uhrf(i)*rescaling/Hc;
 % CpnumRF(i).rhsgm = 0.09;
 % CpnumRF(i).sgm = CpnumRF(i).h*CpnumRF(i).rhsgm;
-CpnumRF(i).t_single_h = linspace(0,1.5,601);% reduced temperature, T/Tc
+CpnumRF(i).t_single_h_no_e = linspace(0,1.5,601);% reduced temperature, T/Tc
 CpnumRF(i).single_h_no_e = zeros(size(CpnumRF(i).t_single_h));
+CpnumRF(i).t_single_h_w_e = CpnumRF(i).t_single_h_no_e(2:end-1);%
 CpnumRF(i).single_h_w_e = zeros(size(CpnumRF(i).t_single_h));
 CpnumRF(i).t_h_dist_noe = [linspace(0.01,.5,50) linspace(0.505,1.1,120) linspace(1.11,1.4,30)];% reduced temperature, T/Tc
 CpnumRF(i).normpdf = zeros(size(CpnumRF(i).t_h_dist_noe));
@@ -402,31 +403,14 @@ end
 toc 
 
 %% Plot averaged data at each field separately
-figure; hold on
-rng = rngNum;% [1 5 7 9 13];
-clr = lines(length(rng));
-eb = cell(size(rng));
-maxTplot = 3.2;%
-for i=rng
-    fp = plot(CpnumRF(i).t_single_h(2:end-1)*Tc0rf,CpnumRF(i).single_h_w_e,'DisplayName','MF');
-%     fp = fplot(@(t) Cp_TFIM(t/Tc0rf,uhrf(i)*rescaling/(Hc0*1e4)),[0 maxTplot],'LineWidth',2);
+rng = find(ismember(uhrf,10^3*[1:8]))';%[1 5 7 9 13];
+rngPlot = rng(3:end-1);
+
+plot_Cp_avg_w_fits(rngPlot, avgRFData, CpnumRF, Tc0rf, uhrf/Hc)
+
 % Fit parameters on data at H=0: Tc=2.125(3), e=1.5(4)e-3
 % Note: the values of amplitude coefficient and Tc extracted from fit 
 % in curve fitting tool using Cp_TFIM (no offset strain) are A=7.35 and Tc=2.142K
-%     clr{rng==i} = get(fp,'Color');
-end
-for i=rng
-    eb{rng==i} = errorbar(avgRFData(i).T,avgRFData(i).Cpelr,avgRFData(i).CpFullErr/R,...
-        '.','MarkerSize',18,'DisplayName',num2str(uhrf(i)/Hc,'%.2f'),...
-        'Color',clr(rng==i,:),'LineWidth',2);
-end
-xlabel('Temperature (K)'); ylabel('C$_p$/R');%ylabel('C$_p$ (JK$^{-1}$mol$^{-1}$)');
-xlim([0 maxTplot])
-title('Heat capacity of TmVO4-RF-E')
-lgd = legend([eb{:}]); lgd.Title.String = '$H_{\mathrm{ext}}/H_c$';
-ax = gca; ax.YMinorTick = 'on';% Add minor ticks on Y axis
-grid on;%
-hold off
 
 %% Gaussian function (see normpdf.m)
 mu = .58; 
@@ -600,9 +584,6 @@ end
 
 toc 
 
-%% Prepare exportation of results
-mfd_ID = 'TmVO4_half-diamond+front-cut_V=Vsample_Hzm=0p71513_mesh=max20um-in_comsol-mfd';
-
 %% Plot Cp for COMSOL distribution of fields
 
 for idx=1%:length(rngMFD)
@@ -639,25 +620,49 @@ for idx=1%:length(rngMFD)
     xlim([0 3.2])
 end
 
+%% Prepare exportation of figure/data
+cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2017-07_TmVO4_Cp_MCE\2017-07-20_Cp\2017-07-20_TmVO4_Cp_analysis'
+mfd_ID = '_TmVO4_half-diamond_V=Vsample_Hzm=0p71513';
+
+%% Create file name for field i
+for i=rng
+fname_field{i} = sprintf('%s_Cpnum_Hext=%dkOe', mfd_ID, uhrf(i)/10^3);
+export_dat = [todaystr fname_field{i} '.dat'];
+import_dat = ['2020-09-09' fname_field{i} '.dat'];
+
+%% Import results from .dat file
+fileID = fopen(import_dat,'r');
+A = textscan(fileID, '%f%f', 'delimiter', ',', 'HeaderLines', 7);
+CpnumRF(i).t_h_dist_w_e = A{1}';
+CpnumRF(i).comsolpdf_w_e = A{2}';
+fclose(fileID);
+
+end
+
+%% Plot data and computed Cp
+plot_Cp_avg_w_fits(rngPlot, avgRFData, CpnumRF, Tc0rf, uhrf/Hc,...
+    'TnumStr', 't_h_dist_w_e', 'CpnumStr', 'comsolpdf_w_e')
+
 %% Export figure
 % Place cursor on this line to run loop containing subsections
 % for idx=1:4%length(rngMFD)
 % i=rngMFD(idx)
 
-% cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2017-07_TmVO4_Cp_MCE\2017-07-20_Cp\2017-07-20_TmVO4_Cp_analysis'
-formatFigure;
-export_name{i} = sprintf('_%s_Cpnum_Hext=%dkOe', mfd_ID, uhrf(i)/10^3);
-printPNG([todaystr export_name{i}])
+% formatFigure;
+% printPNG([todaystr mfd_ID '_Cp_vs_T_H'])
 % printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
 % end
 
 %% Export results to .dat file
 % Note: in order to run a for loop that contains subsections like this
 % one, the cursor has to be outside the loop when executing the run command
-dat_name = [todaystr export_name{i} '.dat'];
 % save_Cpnum_data(CpnumRF(i), uhrf(i)/10^3, mfd_ID, e, Tc0rf, dat_name);
     
-% end
+
+
+
+
+
 
 
 

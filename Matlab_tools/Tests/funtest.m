@@ -1,8 +1,12 @@
-function y = funtest(varargin)
-disp('1')
-    if nargin>0
-        disp('2')
-    end
+function y = funtest(arg1, varargin)
+
+p = inputParser;
+
+addOptional(p, 'arg2', 0);
+
+parse(p, varargin{:});
+
+y = arg1 + p.Results.arg2;
 end
 
 % function y = funtest(x,param)

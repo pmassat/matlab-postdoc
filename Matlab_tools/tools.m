@@ -17,6 +17,9 @@ for idx=1:4
     more_stuff = -idx
 end
 
+%% Import data from text file: use textscan
+% See e.g. https://www.mathworks.com/matlabcentral/answers/64928-import-text-file-with-header
+
 %% Parse function arguments
 % See https://www.mathworks.com/help/matlab/ref/inputparser.html
 
