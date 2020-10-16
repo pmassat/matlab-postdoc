@@ -92,14 +92,24 @@ rng = param_range{param_select};
 for i=rng
 T = Smfd_RF(i).T_K;%
 Hext = Smfd_RF(i).Hext_Oe;%
-p = plot(Smfd_RF(i).binCenters, Smfd_RF(i).hc, '.-', 'DisplayName', sprintf('%.2g, %.2g',T/Tc0rf,Hext/Hc));
+% p = plot(Smfd_RF(i).binCenters, Smfd_RF(i).hc, '.-', 'DisplayName', sprintf('%.2g, %.2g',T/Tc0rf,Hext/Hc));
+p = plot(Smfd_RF(i).binCenters, Smfd_RF(i).hc, '.-', 'DisplayName', sprintf('%.2g',T/Tc0rf));
 end
-lgd = legend('show'); lgd.Title.String = '$T/T_{c,0}$, $H_{\mathrm{ext}}/H_{c,0}$';
-param_title = {[', $H_{\mathrm{ext}}=$ ' sprintf('%.2d Oe',Hext)],...
-    [', $T=$ ' sprintf('%.2g K',T)]};
-title(['Distribution of fields in TmVO$_4$-RF-E' param_title{param_select}])
+lgd = legend('show'); 
+lgd.Title.String = '$T/T_{Q,0}$';% lgd.Title.String = '$T/T_{Q,0}$, $H_{\mathrm{ext}}/H_{c,0}$';
+param_title = {['$H=$ ' sprintf('%.2d Oe',Hext)],...
+    ['$T=$ ' sprintf('%.2g K',T)]};
+% title(['Distribution of fields in TmVO$_4$-RF-E, ' param_title{param_select}])
 xlabel('$H_{\mathrm{in}}/H_{\mathrm{c}}$')
-ylabel('Normalized PDF')
+ylabel('Normalized Probability')
+annfield = annotation('textbox',[0.5 0.8 0.2 0.1], 'interpreter','latex',...
+    'String', param_title{param_select}, 'EdgeColor','none',...
+    'FitBoxToText','on', 'BackgroundColor','none', 'Color','k');% add annotation
+
+%% 
+% formatFigure;
+% printPNG([todaystr mfd_ID '_Cp_vs_T_H'])
+printPDF(['2020-09-09_TmVO4-HD-model_MFD_Hext=5kOe']);
 
 %% Compute the average value of ratio of internal to external magnetic field 
 for i=1:length(Smfd_RF)

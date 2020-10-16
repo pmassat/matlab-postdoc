@@ -11,4 +11,4 @@ function [s,opt] = OP_TFIM_array(t,h,e)
             s(jt,jh) = fsolve(fun,1,opt);
         end
     end
-end   
+end
