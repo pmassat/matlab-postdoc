@@ -13,12 +13,17 @@ cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2018-08_TmVO4-LS52
 Data = ImportCpDR('2018-07-31_TmVO4-LS5228-DR-HC180731.dat');
 % Data0 = importCpSharedPPMS_('20180322_TmVO4-LS5228-MP3-Plt-HC1803_Cp.dat');
 %% Concatenate them in a cell array
-split = {Data};
+H = [Data.FieldOersted];
+[uh,~,X] = unique(round(H(~isnan(H))));
+split = accumarray(X,1:length(H(~isnan(H))),[],@(r){Data(r,:)});
+M = 283.87;% Molar mass of TmVO4, in g/mol
+m = 1e-3;% mass in g
+luh = length(uh);
 
 %% Rename variables
 isTableCol = @(t, thisCol) ismember(thisCol, t.Properties.VariableNames);
 % function to test if a column exists in a table
-for i=1% for doped samples measured in DR
+for i=1:luh% for doped samples measured in DR
     if isTableCol(split{i},'SampleTempKelvin')
         split{i}.Properties.VariableNames{'SampleTempKelvin'} = 'T';% rename the temperature column
     end
@@ -40,14 +45,14 @@ for i=1% for doped samples measured in DR
 end
 
 %% Remove NaN rows
-for i=1
+for i=1:luh
     split{i}(any(isnan(split{i}.T), 2), :) = [];% Remove rows where T is NaN
 end
 
 %% Keep only data under zero magnetic field
-for i=1%for all datasets
-    split{i} = split{i}(round(split{i}.H,-1)==0,:);% keep only data at zero field
-end
+% for i=1%for all datasets
+%     split{i} = split{i}(round(split{i}.H,-1)==0,:);% keep only data at zero field
+% end
 
 %% Parameters for plotting heat capacity
 xlblTemp = '$T$ (K)';
@@ -57,17 +62,16 @@ ttlCp = 'Heat capacity of TmVO$_4$';
 %% Compute molar heat capacity
 M = 283.87326;% Molar mass of each sample, in g/mol
 m = 1e-3*0.38;% mass in g of the sample on which each dataset was measured
-dpg = 0;
-for i=1
-    split{i}.Cpmol = split{i}.Cp *1e-6*M(i)/(m(i)*(1-dpg(i)));% molar heat capacity, in J/mol/K
-    split{i}.CpmolErr = split{i}.CpErr *1e-6*M(i)/(m(i)*(1-dpg(i)));% molar heat capacity, in J/mol/K
+for i=1:luh
+    split{i}.Cpmol = split{i}.Cp *1e-6*M/m;% molar heat capacity, in J/mol/K
+    split{i}.CpmolErr = split{i}.CpErr *1e-6*M/m;% molar heat capacity, in J/mol/K
     % starting from a heat capacity measured in microJoules per Kelvin, as is measured in the DR
     % Cpmol is calculated per mole of Tm3+ ions, hence the (1-dpg) factor in the denominator
 end
 
 %% Sort each dataset by increasing value of temperature
 srtd = repmat(split,1);
-for i=1
+for i=1:luh
     srtd{i} = sortrows(split{i},{'T'});
 %     [split{i}.T,wo] = sort(split{i}.T);
 %     split{i}.Cp = split{i}.Cp(wo);
@@ -78,20 +82,22 @@ srtd = srtd';
 clear avgData
 R = 8.314;% gas constant in J/mol/K
 Tp = 26;% Temperature scale of phonons contribution to Cp in TmVO4, in K; see 'TmVO4_Cp_phonons.m'
-for i = 1
-    avgData(i) = averageCp(6e-3,srtd{i}.T,srtd{i}.Cpmol,srtd{i}.CpmolErr);
-    avgData.CpFull = avgData.Cp;
-    avgData.Cp = avgData.CpFull - R*(avgData.T/Tp).^3;% electronic contribution to Cp, after subtracting phonons contribution
-    avgData.Cpr = avgData.Cp/R;
-    avgData.CprErr = avgData.CpFullErr/R;
+for i = luh:-1:1
+    avgData(i) = averageCpwithH2(6e-3, srtd{i}.T, srtd{i}.Cpmol, srtd{i}.CpmolErr, srtd{i}.H);
+end
+for i = luh:-1:1
+    avgData(i).CpFull = avgData(i).Cp;
+    avgData(i).Cp = avgData(i).CpFull - R*(avgData(i).T/Tp).^3;% electronic contribution to Cp, after subtracting phonons contribution
+    avgData(i).Cpr = avgData(i).Cp/R;
+    avgData(i).CprErr = avgData(i).CpFullErr/R;
 end
 
 %% Plot averaged data 
 figure
-plot(avgData.T,avgData.CpFull,'.','DisplayName','$C_p^{\mathrm{full}}$')
+plot(avgData(i).T,avgData(i).CpFull,'.','DisplayName','$C_p^{\mathrm{full}}$')
 hold on
-plot(avgData.T,R*(avgData.T/Tp).^3,'.','DisplayName','$C_p^{\mathrm{phonons}}$')
-plot(avgData.T,avgData.Cp,'.','DisplayName','$C_p^{\mathrm{full}}-C_p^{\mathrm{phonons}}$')
+plot(avgData(i).T,R*(avgData(i).T/Tp).^3,'.','DisplayName','$C_p^{\mathrm{phonons}}$')
+plot(avgData(i).T,avgData(i).Cp,'.','DisplayName','$C_p^{\mathrm{full}}-C_p^{\mathrm{phonons}}$')
 legend('show')
 title('TmVO$_4$ heat capacity')
 xlabel(xlblTemp); ylabel('$C_p$ (J/K/mol)');
