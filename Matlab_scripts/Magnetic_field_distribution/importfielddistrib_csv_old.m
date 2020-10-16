@@ -1,4 +1,4 @@
-function S = importfielddistrib_csv(filename, varargin)
+function S = importfielddistrib_csv_old(filename, varargin)
 %IMPORTFILE Import numeric data from a text file as a matrix.
 %   MAGFIELDDISTRIB = IMPORTFILE(FILENAME)
 %   Reads data from text file FILENAME for the default selection.

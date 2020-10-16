@@ -1,110 +1,195 @@
 % Code was derived from 'YTmVO4_primary_analysis.m' on 2019-08-06
+M = 283.87326;% Molar mass of each sample, in g/mol
+m = 1e-3*0.38;% mass in g of the sample on which each dataset was measured
 
 %% Analyze heat capacity from DR
 % This routine is intended at anaLzing Cp data acquired with our DR used in 
 % the Dynacool PPMS of the Lee lab
 cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2018-08_TmVO4-LS5228\'
 
-%% To do: 
-% * Error bars:
-% *     For dT data, use standard deviation
-
 %% Import data YTmVO4
-Data = ImportCpDR('2018-07-31_TmVO4-LS5228-DR-HC180731.dat');
+Data5228HC18 = ImportCpDR('2018-07-31_TmVO4-LS5228-DR-HC180731.dat');
 % Data0 = importCpSharedPPMS_('20180322_TmVO4-LS5228-MP3-Plt-HC1803_Cp.dat');
-%% Concatenate them in a cell array
-H = [Data.FieldOersted];
-[uh,~,X] = unique(round(H(~isnan(H))));
-split = accumarray(X,1:length(H(~isnan(H))),[],@(r){Data(r,:)});
-M = 283.87;% Molar mass of TmVO4, in g/mol
-m = 1e-3;% mass in g
-luh = length(uh);
 
-%% Rename variables
-isTableCol = @(t, thisCol) ismember(thisCol, t.Properties.VariableNames);
-% function to test if a column exists in a table
-for i=1:luh% for doped samples measured in DR
-    if isTableCol(split{i},'SampleTempKelvin')
-        split{i}.Properties.VariableNames{'SampleTempKelvin'} = 'T';% rename the temperature column
-    end
-    if isTableCol(split{i},'FieldOersted')
-        split{i}.Properties.VariableNames{'FieldOersted'} = 'H';% rename the magnetic field column
-    end
-    if isTableCol(split{i},'SampHCJK')% for samples measured in DR
-        split{i}.Properties.VariableNames{'SampHCJK'} = 'Cp';% rename the heat capacity column
-    elseif isTableCol(split{i},'SampHCmJmoleK')% for samples measured in shared PPMS
-        split{i}.Properties.VariableNames{'SampHCmJmoleK'} = 'Cp';
-    elseif isTableCol(split{i},'SampHCJmoleK')% for samples measured in Fisher He4 PPMS
-        split{i}.Properties.VariableNames{'SampHCJmoleK'} = 'Cp';
-    end
-    if isTableCol(split{i},'SampHCErrJmoleK')% for samples measured in DR
-        split{i}.Properties.VariableNames{'SampHCErrJmoleK'} = 'CpErr';
-    elseif isTableCol(split{i},'SampHCErrJK')% for samples measured in DR
-        split{i}.Properties.VariableNames{'SampHCErrJK'} = 'CpErr';        
-    end
-end
+%% Store data into variables
+% H=[DATA.FieldOersted; DATA(2).FieldOersted];
+% T=[DATA.SampleTempKelvin; DATA(2).SampleTempKelvin];
+% Cp=[DATA.SampHCJmoleK; DATA(2).SampHCJmoleK];
+H5228HC18=[Data5228HC18.FieldOersted];
+T5228HC18=[Data5228HC18.SampleTempKelvin];
+Cp5228HC18=[Data5228HC18.SampHCJK];
+CpErr5228HC18=[Data5228HC18.SampHCErrJK];
 
-%% Remove NaN rows
-for i=1:luh
-    split{i}(any(isnan(split{i}.T), 2), :) = [];% Remove rows where T is NaN
-end
+whichPoints = isfinite(H5228HC18) & isfinite(T5228HC18) & isfinite(Cp5228HC18);
+H5228HC18 = H5228HC18(whichPoints);
+T5228HC18 = T5228HC18(whichPoints);
+Cp5228HC18 = Cp5228HC18(whichPoints)*1e-6*M/m;% molar heat capacity, converted from uJ/K to J/mol/K
+CpErr5228HC18 = CpErr5228HC18(whichPoints)*1e-6*M/m;
 
-%% Keep only data under zero magnetic field
+[uh5228,~,X] = unique(round(H5228HC18(~isnan(H5228HC18))));
+% split = accumarray(X,1:length(H(~isnan(H))),[],@(r){Data(r,:)});
+luh5228 = length(uh5228);
+
+%% Store data into cell array (outdated)
+% isTableCol = @(t, thisCol) ismember(thisCol, t.Properties.VariableNames);
+% % function to test if a column exists in a table
+% for i=1:luh5228% for doped samples measured in DR
+%     if isTableCol(split{i},'SampleTempKelvin')
+%         split{i}.Properties.VariableNames{'SampleTempKelvin'} = 'T';% rename the temperature column
+%     end
+%     if isTableCol(split{i},'FieldOersted')
+%         split{i}.Properties.VariableNames{'FieldOersted'} = 'H';% rename the magnetic field column
+%     end
+%     if isTableCol(split{i},'SampHCJK')% for samples measured in DR
+%         split{i}.Properties.VariableNames{'SampHCJK'} = 'Cp';% rename the heat capacity column
+%     elseif isTableCol(split{i},'SampHCmJmoleK')% for samples measured in shared PPMS
+%         split{i}.Properties.VariableNames{'SampHCmJmoleK'} = 'Cp';
+%     elseif isTableCol(split{i},'SampHCJmoleK')% for samples measured in Fisher He4 PPMS
+%         split{i}.Properties.VariableNames{'SampHCJmoleK'} = 'Cp';
+%     end
+%     if isTableCol(split{i},'SampHCErrJmoleK')% for samples measured in DR
+%         split{i}.Properties.VariableNames{'SampHCErrJmoleK'} = 'CpErr';
+%     elseif isTableCol(split{i},'SampHCErrJK')% for samples measured in DR
+%         split{i}.Properties.VariableNames{'SampHCErrJK'} = 'CpErr';        
+%     end
+% end
+% 
+% %% Remove NaN rows
+% for i=1:luh5228
+%     split{i}(any(isnan(split{i}.T), 2), :) = [];% Remove rows where T is NaN
+% end
+% 
+% %% Keep only data under zero magnetic field
 % for i=1%for all datasets
 %     split{i} = split{i}(round(split{i}.H,-1)==0,:);% keep only data at zero field
 % end
+% %% Compute molar heat capacity
+% for i=1:luh5228
+%     split{i}.Cpmol = split{i}.Cp *1e-6*M/m;% molar heat capacity, in J/mol/K
+%     split{i}.CpmolErr = split{i}.CpErr *1e-6*M/m;% molar heat capacity, in J/mol/K
+%     % starting from a heat capacity measured in microJoules per Kelvin, as is measured in the DR
+%     % Cpmol is calculated per mole of Tm3+ ions, hence the (1-dpg) factor in the denominator
+% end
+% 
+% %% Sort each dataset by increasing value of temperature
+% srtd = repmat(split,1);
+% for i=1:luh5228
+%     srtd{i} = sortrows(split{i},{'T'});
+% %     [split{i}.T,wo] = sort(split{i}.T);
+% %     split{i}.Cp = split{i}.Cp(wo);
+% end
+% srtd = srtd';
+% 
 
 %% Parameters for plotting heat capacity
 xlblTemp = '$T$ (K)';
 ylblCp = 'C$_p$ (J$\cdot$mol$^{-1}\cdot$K$^{-1}$)';
 ttlCp = 'Heat capacity of TmVO$_4$';
 
-%% Compute molar heat capacity
-M = 283.87326;% Molar mass of each sample, in g/mol
-m = 1e-3*0.38;% mass in g of the sample on which each dataset was measured
-for i=1:luh
-    split{i}.Cpmol = split{i}.Cp *1e-6*M/m;% molar heat capacity, in J/mol/K
-    split{i}.CpmolErr = split{i}.CpErr *1e-6*M/m;% molar heat capacity, in J/mol/K
-    % starting from a heat capacity measured in microJoules per Kelvin, as is measured in the DR
-    % Cpmol is calculated per mole of Tm3+ ions, hence the (1-dpg) factor in the denominator
-end
+%% Separate data according to value of magnetic field
+clear sepH5228HC18
 
-%% Sort each dataset by increasing value of temperature
-srtd = repmat(split,1);
-for i=1:luh
-    srtd{i} = sortrows(split{i},{'T'});
-%     [split{i}.T,wo] = sort(split{i}.T);
-%     split{i}.Cp = split{i}.Cp(wo);
+for i = 1:luh5228
+    wp = abs(H5228HC18-uh5228(i))<50;
+    sepH5228HC18(i).H = H5228HC18(wp);
+    sepH5228HC18(i).T = T5228HC18(wp);
+    sepH5228HC18(i).Cp = Cp5228HC18(wp);
+    sepH5228HC18(i).CpErr = CpErr5228HC18(wp);
+
+    [sepH5228HC18(i).T,wo] = sort(sepH5228HC18(i).T);
+    sepH5228HC18(i).H = sepH5228HC18(i).H(wo);
+    sepH5228HC18(i).Cp = sepH5228HC18(i).Cp(wo);
+    sepH5228HC18(i).CpErr = sepH5228HC18(i).CpErr(wo);
 end
-srtd = srtd';
 
 %% Compute average of data points taken
-clear avgData
+clear avg5228HC18
 R = 8.314;% gas constant in J/mol/K
 Tp = 26;% Temperature scale of phonons contribution to Cp in TmVO4, in K; see 'TmVO4_Cp_phonons.m'
-for i = luh:-1:1
-    avgData(i) = averageCpwithH2(6e-3, srtd{i}.T, srtd{i}.Cpmol, srtd{i}.CpmolErr, srtd{i}.H);
+for i = luh5228:-1:1
+    avg5228HC18(i) = averageCpwithH2(6e-3, sepH5228HC18(i).T,...
+        sepH5228HC18(i).Cp, sepH5228HC18(i).CpErr, sepH5228HC18(i).H);
 end
-for i = luh:-1:1
-    avgData(i).CpFull = avgData(i).Cp;
-    avgData(i).Cp = avgData(i).CpFull - R*(avgData(i).T/Tp).^3;% electronic contribution to Cp, after subtracting phonons contribution
-    avgData(i).Cpr = avgData(i).Cp/R;
-    avgData(i).CprErr = avgData(i).CpFullErr/R;
+for i = luh5228:-1:1
+    avg5228HC18(i).CpFull = avg5228HC18(i).Cp;
+    avg5228HC18(i).Cp = avg5228HC18(i).CpFull - R*(avg5228HC18(i).T/Tp).^3;% electronic contribution to Cp, after subtracting phonons contribution
+    avg5228HC18(i).Cpr = avg5228HC18(i).Cp/R;
+    avg5228HC18(i).CprErr = avg5228HC18(i).CpFullErr/R;
 end
 
 %% Plot averaged data 
 figure
-plot(avgData(i).T,avgData(i).CpFull,'.','DisplayName','$C_p^{\mathrm{full}}$')
+plot(avg5228HC18(i).T,avg5228HC18(i).CpFull,'.','DisplayName','$C_p^{\mathrm{full}}$')
 hold on
-plot(avgData(i).T,R*(avgData(i).T/Tp).^3,'.','DisplayName','$C_p^{\mathrm{phonons}}$')
-plot(avgData(i).T,avgData(i).Cp,'.','DisplayName','$C_p^{\mathrm{full}}-C_p^{\mathrm{phonons}}$')
+plot(avg5228HC18(i).T,R*(avg5228HC18(i).T/Tp).^3,'.','DisplayName','$C_p^{\mathrm{phonons}}$')
+plot(avg5228HC18(i).T,avg5228HC18(i).Cp,'.','DisplayName','$C_p^{\mathrm{full}}-C_p^{\mathrm{phonons}}$')
 legend('show')
 title('TmVO$_4$ heat capacity')
 xlabel(xlblTemp); ylabel('$C_p$ (J/K/mol)');
 
+%% Compute Cp for Gaussian distribution of fields
+clear Cpnum
+Tc5228 = 2.193;% (2.192, 2.194) Value of transition temperature obtained from fit with Cp_LFIM function in Curve Fitting Tool including data poitns up to T = 1.191 K
+e5228 =  6.5e-4;% (0.0005145, 0.0007925) Value of longitudinal field obtained the same way as Tc5228
+Hc = 5000;
+rescaling = .9;
+rngNum = 1:luh5228;
+for i=rngNum
+Cpnum(i).h = uh5228(i)/Hc*rescaling;
+Cpnum(i).t_single_h = linspace(0,1.4,561);% reduced temperature, T/Tc
+Cpnum(i).single_h_no_e = zeros(size(Cpnum(i).t_single_h));
+Cpnum(i).single_h_w_e = zeros(size(Cpnum(i).t_single_h));
+Cpnum(i).t_h_dist_no_e = [linspace(0.01,.5,50) linspace(0.505,1.1,120) linspace(1.11,1.4,30)];% reduced temperature, T/Tc
+Cpnum(i).comsolpdf_no_e = zeros(size(Cpnum(i).t_h_dist_no_e));
+Cpnum(i).comsolpdf_w_e = zeros(size(Cpnum(i).t_h_dist_no_e));
+end
+
+%% Compute Cp_TLFIM at single value of field
+tic
+for i=rngNum
+Cpnum(i).single_h_no_e = Cp_TFIM(Cpnum(i).t_single_h,Cpnum(i).h);
+[~,~,Cpnum(i).single_h_w_e] = FSCp_TLFIM(Cpnum(i).t_single_h,Cpnum(i).h,e5228);
+Cpnum(i).single_h_w_e = Cpnum(i).single_h_w_e';
+end
+toc
+
+%% Plot averaged data at each field separately
+figure; hold on
+rngAvg = 1:luh5228;
+clr = lines(luh5228);
+eb = cell(size(rngAvg));
+for i=rngAvg
+%     fp = fplot(@(t) Cp_TFIM(t/Tc_5228HC18,fields5228HC18(i)/Hc),[0 3],'LineWidth',2);
+    fp = plot(Cpnum(i).t_single_h(2:end-1)*Tc5228,Cpnum(i).single_h_w_e,'DisplayName','MF');
+    clr(i,:) = get(fp,'Color');
+end
+for i=rngAvg
+    eb{rngAvg==i} = errorbar(avg5228HC18(i).T,avg5228HC18(i).Cpr,avg5228HC18(i).CprErr,...
+        '.','MarkerSize',18,'DisplayName',sprintf('%d',uh5228(i)),...
+        'Color',clr(i,:),'LineWidth',2);
+end
+xlabel('$T$ (K)'); 
+ylabel('$C_p/R$');
+% title(['Heat capacity of needles of TmVO$_4$, $e=$ ', sprintf('%.2g',e),...
+%     ', $H\times$' sprintf('%.2g',rescaling)])
+lgd = legend([eb{:}],'Location','northeast');
+lgd.Title.String = '$H$ (Oe)';
+hold off
+annfield = annotation('textbox',[0.15 0.8 0.2 0.1], 'interpreter','latex',...
+    'String', ['Fits at $H\times$' sprintf('%.2g',rescaling)], 'EdgeColor','none',...
+    'FitBoxToText','on', 'BackgroundColor','none', 'Color','k');% add annotation
+xlim([0 3.1]);
+
+%% 
+% formatFigure;
+% printPNG([todaystr mfd_ID '_Cp_vs_T_H'])
+printPDF([todaystr '_TmVO4-LS5228-DR-HC1807_Cp+single-h-fits_e=6p5e-4']);
+
+
+
 %% Prepare plot of theoretical heat capacity curve 
 % Tc = 2.19;%  Value of transition temperature obtained from fit with Cp_LFIM_NF function in Curve Fitting Tool
-Tc = 2.185;%  Value of transition temperature obtained from fit with Cp_LFIM_CW function in Curve Fitting Tool
+Tc5228 = 2.185;%  Value of transition temperature obtained from fit with Cp_LFIM_CW function in Curve Fitting Tool
 s =  5e-4;%  Value of longitudinal field obtained from fit with Cp_LFIM_NF and Cp_LFIM_CW and Cp_LFIM_MEC_cst_stress function in Curve Fitting Tool
 T_CW = 2.09;% Curie-Weiss temperature obtained from fit with function Cp_LFIM_CW 
 A_CW = 0.0136;% amplitude of CW divergence obtained from fit with function Cp_LFIM_CW 
@@ -113,24 +198,25 @@ A = 5e-3;% Amplitude of "high"-temperature divergence obtained from fit with fun
 tvec = linspace(1e-3,4,300);% temperature vector for computation of Cp
 
 %% Compute pure mean-field heat capacity
-Cptheo0 = Cp_TFIM(tvec/Tc,0);
+Cptheo0 = Cp_TFIM(tvec/Tc5228,0);
 
 %% Compute theoretical heat capacity in LFIM
 % Cptheo = Cp_LFIM(tvec/Tc,s);
 % Cptheo = Cp_LFIM_CW(tvec/Tc,s,A,T0/Tc);
-Cptheo = Cp_LFIM_MEC_cst_stress(tvec/Tc,s,A,T0/Tc);
+Cptheo = Cp_LFIM_MEC_cst_stress(tvec/Tc5228,s,A,T0/Tc5228);
 
 %% Subtract Cptheo from experimental data to analyze the residual Cp
-Cptheodat = Cp_LFIM(avgData(i).T/Tc,s);% theoretical Cp computed at same temperatures as data
-avgData(i).Cpres = avgData(i).Cp - Cptheodat*R;% Residual Cp after subtraction of the fit
+Cptheodat = Cp_LFIM(avg5228HC18(i).T/Tc5228,s);% theoretical Cp computed at same temperatures as data
+avg5228HC18(i).Cpres = avg5228HC18(i).Cp - Cptheodat*R;% Residual Cp after subtraction of the fit
 
 %% Prepare fit of Cp vs Temperature 
 % Use these variables in Curve fitting tool
-fitT = avgData(i).T;
-fitCp = avgData(i).Cpr;
-fitCpErr = avgData(i).CprErr;
+i=1;
+fitT = avg5228HC18(i).T;
+fitCp = avg5228HC18(i).Cpr;
+fitCpErr = avg5228HC18(i).CprErr;
 fitwghts = 1./fitCpErr;
-fitCpres = avgData(i).Cpres/R;
+% fitCpres = avg5228HC18(i).Cpres/R;
 
 %% Prepare tight subplot for combining plots in single figure
 % For figure 1 of paper 1
@@ -148,8 +234,8 @@ c2 =    0.004759;  %(0.003322, 0.006196)
 p0 = plot(tvec,Cptheo0,'Color',[.5 .5 .5],'DisplayName','Mean-field');
 hold on
 p1 = plot(tvec,Cptheo,'-r','DisplayName',['MF + pheno.']);
-% fp = plot(avgData(i).T,Cptheodat,'-r','DisplayName',sprintf('MF: e=%.2g',e));
-pdat = errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.b',...
+% fp = plot(avg5228HC18(i).T,Cptheodat,'-r','DisplayName',sprintf('MF: e=%.2g',e));
+pdat = errorbar(avg5228HC18(i).T,avg5228HC18(i).Cp/R,avg5228HC18(i).CpFullErr/R,'.b',...
     'MarkerSize',18,'LineWidth',1,'DisplayName','Experiment');
 xlabel(xlblTemp); ylabel('$C_p^{4f}/R$');
 ylim([0 1.55])
@@ -198,7 +284,7 @@ lgd = legend('show');
 % For figure 1 of paper 1
 sz = zeros(size(tvec));
 for j=1:length(tvec)
-sz(j) = 2.95/2*OP_TFIM(tvec(j)/Tc,0,s);%2.95 cm-1 is the total splitting of the GS doublet, see e.g. Melcher1976, fig.2(a)
+sz(j) = 2.95/2*OP_TFIM(tvec(j)/Tc5228,0,s);%2.95 cm-1 is the total splitting of the GS doublet, see e.g. Melcher1976, fig.2(a)
 end
 
 %% Plot splitting vs T
@@ -238,7 +324,7 @@ printSVG([todaystr '_TmVO4-LS5228-DR-HC180731_Cp+fit'])
 %     fid = fopen(expstr(i), 'wt');
 %     fprintf(fid, '%s\n', ['Exported from AnaLzeCpDRdoping_2018-10-10_YTmVO4_VTmAsO4.mlx on ',date]);  % header
 %     fclose(fid);
-%     dlmwrite(expstr(i),cat(2,avgData(i).T',avgData(i).Cp',avgData(i).stdCp'),'-append','delimiter','\t')
+%     dlmwrite(expstr(i),cat(2,avg5228HC18(i).T',avg5228HC18(i).Cp',avg5228HC18(i).stdCp'),'-append','delimiter','\t')
 % end
 % 
 
@@ -258,7 +344,7 @@ maxTfit = 2.23;
 a = 0.9996;%  (0.203, 1.796)
 b = -3.035;%  (-3.795, -2.275);% When fitting only the highest three data points
 figure
-errorbar(avgData(i).T,avgData(i).Cpres/R,avgData(i).CpFullErr/R,'.b',...
+errorbar(avg5228HC18(i).T,avg5228HC18(i).Cpres/R,avg5228HC18(i).CpFullErr/R,'.b',...
     'MarkerSize',18,'LineWidth',1,'DisplayName','Residual $C_p$')
 hold on
 % fpr = plot(tvec(2:end-1),Cpmagres','-r','DisplayName',['Mag. dip.' newline '${\Delta e}/T_c=$ ' sprintf('%.2g',d0md)]);
@@ -272,14 +358,14 @@ ylim([0 .2])
 
 %% Cp LFIM with arbitrary value of longitudinal field
 e2 = 1e-2;
-Cpt2 = Cp_LFIM(tvec/Tc,e2);
+Cpt2 = Cp_LFIM(tvec/Tc5228,e2);
 
 %% Compute Cp correction due to magnetic dipole interactions
 C_0 = 0.088;% 1/T^2 coefficient, see paper
 d0md = 0.01;
 szcp = sz(2:end-1);
 % tadr = linspace(3e-3,2,500);
-deltaCpdr = (1-szcp'*2/2.95).*C_0/Tc.*Cp_magDipRandFields(tvec'/Tc,d0md);
+deltaCpdr = (1-szcp'*2/2.95).*C_0/Tc5228.*Cp_magDipRandFields(tvec'/Tc5228,d0md);
 
 %% Cp in random strains
 d0dr = .3;
@@ -290,10 +376,10 @@ Cpma = Cp_full_random_strains(d0dr,6*s,tvec/Tcrs);
 figure; 
 % ax2 = subplot(5,1,[3:5]); 
 p1 = plot(tvec,Cptheo,'-r','DisplayName',sprintf('MF: e=%.2g',s));
-% fp = plot(avgData(i).T,Cptheodat,'-r','DisplayName',sprintf('MF: e=%.2g',e));
+% fp = plot(avg5228HC18(i).T,Cptheodat,'-r','DisplayName',sprintf('MF: e=%.2g',e));
 hold on
 fpr = plot(tvec,Cpma,'-g','DisplayName',['Rand. strains:' newline '${\Delta e}/T_c$=' sprintf('%.2g',d0dr)]);
-errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.b',...
+errorbar(avg5228HC18(i).T,avg5228HC18(i).Cp/R,avg5228HC18(i).CpFullErr/R,'.b',...
     'MarkerSize',18,'LineWidth',1,'DisplayName','Experiment')
 xlabel(xlblTemp); ylabel('$C_p/R$');
 ylim([0 1.55])
@@ -311,7 +397,7 @@ p1 = plot(tvec,Cptheo,'-r','DisplayName',sprintf('MF: $e=$ %.2g',s));
 hold on
 fpr = plot(tvec(2:end-1),deltaCpdr','-g','DisplayName',['Mag. dip.:' newline '${\Delta e}/T_c$=' sprintf('%.2g',d0md)]);
 fpt = plot(tvec(2:end-1),Cptheo(2:end-1)+deltaCpdr','-m','DisplayName','MF + mag. dip.');
-errorbar(avgData(i).T,avgData(i).Cp/R,avgData(i).CpFullErr/R,'.b',...
+errorbar(avg5228HC18(i).T,avg5228HC18(i).Cp/R,avg5228HC18(i).CpFullErr/R,'.b',...
     'MarkerSize',18,'LineWidth',1,'DisplayName','Experiment')
 xlabel(xlblTemp); ylabel('$C_p/R$');
 ylim([0 1.55])
@@ -320,5 +406,5 @@ title(['TmVO$_4$ heat capacity: mean-field fit' newline '+ correction from magne
 lgd = legend('show');
 
 %% Mag dip correction to Cp for comparison with Cpres
-Cpmagres = C_0/Tc.*Cp_magDipRandFields(tvec'/Tc,d0md);
+Cpmagres = C_0/Tc5228.*Cp_magDipRandFields(tvec'/Tc5228,d0md);
 

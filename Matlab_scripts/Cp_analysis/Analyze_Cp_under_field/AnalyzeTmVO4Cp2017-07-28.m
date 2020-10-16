@@ -9,7 +9,7 @@ mfdNdlFname{1} = 'TmVO4-LS5200_HC2017-07_sample1-Needle_mesh-p1mm_T=p3-p4-3p1_He
 mfdNdlFname{2} = 'TmVO4-LS5200_HC2017-07_sample2-Arya_mesh-20um_T=p3-p4-3p1_Hext=all.csv';
 mfdDomNum = {2,3};
 for ic=1:length(mfdNdlFname)
-    Sndl{ic} = importfielddistrib_csv(mfdNdlFname{ic}, 56, 'domainNum', mfdDomNum{ic});
+    Sndl{ic} = importfielddistrib_csv_old(mfdNdlFname{ic}, 56, 'domainNum', mfdDomNum{ic});
 end
 
 %% Extract values of temperature and external magnetic field from structure header
@@ -169,7 +169,7 @@ end
 
 %% Plot averaged data
 figure; hold on
-for i=1:2:length(fieldsNdl)
+for i=1:length(fieldsNdl)
     errorbar(avgNdlData(i).T,avgNdlData(i).Cpel,avgNdlData(i).CpFullErr,'.','MarkerSize',18)
 end
 xlabel('Temperature (K)');
@@ -199,9 +199,10 @@ uhmfd1 = unique(Tmfd_ndl1.Hext_Oe);
 %% Compute Cp for Gaussian distribution of fields
 % clear Cpnum
 % Hcnum=4900
+rescaling = .97;
 rngNum = 1:length(fieldsNdl);
 for i=rngNum
-Cpnum(i).h = fieldsNdl(i)/Hc;
+Cpnum(i).h = fieldsNdl(i)/Hc*rescaling;
 Cpnum(i).t_single_h = linspace(0,1.4,561);% reduced temperature, T/Tc
 Cpnum(i).single_h_no_e = zeros(size(Cpnum(i).t_single_h));
 Cpnum(i).single_h_w_e = zeros(size(Cpnum(i).t_single_h));
@@ -221,7 +222,7 @@ toc
 
 %% Plot averaged data at each field separately
 figure; hold on
-rngAvg = rngNum;%1:length(fieldsNdl);
+rngAvg = [1,3:6,8];%1:length(fieldsNdl);
 clr = cell(size(rngAvg));
 eb = cell(size(rngAvg));
 for i=rngAvg
@@ -231,14 +232,25 @@ for i=rngAvg
 end
 for i=rngAvg
     eb{rngAvg==i} = errorbar(avgNdlData(i).T,avgNdlData(i).Cpelr,avgNdlData(i).CpelrErr,...
-        '.','MarkerSize',18,'DisplayName',sprintf('%.2d Oe',fieldsNdl(i)),...
+        '.','MarkerSize',18,'DisplayName',sprintf('%d',fieldsNdl(i)),...
         'Color',clr{rngAvg==i},'LineWidth',2);
 end
 xlabel('$T$ (K)'); 
 ylabel('$C_p/R$');
-title(['Heat capacity of needles of TmVO$_4$, $e=$ ' sprintf('%.2g',e)])
-legend([eb{:}],'Location','best');
+% title(['Heat capacity of needles of TmVO$_4$, $e=$ ', sprintf('%.2g',e),...
+%     ', $H\times$' sprintf('%.2g',rescaling)])
+lgd = legend([eb{:}],'Location','northeast');
+lgd.Title.String = '$H$ (Oe)';
 hold off
+annfield = annotation('textbox',[0.15 0.8 0.2 0.1], 'interpreter','latex',...
+    'String', ['Fits at $H\times$' sprintf('%.2g',rescaling)], 'EdgeColor','none',...
+    'FitBoxToText','on', 'BackgroundColor','none', 'Color','k');% add annotation
+xlim([0 3.1]);
+
+%% 
+% formatFigure;
+% printPNG([todaystr mfd_ID '_Cp_vs_T_H'])
+printPDF([todaystr '_TmVO4-needles_Cp+single-h-fits_e=1p1e-3']);
 
 
 
