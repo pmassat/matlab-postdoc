@@ -1,11 +1,37 @@
 %% Transverse field Ising model: heat capacity in the mean-field approximation %%
+cd 'C:\Users\Pierre\Desktop\Postdoc\Software\Matlab\Matlab_scripts\TFIM\Figures'
 
 %% Order parameter vs temperature at zero field
 figure;
-fplot(@(x)order_parameter(x),[0 1-1e-3]);
+fplot(@(x) OP_TFIM(x,0,0),[0 1]);
 title('Mean-field Ising order parameter');
-xlabel('T/T$_c$');ylabel('$\left<S^{z}\right>$');
+xlabel('T/T$_c$');
+ylabel('$\left<S^{z}\right>$');
 
+%% Heat capacity in the TFIM (without longitudinal fields)
+tmax = 1.5;
+t = linspace(0,tmax,tmax*500+1);
+h = [0,.5,.72,.9,.95,.99,1.1];
+clr = lines(7);% call default color scheme
+clr([2 3],:) = clr([3 2],:);% swap second and third colors
+figure; hold on
+for i = 1:length(h)
+    plot(t, Cp_TFIM(t,h(i)), 'DisplayName', num2str(h(i)), 'Color', clr(i,:))
+end
+hold off
+lgd = legend('show');
+lgd.Title.String = '$H/H_c$';
+lgd.Location = 'northwest';
+ylabel('$C_p/R$')
+xlabel('$\frac{T}{T_Q(H=0)}$')
+
+%% Format and export figure
+% formatFigure
+% printPDF([todaystr '_theoretical_MF_Cp_TFIM'])
+
+
+
+%% The following code is outdated
 %% Heat capacity in zero field
 rev_Sz = [logspace(-15,-2),0.01:0.01:0.99];
 Sz = 0.5.*(1-rev_Sz);% pseudospin values, with log scale close to Sz,max=0.5
