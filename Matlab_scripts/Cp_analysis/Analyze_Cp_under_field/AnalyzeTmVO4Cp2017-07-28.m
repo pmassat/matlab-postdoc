@@ -1,15 +1,13 @@
 Tc_ndl = 2.22;% transition temperature at zero field, in Kelvin units
 Hc = 5000;% critical field at zero temperature, in Oersted units
+cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-LS5200_HC2017-07\TmVO4-LS5200_HC2017-07_COMSOL_results'
 
 %% Import magnetic field distribution from CSV file
-cd 'C:\Users\Pierre\Desktop\Postdoc\Software\COMSOL\TmVO4-LS5200_HC2017-07\TmVO4-LS5200_HC2017-07_COMSOL_results'
-% mfdfilename = cell(1,2);
-% S = cell(1,2);
-mfdNdlFname{1} = 'TmVO4-LS5200_HC2017-07_sample1-Needle_mesh-p1mm_T=p3-p4-3p1_Hext=all.csv';
-mfdNdlFname{2} = 'TmVO4-LS5200_HC2017-07_sample2-Arya_mesh-20um_T=p3-p4-3p1_Hext=all.csv';
-mfdDomNum = {2,3};
+clear mfdNdlFname Sndl
+mfdNdlFname{1} = '2020-11-03_TmVO4-LS5200_HC17-VII_T=p3-p4-3p1_Hext=all.csv';
+
 for ic=1:length(mfdNdlFname)
-    Sndl{ic} = importfielddistrib_csv_old(mfdNdlFname{ic}, 56, 'domainNum', mfdDomNum{ic});
+    Sndl{ic} = importfielddistrib_csv(mfdNdlFname{ic}, 56);
 end
 
 %% Extract values of temperature and external magnetic field from structure header
@@ -24,16 +22,16 @@ for sidx=1:length(Smfd_ndl)
     % Same with "Bext", which is the external magnetic flux density, in Tesla
     % units, and convert it into a value of magnetic field, in Oersted units
     Smfd_ndl(sidx).Hext_Oe = str2double(TBextCell{circshift(TBextCell=="Bext",1)})*10^4;
-    if sidx<=56
-        Smfd_ndl(sidx).label = 'needle1';
-    else
-        Smfd_ndl(sidx).label = 'needle2';
-    end
+%     if sidx<=56
+%         Smfd_ndl(sidx).label = 'needle1';
+%     else
+%         Smfd_ndl(sidx).label = 'needle2';
+%     end
 end
 
 %% Compute probability distribution of fields at a given value of T and Hext
 for i=1:length(Smfd_ndl)
-mfd = Smfd_ndl(i).mfd(Smfd_ndl(i).mfd>0)/Hc;% create distribution from non-zero values
+mfd = Smfd_ndl(i).mfd(Smfd_ndl(i).mfd>0)/Smfd_ndl(i).Hext_Oe;% create distribution from non-zero values; also possible to normalize wrt Hc
 % h = histogram(mfd, 'Normalization', 'pdf');% plot histogram of distribution
 [Smfd_ndl(i).hc, edges] = histcounts(mfd, 50, 'Normalization', 'pdf');% plot histogram of distribution
 % binCenters = h.BinEdges + (h.BinWidth/2);
@@ -42,27 +40,69 @@ Smfd_ndl(i).binWidths = edges(2:end)-edges(1:end-1);
 end
 
 %% Plot distribution of fields at a given value of T and Hext
-figure;
-hold on
-needle_index = 1;% there are 2 needle-shaped samples 
-start_index = [0,56];% needle 1 data start at index 0+1, needle 2 data at 56+1
+figure; hold on
+% needle_index = 1;% there are 2 needle-shaped samples 
+% start_index = [0,56];% needle 1 data start at index 0+1, needle 2 data at 56+1
 param_index = 2;% 1 is constant T, 2 is constant Hext, see param_range
-param_range = {[3:8:56], 4*8+[1:8]};% first range corresponds to a 
+param_range = {[1:8*2:56], 4*8+[1,4,6,8]};% first range corresponds to a 
 % field dependence at constant temp, second range corresponds to a 
 % temperature dependence at constant field
-rng = start_index(needle_index)  + param_range{param_index};
+rng = param_range{param_index};% + start_index(needle_index);
+
 for i=rng 
-Tndl = Smfd_ndl(i).T_K;%
-Hext = Smfd_ndl(i).Hext_Oe;%
-p = plot(Smfd_ndl(i).binCenters, Smfd_ndl(i).hc, '.-', 'DisplayName', sprintf('%.2g, %.2g',Tndl/Tc_ndl,Hext/Hc));
+    Tndl = Smfd_ndl(i).T_K;%
+    Hext = Smfd_ndl(i).Hext_Oe;%
+    lgd_str = legend_string(param_index, Hext/Hc, Tndl/Tc_ndl)
+    p = plot(Smfd_ndl(i).binCenters, Smfd_ndl(i).hc, '.-', 'DisplayName', lgd_str);
 end
-lgd = legend('show','Location','northwest'); lgd.Title.String = '$T/T_c$, $H_{\mathrm{ext}}/H_c$';
-needle_title = sprintf('Field distrib. in TmVO$_4$ needle %d', needle_index);
-param_title = {[', $T=$' sprintf('%.2g K',Tndl)],...
-    [', $H_{\mathrm{ext}}=$ ' sprintf('%.2d Oe',Hext)]};
-title([needle_title param_title{param_index}])
-xlabel('$H_{\mathrm{in}}/H_{c}$')
-ylabel('Normalized PDF')
+xlim([.6966 1.05])
+
+lgd = legend('show','Location','northwest'); 
+if param_index==1
+    lgd.Title.String = '$H_{\mathrm{ext}}/H_c$';
+    ann_str = ['$T/T_c=$' sprintf(' %.2g', Tndl/Tc_ndl)];
+elseif param_index==2
+    lgd.Title.String = '$T/T_c$';
+    ann_str = ['$H_{\mathrm{ext}} =$' sprintf(' %.3g kOe', Hext/1e3)];
+end
+anndist = annotation('textbox',[0.35 0.8 0.2 0.1], 'interpreter','latex',...
+    'String', ann_str, 'EdgeColor','none', 'FitBoxToText', 'on',...
+    'BackgroundColor','none', 'Color','k');% add annotation
+% needle_title = sprintf('Field distribution in TmVO$_4$ needles');
+% param_title = {[', $T=$' sprintf('%.2g K',Tndl)],...
+%     [', $H_{\mathrm{ext}}=$ ' sprintf('%.2d Oe',Hext)]};
+% title([needle_title param_title{param_index}])
+xlabel('$H_{\mathrm{in}}/H_{\mathrm{ext}}$')
+ylabel('Probability density')
+ax = gca; ax.XTick = .7:.1:1;
+grid on
+
+%% Export figure
+% formatFigure
+% printPNG([todaystr '_TmVO4-needles-2017-07_mfd@H=4kOe'])
+% printPNG([todaystr '_TmVO4-needles-2017-07_mfd@Tr=1p4'])
+
+%% Compute the average value of ratio of internal to external magnetic field 
+for i=1:length(Smfd_ndl)
+Smfd_ndl(i).Hinm_Oe = round(...
+    sum(...
+    Smfd_ndl(i).binCenters.*Smfd_ndl(i).hc.*Smfd_ndl(i).binWidths...
+    )*Smfd_ndl(i).Hext_Oe...
+    );
+end
+
+%% Check results for given range of temperatures/field
+rng = param_range{1};% define range
+
+% Check that the ratio of Hinm/Hext is roughly constant inside the
+% ordered phase, thus allowing to use the value at 0.3 K and 1000 Oe as a proxy
+T = [Smfd_ndl(rng).T_K]
+Hext = [Smfd_ndl(rng).Hext_Oe]
+Hinm = [Smfd_ndl(rng).Hinm_Oe]
+h = Hinm./Hext
+
+rescaling = Smfd_ndl(1).Hinm_Oe/Smfd_ndl(1).Hext_Oe;%Hc0/0.69;% rescaling factor, due to demag; 
+
 
 %% Import HC data
 cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2017-07_TmVO4_Cp_MCE\2017-07-28--31\2017-07-28_Cp'

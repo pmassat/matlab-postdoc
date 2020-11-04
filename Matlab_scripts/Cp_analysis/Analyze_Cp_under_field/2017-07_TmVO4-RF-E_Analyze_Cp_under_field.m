@@ -82,23 +82,26 @@ end
 figure;
 hold on
 % Ntemp = 7;
-param_select = 1;% 1 is constant Hext, 2 is constant T, see param_range
-temp_index = 1;% determines temperature of data to plot, taken among [.3:.4:3.1]K
+param_select = 2;% 1 is constant Hext, 2 is constant T, see param_range
+temp_index = Ntemp;% determines temperature of data to plot, taken among [.3:.4:3.1]K
 field_index = 5;% determines field of data to plot from [.1,.2,.3,.4,.45,.5,.55,.6,.62,.63,.65,.67,.7,.8]T
-param_range = {(field_index-1)*Ntemp+[1:1:Ntemp], temp_index+[0:Ntemp:Ntemp*(Nfields-1)]};% first range corresponds to a 
+param_range = {(field_index-1)*Ntemp+[1:1:Ntemp], [21:4*6:48]};% first range corresponds to a 
 % field dependence at constant temp, second range corresponds to a 
 % temperature dependence at constant field
 rng = param_range{param_select};
+
 for i=rng
-T = Smfd_RF(i).T_K;%
-Hext = Smfd_RF(i).Hext_Oe;%
-% p = plot(Smfd_RF(i).binCenters, Smfd_RF(i).hc, '.-', 'DisplayName', sprintf('%.2g, %.2g',T/Tc0rf,Hext/Hc));
-p = plot(Smfd_RF(i).binCenters, Smfd_RF(i).hc, '.-', 'DisplayName', sprintf('%.2g',T/Tc0rf));
+    Trf = Smfd_RF(i).T_K;%
+    Hext = Smfd_RF(i).Hext_Oe;%
+    lgd_str = legend_string(param_select, Trf/Tc0rf, Hext/Hc);
+    % p = plot(Smfd_RF(i).binCenters, Smfd_RF(i).hc, '.-', 'DisplayName', sprintf('%.2g, %.2g',T/Tc0rf,Hext/Hc));
+    p = plot(Smfd_RF(i).binCenters, Smfd_RF(i).hc, '.-', 'DisplayName', lgd_str);
 end
+
 lgd = legend('show'); 
-lgd.Title.String = '$T/T_{Q,0}$';% lgd.Title.String = '$T/T_{Q,0}$, $H_{\mathrm{ext}}/H_{c,0}$';
-param_title = {['$H=$ ' sprintf('%.2d Oe',Hext)],...
-    ['$T=$ ' sprintf('%.2g K',T)]};
+lgd_title = {'$T/T_{Q,0}$', '$H_{\mathrm{ext}}/H_{c,0}$'};
+lgd.Title.String = lgd_title{param_select};
+param_title = {['$H=$ ' sprintf('%.2d Oe',Hext)], ['$T=$ ' sprintf('%.2g K',Trf)]};
 % title(['Distribution of fields in TmVO$_4$-RF-E, ' param_title{param_select}])
 xlabel('$H_{\mathrm{in}}/H_{\mathrm{c}}$')
 ylabel('Normalized Probability')
@@ -142,13 +145,13 @@ RFDATA=ImportTmVO4Cp(filename);% Use this data to plot color map of phase diagra
 
 %% Assign data to variables
 H=[RFDATA.FieldOersted];%*rescaling;
-T=[RFDATA.SampleTempKelvin];
+Trf=[RFDATA.SampleTempKelvin];
 Cp=[RFDATA.SampHCJmoleK];
 CpErr=[RFDATA.SampHCErrJmoleK];
 
-whichPoints = isfinite(H) & isfinite(T) & isfinite(Cp);
+whichPoints = isfinite(H) & isfinite(Trf) & isfinite(Cp);
 H=H(whichPoints);
-T=T(whichPoints);
+Trf=Trf(whichPoints);
 Cp=Cp(whichPoints).*M/m*1e-6;% factor 1e-6 converts from uJ/K to J/K
 CpErr=CpErr(whichPoints).*M/m*1e-6;%
 [uhrf,~,X] = unique(round(H,-1));
@@ -156,17 +159,17 @@ uhrf(2,:)=[];% When rounding to nearest tens, remove uh=10Oe because it is redun
 
 %% Plot 2D scatter of Cp data at H=0
 figure
-plot(T(round(H,-1)<20),Cp(round(H,-1)<20),'.')
+plot(Trf(round(H,-1)<20),Cp(round(H,-1)<20),'.')
 % xlim([0 hmax]);ylim([0 tmax]);
 xlabel('Temperature (K)');
 ylabel('Cp (J/K/mol)')
 
 %% Plot 3D scatter of Cp data
 hmax=max(uhrf);
-tmin = min(T);
-tmax = max(T);
+tmin = min(Trf);
+tmax = max(Trf);
 figure
-scatter3(H,T,Cp,'.')
+scatter3(H,Trf,Cp,'.')
 xlim([0 hmax]);ylim([0 tmax]);
 xlabel('Field (Oe)');ylabel('Temperature (K)');
 zlabel('Cp (J/K/mol)')
@@ -183,7 +186,7 @@ d1Cp = conv2(Cp,d1Gaussian','same');
 
 %% Plot 3D scatter of derivative of Cp
 figure
-scatter3(H,T,-d1Cp,'.')
+scatter3(H,Trf,-d1Cp,'.')
 xlim([0 hmax]);ylim([0 tmax]);
 xlabel('Field (Oe)');ylabel('Temperature (K)');
 zlabel('-dCp/dT (J/K/mol)')
@@ -194,11 +197,11 @@ zlabel('-dCp/dT (J/K/mol)')
 Hgl = 0:hstep:hmax;% for gridfit
 Tgl = tmin:tstep:tmax;% for gridfit
 figure
-Cpg = gridfit(H,T,Cp,Hgl,Tgl);
+Cpg = gridfit(H,Trf,Cp,Hgl,Tgl);
 % Cpg = griddata(H,T,Cp,Hg,Tg);
 surf(Hg,Tg,Cpg)
 hold on
-scatter3(H,T,Cp,100,'.','.k')
+scatter3(H,Trf,Cp,100,'.','.k')
 ylim([0 tmax])
 zlim([0 1.1*max(Cp)])
 xlabel('Field (Oe)')
@@ -235,7 +238,7 @@ clear separatedCpData
 for i = 1:length(uhrf)
     wp = abs(H-uhrf(i))<50;
     separatedRFCpData(i).H = H(wp);
-    separatedRFCpData(i).T = T(wp);
+    separatedRFCpData(i).T = Trf(wp);
     separatedRFCpData(i).Cp = Cp(wp);
     separatedRFCpData(i).d1Cp = d1Cp(wp);
     separatedRFCpData(i).CpErr = CpErr(wp);
@@ -300,7 +303,7 @@ end
 [Hgm,Tgm] = meshgrid(0:hstep:hmax,tmin:tstep:tmax);% for use with gridfit
 Hgml = 0:hstep:hmax;% for gridfit
 Tgml = tmin:tstep:tmax;% for gridfit
-Cpgm = gridfit(H,T,Cp,Hgml,Tgml);
+Cpgm = gridfit(H,Trf,Cp,Hgml,Tgml);
 d1Cpgm = conv2(Cpgm,d1Gaussian','same');
 
 %% Plot 2D contour of derivative of Cp
