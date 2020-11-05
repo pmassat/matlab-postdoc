@@ -2,15 +2,22 @@ cd 'C:/Users/Pierre/Desktop/Postdoc/Software/Matlab/Matlab_scripts/TFIM/Magnetiz
 
 %% 
 fig = figure; 
+% set(fig,'defaultAxesColorOrder',[[1 0 0]; [0 0 1]]);
+% set(fig,'DefaultAxesLineStyleOrder',{'-'});
+colororder({'r','b'})
 hold on; 
+
 temps = [.1, 1.3, 1.8, 2.0, 2.14];% measurement temperatures, in Kelvin units, in figure 2 of Cooke et al. 1972
 hmax = 3;
 h  = linspace(0,hmax,hmax*100+1);
+
+yyaxis left
+
 for jt = length(temps):-1:1
     T = temps(jt);
     t = T/2.15; 
-    pm{jt} = plot(h, magnetization_TFIM(t,h),...
-        'DisplayName',sprintf('%.2f', t));
+    pm{jt} = plot(h, magnetization_TFIM(t,h), 'Marker', 'none',...
+        'DisplayName', sprintf('%.2f', t), 'Color', [1 (5-jt)*.20 0]);
 end
 
 Hc = 5000;% critical field, in Oersted
@@ -35,11 +42,12 @@ txtHext = text(.2,1.05,'$H_{\mathrm{ext}}=$');
 % txttc = text(2.0,.7,'$T_c=2.15$ K');
 % txtHunit = text(xhext*1.25,1.05,'Oe');
 lgd = legend([pm{:}],'Location','east'); 
-lgd.Title.String = '$T/T_{c,0}$';
+lgd.Title.String = '$T/T_{Q,0}$';
 % title('Magnetization of TmVO$_4$ vs magnetic field')
 xlabel('$H/H_{c,0}$')
 ylabel('$M/M_{\mathrm{sat}}$')
 ylim([0 1.1])
+lar = annotation('arrow', [.215 .14], [.45 .45], 'Color', 'red');
 
 % Plot MFD's at 4kOe and 8kOe for sample TmVO4-RF-E
 % Run the first 100 lines of file
@@ -58,15 +66,14 @@ end
 ylabel('Probability density')
 
 lgd.String = lgd.String(1:5);
-ax = gca; 
-ax.YColor = [0 0 1];% aka 'blue'
-ar = annotation('arrow', [.5 .7], [.25 .25], 'Color', 'blue');
+lgd.Position(1:2) = [.65 .4];% correct position after applying 'formatFigure'
+rar = annotation('arrow', [.5 .7], [.25 .25], 'Color', 'blue');
 
 
 %% Export figure
 % cd 'C:\Users\Pierre\Desktop\Postdoc\Software\Matlab\Matlab_scripts\TFIM\Magnetization_TFIM'
 % formatFigure 
-printPNG([todaystr '_magnetization_TFIM_5values'])
+% printPNG([todaystr '_magnetization_TFIM_5values'])
 
 
 
