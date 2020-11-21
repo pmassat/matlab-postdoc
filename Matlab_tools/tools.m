@@ -66,7 +66,7 @@ end
 s(1).x = [1 2 3; 4 5 6; 7 8 9]; s(1).x 
 s(2).x = [11 12 13; 14 15 16; 17 18 19]; s(2).x 
 cell2mat( arrayfun(@(c) c.x(2,:), s(1:length(s)).', 'Uniform', 0) )
-% Note: on the Matlab Answers webpage, the previous line of code is missing the 's' before in "s(1:length(s)).'"
+% Note: on the Matlab Answers webpage, the previous line of code is missing the 's' before "(1:length(s)).'"
 % Output: ans = [4 5 6; 14 15 16]
 
 %% Check if a variable exists in a table column

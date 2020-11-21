@@ -48,8 +48,10 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
                 if any(dependentRow==refRow)% if the row index of the row to be compared is already contained in list dependentRow
                     continue% continue to the next row
                 end%
-                for compRow=refRow+1:length(ifp)% loop over cells that are below the cell of comparison
-                    if contains(ifp{compRow,1},ifp{refRow,1})% if the parameter name in row #refRow is contained in that of row #compRow
+                for compRow=1:length(ifp)% loop over all cells of ifp
+                    if compRow==refRow% except the one used as reference
+                        continue
+                    elseif contains(ifp{compRow,1},ifp{refRow,1})% if the parameter name in row #refRow is contained in that of row #compRow
                         dependentRow(end+1) = compRow;% store row #compRow into dependentRow list
                     end
                 end
@@ -271,12 +273,12 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
                             % is contained in the current dependent parameter and store its array index
                             [sdiff,smatch] = strsplit(obj.freeParams{ii}{idxfp},obj.indepFreeParams{idxifp});
                             if ~isempty(sdiff{1})
-                                fitPrms(jj) = str2double([sdiff{1} num2str(fitresult.(smatch{1}))]);
+                                fitPrms(jj) = eval([sdiff{1} num2str(fitresult.(smatch{1}))]);
                             % Note: str2double does not work here as it 
                             % does not handle mathematical operations,
                             % whereas str2num does
                             elseif ~isempty(sdiff{2})
-                                fitPrms(jj) = str2double([num2str(fitresult.(smatch{1})) sdiff{2}]);
+                                fitPrms(jj) = eval([num2str(fitresult.(smatch{1})) sdiff{2}]);
                             else; fitPrms(jj) = fitresult.(smatch{1});
                             end
                         end
@@ -294,25 +296,25 @@ classdef fitICpV < handle% handle allows to modify object properties in the clas
             maxIndex = find(~obj.dataExcl,1,'last');% index of non-excluded datapoint with highest x value 
             Xfit = linspace(obj.X(minIndex),obj.X(maxIndex),1000);
             Yfit = fitresult(Xfit);% compute fit over a controlled number of points
-% this allows to have fit plot with better resolution than the calculated one
+% this allows to have fit plotted with better resolution than the calculated one
             
 % Plot fit with data.
             figure; hold on;
-            if nPks>1% if there is more than one peak
+            if nPks>1% if there are more than one peak
                 psub = cell(1,nPks);%
                 for kk=1:nPks% plot fit curve for each peak
                     psub{kk} = fplot(funCell{kk},...
-                        [obj.X(minIndex) obj.X(maxIndex)],'LineWidth',2);
+                        [obj.X(minIndex) obj.X(maxIndex)], 'LineWidth',2);
                 end
             end
             pfit = plot(Xfit,Yfit,'r-');
             pdat = errorbar(xData,yData,obj.dY,'.b','MarkerSize',18,'LineWidth',2);
             pexcl = plot(obj.X(excludedPoints),obj.Y(excludedPoints),'xk',...
                 'MarkerSize',9);
-            legend([pdat,pfit],'I vs. hh0','fit ICpV','Location','northeast');
+            legend([pdat,pfit],'Data','Full fit','Location','northeast');
 %             legend([pdat,pexcl,pfit],'I vs. hh0','Excluded','fit ICpV');
             % Label axes
-            xlabel("hh0"); ylabel("I (a.u.)");
+            xlabel('$h$ in $[h\, h\, 0]$'); ylabel('$I$ (a.u.)');
             xlim([obj.X(minIndex)-0.05 obj.X(maxIndex)+0.05]);
             grid on
         end

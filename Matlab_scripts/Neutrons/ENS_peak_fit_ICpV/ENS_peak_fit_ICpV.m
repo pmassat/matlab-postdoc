@@ -1,41 +1,43 @@
 %% Import neutrons diffraction data measured at 0.6K
-% Import first set of data (format is different than the second set)
-cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_neutrons\2019-02_ORNL_Corelli\2019-02-14';
-clear nData;
-FilesOrtho = dir('p6K_*.txt');
-for i=1:length(FilesOrtho)
-    tbl1 = ImportNeutronsLineCut(FilesOrtho(i).name);
-    nData(i).file = FilesOrtho(i).name;
-    nData(i).hh0 = tbl1.hh0;
-    nData(i).I = tbl1.I;
-    nData(i).dI = tbl1.dI;
-    [C,matches] = strsplit(FilesOrtho(i).name,{'p6K_','T\w*.txt'},...
-        'DelimiterType','RegularExpression','CollapseDelimiters',true);
-    % extract value of field from file name using regular expression
-    str = replace(C{2},'p','.');% replace letter p (if any) with a decimal dot
-    nData(i).field = str2num(str);
-    nData(i).temp = 0.6;
-end
+% Ignore this dataset, which was a test run
 
-%% Import second data set at 0.6K
-cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_neutrons\2019-02_ORNL_Corelli\2019-02-14\p6K\linecut2';
-fieldinfo = importfieldinfo('field_info.txt');% fieldinfo = import manually data from "field_info.txt"
+% Import first set of data (format is different than the second set)
+% cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_neutrons\2019-02_ORNL_Corelli\2019-02-14';
+% clear nData;
+% FilesOrtho = dir('p6K_*.txt');
+% for i=length(FilesOrtho):-1:1
+%     tbl1 = ImportNeutronsLineCut(FilesOrtho(i).name);
+%     nData(i).file = FilesOrtho(i).name;
+%     nData(i).hh0 = tbl1.hh0;
+%     nData(i).I = tbl1.I;
+%     nData(i).dI = tbl1.dI;
+%     [C,matches] = strsplit(FilesOrtho(i).name,{'p6K_','T\w*.txt'},...
+%         'DelimiterType','RegularExpression','CollapseDelimiters',true);
+%     % extract value of field from file name using regular expression
+%     str = replace(C{2},'p','.');% replace letter p (if any) with a decimal dot
+%     nData(i).field = str2double(str);
+%     nData(i).temp = 0.6;
+% end
+
+%% Import dataset metadata at 0.6K
+cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_neutrons\2019-02_ORNL_Corelli\2019-02-14\p6K\linecut_f';
+fieldinfo = importLinecutfFieldInfo('field_info.txt');% fieldinfo = import manually data from "field_info.txt"
+fieldinfo.FileName = strcat('HH0_', num2str(fieldinfo.ScanNumber), '.txt');
+
+%% Import full dataset at 0.6K
 if exist('nData','var'); lnd = length(nData); else; lnd = 0; end
-for j=1:length(fieldinfo.FileName)
-    tbl2 = ImportNeutronsLineCut(strcat(fieldinfo.FileName(j,:),".txt"));
+for j=length(fieldinfo.FileName):-1:1
+    tbl2 = ImportNeutronsLineCut(fieldinfo.FileName(j,:));
     i = j+lnd;
     nData(i).file = fieldinfo.FileName(j,:);
     nData(i).hh0 = tbl2.hh0;
-    nData(i).I = tbl2.I;
-    nData(i).dI = tbl2.dI;
-    nData(i).field = fieldinfo.H_T(j);
+    nData(i).I = tbl2.I/fieldinfo.ProtonCharge(j);
+    nData(i).dI = tbl2.dI/fieldinfo.ProtonCharge(j);
+    nData(i).field = fieldinfo.B_T(j);
     nData(i).temp = fieldinfo.T_K(j);
 end
 
-%% Sort structure according to ascendring value of magnetic field
-nData = nestedSortStruct(nData,'field');%
-% Note: nestedSortStruct is a Matlab add-on available at https://www.mathworks.com/matlabcentral/fileexchange/28573-nestedsortstruct
-
+%% Import data at 0.94K
 % %% Import neutrons diffraction data measured at 0.94K
 % % fieldinfo0p94K = import manually data from "field_info.txt"
 % fieldinfo0p94K.FileName = strcat("HH0_",num2str(fieldinfo0p94K.FileID));
@@ -49,21 +51,27 @@ nData = nestedSortStruct(nData,'field');%
 %     nData(i).temp = fieldinfo0p94K.T_K(i);
 % end
 
-%% Magnetic field data
-field = extractfield(nData,'field');
-Hc_0 = 0.51;% value in Tesla units of the critical field at zero temperature
-% in the absence of demagnetizing factor
-% see data taken on needles of TmVO4-LS5200 in July 2017
+%% Remove non-sensical data 
+% nData(85:86)=[];% Delete fields where the data does not make
+% sense: H=0.86T and H=0.865T
 
-%% Basic data treatment
-nData(round(field,2)==0.86)=[];% Delete fields where the data does not make
-% sense: H=0.86T and H=0.865T (which rounds to 0.86)
-nData(round(field,2)==0).I = nData(round(field,2)==0).I*0.73/1.15;
-% rescale data at zero field, as it has a higher intensity than the rest
-field = extractfield(nData,'field');
+% nData(round(field,2)==0).I = nData(round(field,2)==0).I*0.73/1.15;% This
+% is not required anymore, since the scaling factor of the intensity is
+% taken into account when normalizing wrt the proton charge
+
+%% Sort structure according to ascendring value of magnetic field
+nData = nestedSortStruct(nData,'field');%
+% Note: nestedSortStruct is a Matlab add-on available at https://www.mathworks.com/matlabcentral/fileexchange/28573-nestedsortstruct
+
+field = cell2mat( arrayfun(@(c) c.field, nData(:).', 'Uniform', 0) );
+% field = extractfield(nData,'field');% outdated, see tools.m; in fact, I don't even
+% have the extractfield() function in my libraries anymore
 
 %% Center of peak to be studied in the following
 hcenter = -8.0;% center of unsplit peak in reciprocal space
+Hc_0 = 0.51;% value in Tesla units of the critical field at zero temperature
+% in the absence of demagnetizing factor
+% see data taken on needles of TmVO4-LS5200 in July 2017
 
 %% Analysis parameters
 % ufb = 0.99; % upper fit boundary = highest value of h-hc for which to include datapoints for the fit
@@ -73,7 +81,7 @@ iend = length(field);
 %% Perform and plot fit using convolution of Ikeda-Carpenter function with pseudo-Voigt
 xc = [hcenter(1)-.03 hcenter(1)+.01];% position of peaks in reciprocal space
 lx = length(xc);
-rng = istart:1:iend;
+rng = istart+20:20:iend;
 I1 = 8e4; R1 = 0.1; a1 = 200; b1 = 0.1; g1 = 1e-3; s1 = 6.6e-3;% free parameters initial values
 I2 = I1/0.46; R2 = 0.1; a2 = 200; b2 = 0.1; g2 = 1e-3; s2 = 6.6e-3;% free parameters initial values
 % freePrms1 = {'I',I1;'R',R1;'alpha',a1;'beta',b1;'gamma',g1;'sigma',s1;'x0',hc};%7 free parameters
@@ -93,9 +101,10 @@ for i=rng
 % data points that correspond to other peaks as well as those that are too far away
 % datExcld should be defined on the x interval where obj.dY>0, otherwise
 % the number of excluded points will be higher than the number of data points
-    myfit = fitICpV(nData(i).hh0,nData(i).I,nData(i).dI,xc); 
+    myfit = fitICpV(nData(i).hh0, nData(i).I, nData(i).dI, xc); 
     myfit.dataExcl = datExcld;
-    ap1 = myfit.allParams{1}; ap1('alpha') = 140; ap1('sigma') = 6.6e-3;% 'ap1' is shorter than 'myfit.allParams{1}'
+    ap1 = myfit.allParams{1}; 
+    ap1('alpha') = 140; ap1('sigma') = 6.6e-3;% 'ap1' is shorter than 'myfit.allParams{1}'
     ap1('R')=0.0; ap1('beta')=0; ap1('I') = I1; ap1('gamma') = 0;
     ap2 = myfit.allParams{2}; ap2('gamma') = 0;
     myfit.freeParams = {freePrms1,freePrms2};
@@ -105,20 +114,28 @@ for i=rng
     fitStr = ['fit'  int2str(lx) 'ICpV' int2str(Nprms)]; 
     gofStr = ['gof'  int2str(lx) 'ICpV' int2str(Nprms)];
     [nData(i).(fitStr), nData(i).(gofStr)] = myfit.compute_fit();
-    if exist('H_c','var'); hfactor = H_c/cval(1);
-    else hfactor = 1;end
+    if exist('cval','var'); hfmt = ['$\frac{H}{H_c}=$ ' sprintf('%.2g', nData(i).field/cval(1))];
+    else, hfmt = sprintf('H = %.2fT', nData(i).field); end
     if mod(i,20)==1% select data to plot
         myfit.plot_fit(nData(i).(fitStr));% title(label);
     xlim([hcenter-.1 hcenter+.1]);
-    ann00 = annotation('textbox',[0.15 0.8 0.2 0.1],'interpreter','latex',...
-        'String',{sprintf('T=%.2fK',nData(i).temp) sprintf('H=%.2fT',field(i)*hfactor)},...
-        'FontSize',14,'FontName','Arial','LineStyle','-','EdgeColor','r',...
-        'FitBoxToText','on','LineWidth',2,'BackgroundColor',[1 1 1],'Color','k');% add annotation
+    ylim([0 5e6]);
+    ann00 = annotation('textbox',[0.15 0.81 0.15 0.1], 'interpreter','latex',...
+        'String',{['$T=$ ' sprintf('%.2f K', nData(i).temp)] hfmt},...
+        'FontSize',14, 'FontName','Arial', 'LineStyle','-',...
+        'FitBoxToText','on', 'LineWidth',.5, 'BackgroundColor','w',...
+        'HorizontalAlignment','center');% add annotation
 % hAnnotAxes = findall(gcf,'Tag','scribeOverlay');% retrieve annotation object, in case it is necessary to manipulate it
+    formatFigure
     end
     disp(label); disp(nData(i).(fitStr)); disp(nData(i).(gofStr));
 end
-%% Write fit parameters to a table 
+
+%% Export figures
+% cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_neutrons\2019-02_ORNL_Corelli\2019-02-14\p6K\p6K_analysis\2020-11_p6K_da'
+printPDF([todaystr '_TmVO4_ENS_880_peaks_fit2ICpV3_p6K_h=p68'])
+
+%% Write fit parameters to a table
 np = Nprms;
 fitStrnp = fitStr; gofStrnp = gofStr;
 if ~exist('Stbl','var') || ~isfield(Stbl,(fitStrnp)); Stbl(1).(fitStrnp) = []; end
@@ -170,6 +187,7 @@ if ismember('I1', Stbl(end).(fitStr).Properties.VariableNames) && ismember('I2',
     annir.FitBoxToText='on';% fit annotation box to text
 else; warning('Need two intensities to plot ratio. Ignoring this part.');
 end
+
 
 %% Write table to file
 fileChar = [sprintf('%1.eK',nData(1).temp) fitStr '.txt'];% '_R=' sprintf('%2.e',ap1('R'))
@@ -238,7 +256,7 @@ wghts = min(spltRE)./spltRE;
 %% Plot splitting
 figure
 % plot(field,splitting,'.')
-errorbar(field,splitting,spltRE(rng),'.','MarkerSize',12);
+errorbar(field, splitting, spltRE(rng), '.', 'MarkerSize',12);
 ylim([0 6e-3])
 
 %% Fit splitting
