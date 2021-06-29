@@ -1,33 +1,37 @@
 %% Transverse field Ising model: heat capacity in the mean-field approximation %%
-cd 'C:\Users\Pierre\Desktop\Postdoc\Software\Matlab\Matlab_scripts\TFIM\Figures'
 
 %% Order parameter vs temperature at zero field
+cd 'C:\Users\Pierre\Desktop\Postdoc\Software\Matlab\Matlab_scripts\TFIM\OP_TFIM\'
 figure;
 fplot(@(x) OP_TFIM(x,0,0),[0 1]);
 title('Mean-field Ising order parameter');
 xlabel('T/T$_c$');
 ylabel('$\left<S^{z}\right>$');
 
+%% Change to directory containing Cp_TFIM function
+cd 'C:\Users\Pierre\Desktop\Postdoc\Software\Matlab\Matlab_scripts\TFIM\Cp_TFIM\'
+
 %% Heat capacity in the TFIM (without longitudinal fields)
 tmax = 1.5;
 t = linspace(0,tmax,tmax*500+1);
-h = [0,.5,.72,.9,.95,.99,1.1];
-clr = lines(7);% call default color scheme
-clr([2 3],:) = clr([3 2],:);% swap second and third colors
+h = [0,.5,.7,.8,.9,.95,1.1];
+clr = jet(7);% call default color scheme
+% clr([2 3],:) = clr([3 2],:);% swap second and third colors
 figure; hold on
 for i = 1:length(h)
-    plot(t, Cp_TFIM(t,h(i)), 'DisplayName', num2str(h(i)), 'Color', clr(i,:))
+    plot(t, Cp_TFIM(t,h(i)), 'DisplayName', num2str(h(i)), 'Color', clr(length(h)+1-i,:))
 end
 hold off
 lgd = legend('show');
 lgd.Title.String = '$H/H_c$';
 lgd.Location = 'northwest';
 ylabel('$C_p/R$')
-xlabel('$\frac{T}{T_Q(H=0)}$')
+xlabel('$T/T_{Q,0}$')
 
 %% Format and export figure
+cd 'C:\Users\Pierre\Desktop\Postdoc\Software\Matlab\Matlab_scripts\TFIM\Figures'
 % formatFigure
-% printPDF([todaystr '_theoretical_MF_Cp_TFIM'])
+% printPNG([todaystr '_theoretical_MF_Cp_TFIM'])
 
 
 
