@@ -140,7 +140,7 @@ mfd_diff(113).abs_diff = abs(Smfd_RF(1).hc);%-Smfd(13).hc);
 %% Data importation
 sample = 'TmVO4-RF-E';
 filename = 'TmVO4_RF-E_2017-07-14.dat';
-cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2017-07_TmVO4_Cp_MCE\2017-07-20_Cp\2017-07-20_TmVO4_Cp_analysis'
+cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2017-07_TmVO4_Cp_MCE\2017-07-20_Cp\'
 RFDATA=ImportTmVO4Cp(filename);% Use this data to plot color map of phase diagram
 
 %% Assign data to variables
