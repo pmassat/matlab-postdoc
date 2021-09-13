@@ -52,8 +52,7 @@ end
 % end
 
 %% Remove non-sensical data 
-% nData(85:86)=[];% Delete fields where the data does not make
-% sense: H=0.86T and H=0.865T
+nData(85)=[];% Delete fields where the data does not make sense: H=0.86T and H=0.865T
 
 % nData(round(field,2)==0).I = nData(round(field,2)==0).I*0.73/1.15;% This
 % is not required anymore, since the scaling factor of the intensity is
@@ -133,7 +132,7 @@ end
 
 %% Export figures
 % cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_neutrons\2019-02_ORNL_Corelli\2019-02-14\p6K\p6K_analysis\2020-11_p6K_da'
-printPDF([todaystr '_TmVO4_ENS_880_peaks_fit2ICpV3_p6K_h=p68'])
+% printPDF([todaystr '_TmVO4_ENS_880_peaks_fit2ICpV3_p6K_h=p68'])
 
 %% Write fit parameters to a table
 np = Nprms;
@@ -194,7 +193,7 @@ fileChar = [sprintf('%1.eK',nData(1).temp) fitStr '.txt'];% '_R=' sprintf('%2.e'
 fileID = fopen(fileChar,'a');
 % fprintf(fileID,'\nValues of free parameters after fit:\n');
 % fprintf(fileID,'%s\n',nData(np).Stbl);
-writetable(Stbl(Ntbl).(fitStrnp),fileChar);
+% writetable(Stbl(Ntbl).(fitStrnp),fileChar);
 fprintf(fileID,'\nInitial values of free parameters:\n');
 S = string(vertcat(myfit.freeParams{:}));
 fprintf(fileID,'%s\n',strcat(S(:,1)," = ",S(:,2)));
@@ -284,17 +283,19 @@ strHMaxFit = sprintf('Max value of H/Hc for fit of orthorhombic distortion: %g',
     HMaxFit/cval(1));
 
 %% Calculate effective temperature
-Tc0 = 2.15;% critical temperature at zero field (better to use the actual value of Tc from Cp data?)
-max_splitting = 5.84e-3;% maximum value of splitting, from Segmuller et al. 1974
-x = cval(2)/max_splitting;% reduced splitting calculated from fit
-dx = (cval(2)-cft(1,2))/max_splitting;% error bar on reduced splitting calculated from fit
-Teff = Tc0*x/atanh(x);% effective temperature calculated from data
-% 2.2*x/atanh(x) is simply the result of inverting the self-consistent
-% equation of pseudospin vs temperature
-dTeff = Tc0*dx*abs(atanh(x)-x/(1-x^2))/(atanh(x)^2);% effective temperature calculated from data
-% calculated by differentiating the expression of Teff wrt x
-sTeff = sprintf('T = %.2f(%.0f)K',Teff,dTeff*1e2);% Effective temperature with error bars
-sTdr = sprintf('$T_{DR}$=%.1fK',nData(1).temp);
+% Edit 2021-09-13: take Teff = 0.6K
+Teff = 0.6;
+% Tc0 = 2.15;% critical temperature at zero field (better to use the actual value of Tc from Cp data?)
+% max_splitting = 5.84e-3;% maximum value of splitting, from Segmuller et al. 1974
+% x = cval(2)/max_splitting;% reduced splitting calculated from fit
+% dx = (cval(2)-cft(1,2))/max_splitting;% error bar on reduced splitting calculated from fit
+% Teff = Tc0*x/atanh(x);% effective temperature calculated from data
+% % 2.2*x/atanh(x) is simply the result of inverting the self-consistent
+% % equation of pseudospin vs temperature
+% dTeff = Tc0*dx*abs(atanh(x)-x/(1-x^2))/(atanh(x)^2);% effective temperature calculated from data
+% % calculated by differentiating the expression of Teff wrt x
+% sTeff = sprintf('T = %.2f(%.0f)K',Teff,dTeff*1e2);% Effective temperature with error bars
+% sTdr = sprintf('$T_{DR}$=%.1fK',nData(1).temp);
 
 %% Estimate critical field at the effective temperature in the absence of demagnetizing factor
 % Function defining the critical field
@@ -312,7 +313,7 @@ sprintf("Critical field at T/Tc0=%.2f: Hc(T)/Hc0 = %.2f",t,h_c)
 %% Create dataset for 2D color plot
 nData2 = nData;% create an independent copy of nData
 for i=length(nData2):-1:1
-    if size(nData2(i).I)~=2200% if none of the dimensions of nData2(i).I is 2200
+    if size(nData2(i).I)~=4800% if none of the dimensions of nData2(i).I is 2200
         nData2(i)=[];% simply remove this dataset from the structure
     end
 end
@@ -322,7 +323,8 @@ demag_correction = H_c/cval(1);% cval(1) is the value of critical field
 % that comes from the fit of the splitting extracted from the data at 0.94K
 % and 0.969 is the value of Hc/Hc0 at the effective temperature of the measurement
 % see results of the below code when using demag_correction = 1
-field2 = extractfield(nData2,'field')*H_c/cval(1);%
+field2_ = cell2mat( arrayfun(@(c) c.field, nData2(:).', 'Uniform', 0) );
+field2 = field2_*H_c/cval(1);%extractfield(nData2,'field')*H_c/cval(1);%
 strHc = sprintf('$H_c$ = %.3f(%.0f)T',H_c,...
     (cval(1)-cft(1,1))*H_c/cval(1)*1e3);% print out value of critical field, with error bars
 
@@ -390,15 +392,15 @@ ax2.TitleFontSizeMultiplier = 0.8; ax2.YTick = [0 2 4]; ax2.FontSize=16;
 ann22 = annotation('textbox',[ax2.Position(1)+.01 ax2.Position(2)+.01 0.2 0.1],'interpreter','latex',...
     'String',{'(b)'},'FontSize',ax2.FontSize,'LineStyle','-','EdgeColor','none',...
     'FitBoxToText','on','LineWidth',2,'BackgroundColor','none','Color','k');% add annotation
-ann23 = annotation('textbox',[0.2 ax2.Position(2)+.05 0.2 0.1],'interpreter','latex',...
-    'String',{'TmVO$_4$' sTeff},...
-    'FontSize',14,'LineStyle','-','EdgeColor','k','FitBoxToText','on',...
-    'LineWidth',1,'BackgroundColor',[1 1 1],'Color','k');% add annotation
+% ann23 = annotation('textbox',[0.2 ax2.Position(2)+.05 0.2 0.1],'interpreter','latex',...
+%     'String',{'TmVO$_4$' sTeff},...
+%     'FontSize',14,'LineStyle','-','EdgeColor','k','FitBoxToText','on',...
+%     'LineWidth',1,'BackgroundColor',[1 1 1],'Color','k');% add annotation
 
 %% Figure formatting
 ann22.Position(1) = ax2.Position(1)+.01; ann22.Position(2) = ax2.Position(2)+.01;
-ann23.Position(1) = ax2.Position(1)+.1/diff(ax2.XLim)*ax2.Position(3);% position textbox at x=0.2 in x axis units
-ann23.Position(2) = ax2.Position(2)+.1;
+% ann23.Position(1) = ax2.Position(1)+.1/diff(ax2.XLim)*ax2.Position(3);% position textbox at x=0.2 in x axis units
+% ann23.Position(2) = ax2.Position(2)+.1;
 ax2.LineWidth = 1;
 
 %% Data formatting for curve fitting tool analysis

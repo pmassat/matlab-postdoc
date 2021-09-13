@@ -181,9 +181,11 @@ annfield = annotation('textbox',[0.15 0.8 0.2 0.1], 'interpreter','latex',...
 xlim([0 3.1]);
 
 %% 
+% cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2018-08_TmVO4-LS5228\TmVO4_TFIM_article1_fig1'
 % formatFigure;
 % printPNG([todaystr mfd_ID '_Cp_vs_T_H'])
-printPDF([todaystr '_TmVO4-LS5228-DR-HC1807_Cp+single-h-fits_e=6p5e-4']);
+% printPDF([todaystr '_TmVO4-LS5228-DR-HC1807_Cp+single-h-fits_e=6p5e-4']);
+printPNG([todaystr '_Cp_vs_T_H=0_fits_MF_MF+strain']);
 
 
 
@@ -233,7 +235,7 @@ c2 =    0.004759;  %(0.003322, 0.006196)
 % ax2 = subplot(5,1,[3:5]); 
 p0 = plot(tvec,Cptheo0,'Color',[.5 .5 .5],'DisplayName','Mean-field');
 hold on
-p1 = plot(tvec,Cptheo,'-r','DisplayName',['MF + pheno.']);
+p1 = plot(tvec,Cptheo,'-r','DisplayName',['MF + strain']);
 % fp = plot(avg5228HC18(i).T,Cptheodat,'-r','DisplayName',sprintf('MF: e=%.2g',e));
 pdat = errorbar(avg5228HC18(i).T,avg5228HC18(i).Cp/R,avg5228HC18(i).CpFullErr/R,'.b',...
     'MarkerSize',18,'LineWidth',1,'DisplayName','Experiment');
