@@ -40,6 +40,7 @@ for ic=length(files):-1:1
 end
 
 %% Extract values of temperature and external magnetic field from structure header
+% Takes 1 or 2 minutes...
 Smfd_RF = [Srf{1,:}];% concatenate cell arrays into structure
 user_mag = [1000*ones(Ntemp,1); NaN*ones(Ntemp*Nsubfields(2),1); 5000*ones(Ntemp,1)];% Oe
 for sidx=1:length(Smfd_RF)
@@ -112,7 +113,7 @@ annfield = annotation('textbox',[0.5 0.8 0.2 0.1], 'interpreter','latex',...
 %% 
 % formatFigure;
 % printPNG([todaystr mfd_ID '_Cp_vs_T_H'])
-printPDF(['2020-09-09_TmVO4-HD-model_MFD_Hext=5kOe']);
+% printPDF(['2020-09-09_TmVO4-HD-model_MFD_Hext=5kOe']);
 
 %% Compute the average value of ratio of internal to external magnetic field 
 for i=1:length(Smfd_RF)
@@ -185,6 +186,8 @@ d2Gaussian = exp(-x.^2/(2*s^2)).*(x.^2 - s^2)/sqrt(s^10*2*pi);
 d1Cp = conv2(Cp,d1Gaussian','same');
 
 %% Plot 3D scatter of derivative of Cp
+hmax = max(H)
+tmax = max(Trf)
 figure
 scatter3(H,Trf,-d1Cp,'.')
 xlim([0 hmax]);ylim([0 tmax]);
@@ -311,7 +314,7 @@ d1Cpgm = conv2(Cpgm,d1Gaussian','same');
 % from 'AnalyzeMCEinDR_TmVO4-LS5228-DR-HC180731.m'
 figure
 n = 300;
-contourf(Hgm./5100,Tgm/Tc0rf,-d1Cpgm,n,'EdgeColor','none');
+contourf(Hgm./7326,Tgm/Tc0rf,-d1Cpgm,n,'EdgeColor','none');% 7326 Oe is the value of Hc extracted from fitting Tc vs H in curve fitting tool (see section "Identify experimental critical temperature at each field" below)
 hold on;
 fplt = fplot(@(h)h/atanh(h),[0 1.1],'Color','k','LineWidth',1);
 xlabel('$H / H_c(T=0)$'); ylabel('$T / T_D(H=0)$');
@@ -321,7 +324,7 @@ ylim([0.17 1.35]);
 cb=colorbar('north'); cb.Ticks = 0:1000:2000;%make a horizontal colorbar at the top of the plot
 cb.Label.String = '$-dC_p/dT$ (J/K$^2$/mol)'; cb.Label.Interpreter = 'latex'; cb.TickLabelInterpreter = 'latex';
 
-%% Export d1Cp matrix to to a tab delimited file
+%% Export d1Cp matrix to a tab delimited file
 filename = '2019-07-29_TmVO4-RF-E_dCp-dT.txt';
 % Header
 hdr1={'From file "2017-07_TmVO4-RF-E_Analyze_Cp_under_field.m"'};% First line header: quantities names
@@ -349,8 +352,10 @@ ebup = errorbar(hctbl.Hcrup,hctbl.Tr,hctbl.dTr,hctbl.dTr,...
 legend([ebup,ebdown],'$H_c^{\mathrm{min}}$','$H_c^{\mathrm{max}}$','Location','northeast');
 
 %% Identify experimental critical temperature at each field
-% Then we can plot Tc vs uh and fit using equation f(h) = Tc/Hc*h/atanh(h/Hc)
-% From this, we can see that the experimental value of Hc is ~0.72T 
+% Then we can plot Tc vs uh and fit using equation 
+% f(h) = Tc/Hc*h/atanh(h/Hc) in the curve fitting tool (don't forget to initialize
+% Tc and Hc with reasonable values)
+% From this, we can see that the experimental value of Hc is ~7.3 kOe 
 % and hence correct for demag, knowing the value of critical field Hc0 (see beginning of code)
 M = ones(1,length(uhrf));
 Tcd1 = ones(1,length(uhrf));
@@ -393,9 +398,9 @@ CpnumRF(i).h = uhrf(i)*rescaling/Hc;
 % CpnumRF(i).rhsgm = 0.09;
 % CpnumRF(i).sgm = CpnumRF(i).h*CpnumRF(i).rhsgm;
 CpnumRF(i).t_single_h_no_e = linspace(0,1.5,601);% reduced temperature, T/Tc
-CpnumRF(i).single_h_no_e = zeros(size(CpnumRF(i).t_single_h));
+CpnumRF(i).single_h_no_e = zeros(size(CpnumRF(i).t_single_h_no_e));
 CpnumRF(i).t_single_h_w_e = CpnumRF(i).t_single_h_no_e(2:end-1);%
-CpnumRF(i).single_h_w_e = zeros(size(CpnumRF(i).t_single_h));
+CpnumRF(i).single_h_w_e = zeros(size(CpnumRF(i).t_single_h_no_e));
 CpnumRF(i).t_h_dist_noe = [linspace(0.01,.5,50) linspace(0.505,1.1,120) linspace(1.11,1.4,30)];% reduced temperature, T/Tc
 CpnumRF(i).normpdf = zeros(size(CpnumRF(i).t_h_dist_noe));
 CpnumRF(i).comsolpdf_no_e = zeros(size(CpnumRF(i).t_h_dist_noe));
@@ -409,8 +414,8 @@ end
 %% Compute Cp_TLFIM at single value of field
 tic
 for i=rngNum%(2:end)
-CpnumRF(i).single_h_no_e = Cp_TFIM(CpnumRF(i).t_single_h,CpnumRF(i).h);
-[~,~,CpnumRF(i).single_h_w_e] = FSCp_TLFIM(CpnumRF(i).t_single_h,CpnumRF(i).h,e);
+CpnumRF(i).single_h_no_e = Cp_TFIM(CpnumRF(i).t_single_h_no_e,CpnumRF(i).h);
+[~,~,CpnumRF(i).single_h_w_e] = FSCp_TLFIM(CpnumRF(i).t_single_h_no_e,CpnumRF(i).h,e);
 CpnumRF(i).single_h_w_e = CpnumRF(i).single_h_w_e';
 end
 toc 
@@ -478,9 +483,10 @@ end
 tic% start clock to measure computation time
 rngMFD = find(ismember(uhrf,10^3*[1:8]));
 
-for idx=length(rngMFD);%rngNum(3:end)
+for idx=[6,8,10:13]%rngNum(2:4)
 % idx = 8
-    i = rngMFD(idx)
+%     i = rngMFD(idx)
+    i = idx
     
     Hext_data = unique(round(avgRFData(i).H,-1));
     [~,mfdhidx] = min(abs(Tmfd_RF.Hext_Oe-Hext_data));
@@ -612,9 +618,9 @@ for idx=1%:length(rngMFD)
     w_e_str = [' ($e=$ ' sprintf(' %.2g)',e)];
 
     % Plot results at single value of magnetic field
-    plot(CpnumRF(i).t_single_h*Tc0rf,CpnumRF(i).single_h_no_e,...
+    plot(CpnumRF(i).t_single_h_no_e*Tc0rf,CpnumRF(i).single_h_no_e,...
         'DisplayName',[single_str no_e_str]);% no longitudinal field
-    plot(CpnumRF(i).t_single_h(2:end-1)*Tc0rf,CpnumRF(i).single_h_w_e,...
+    plot(CpnumRF(i).t_single_h_no_e(2:end-1)*Tc0rf,CpnumRF(i).single_h_w_e,...
         'DisplayName',[single_str w_e_str]);% with longitudinal field
 
     % Plot results for distribution of magnetic fields as computed with COMSOL
@@ -687,7 +693,7 @@ plot_Cp_avg_w_fits(rngPlot, avgRFData, CpnumRF, Tc0rf, uhrf/Hc,...
 figure
 plot(avgRFData(i).T,avgRFData(i).Cpelr,'.','DisplayName','data')
 hold on;
-plot(CpnumRF(i).t_single_h*Tc0rf,CpnumRF(i).single_h_no_e,'DisplayName','MF');
+plot(CpnumRF(i).t_single_h_no_e*Tc0rf,CpnumRF(i).single_h_no_e,'DisplayName','MF');
 plot(CpnumRF(i).t_h_dist_noe*Tc0rf,CpnumRF(i).normpdf,'DisplayName','Gauss');
 title(['Cp mean-field vs normal pdf $H_{\mathrm{ext}}=$' sprintf('%.0fOe',uhrf(i))]);
 lgd = legend();% title(lgd,'TmVO4-RF-E');
@@ -698,7 +704,7 @@ clr = lines(length(rng));
 eb = cell(size(rng));
 for i=rng
 % fp = fplot(@(t)Cp_TFIM(t/Tc0rf,Cptheo(i).h),[0 3.2],'--','LineWidth',2,'Color',clr(rng==i,:));
-plot(CpnumRF(i).t_single_h*Tc0rf,CpnumRF(i).single_h_no_e,'--','Color',clr(rng==i,:),'DisplayName',sprintf('h=%.2f',CpnumRF(i).h));
+plot(CpnumRF(i).t_single_h_no_e*Tc0rf,CpnumRF(i).single_h_no_e,'--','Color',clr(rng==i,:),'DisplayName',sprintf('h=%.2f',CpnumRF(i).h));
 plot(CpnumRF(i).t_h_dist_noe*Tc0rf,CpnumRF(i).normpdf,'Color',clr(rng==i,:),'DisplayName',...
     sprintf('h=%.2f,r=%.1e',CpnumRF(i).h,CpnumRF(i).rhsgm));
 end
@@ -708,7 +714,7 @@ eb{rng==i} = errorbar(avgRFData(i).T,avgRFData(i).Cpelr,avgRFData(i).CpFullErr/R
     'Color',clr(rng==i,:),'LineWidth',2);
 end
 xlabel('$T$ (K)'); ylabel('$C_p/R$');%ylabel('C$_p$ (JK$^{-1}$mol$^{-1}$)');
-xlim([0 max(CpnumRF(rng(1)).t_single_h*Tc0rf)]);
+xlim([0 max(CpnumRF(rng(1)).t_single_h_no_e*Tc0rf)]);
 lgd = legend([eb{:}]); lgd.Title.String = '$H/H_c$';
 ax = gca; ax.YMinorTick = 'on';% Add minor ticks on Y axis
 anntheo = annotation('textbox',[0.13 0.83 0.2 0.1],'interpreter','latex',...
