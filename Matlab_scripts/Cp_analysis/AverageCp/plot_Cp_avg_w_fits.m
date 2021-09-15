@@ -15,7 +15,8 @@ function plot_Cp_avg_w_fits(rng, avgData, Cpnum, Tc, label, varargin)
     CpnumStrstr = p.Results.CpnumStr;
 
 %% Actual function
-figure; hold on
+figure; 
+hold on
 range = [1,rng];
 clr = lines(length(range));
 eb = cell(size(range));
@@ -35,11 +36,15 @@ for i=range
         'Color',clr(range==i,:),'LineWidth',2);
 end
 
-xlabel('Temperature (K)'); ylabel('C$_p$/R');%ylabel('C$_p$ (JK$^{-1}$mol$^{-1}$)');
+xlabel('$T$ (K)'); ylabel('$C_p/R$');%ylabel('C$_p$ (JK$^{-1}$mol$^{-1}$)');
 xlim([0 maxTplot])
-title('Heat capacity of TmVO4-RF-E')
-lgd = legend([eb{:}]); lgd.Title.String = '$H_{\mathrm{ext}}/H_c$';
+ylim([0 1.5])
+% title('Heat capacity of TmVO4-RF-E')
+lgd = legend([eb{:}]); 
+lgd.Title.String = '$H/H_{c,0}$';
+lgd.FontSize = 22;
 ax = gca; ax.YMinorTick = 'on';% Add minor ticks on Y axis
+ax.FontSize = 22;
 grid on;%
 hold off
 end

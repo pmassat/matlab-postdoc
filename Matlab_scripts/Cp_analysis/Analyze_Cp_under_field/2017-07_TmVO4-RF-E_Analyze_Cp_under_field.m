@@ -29,6 +29,7 @@ Nparams = Ntemp*Nsubfields;
 Nfields = sum(Nsubfields);
 
 %% Import magnetic field distribution from CSV file
+% Takes 1 or 2 minutes...
 % mfdRFfname = cell(1,2);
 % Srf = cell(1,2);
 % mfdRFf{3} = {'2020-08-11_TmVO4-RF-E_COMSOL_mfd_mesh=max20um-in_T=p5-1-1p5K_H=p1-p1-p8.csv',24};
@@ -40,7 +41,6 @@ for ic=length(files):-1:1
 end
 
 %% Extract values of temperature and external magnetic field from structure header
-% Takes 1 or 2 minutes...
 Smfd_RF = [Srf{1,:}];% concatenate cell arrays into structure
 user_mag = [1000*ones(Ntemp,1); NaN*ones(Ntemp*Nsubfields(2),1); 5000*ones(Ntemp,1)];% Oe
 for sidx=1:length(Smfd_RF)
@@ -309,12 +309,26 @@ Tgml = tmin:tstep:tmax;% for gridfit
 Cpgm = gridfit(H,Trf,Cp,Hgml,Tgml);
 d1Cpgm = conv2(Cpgm,d1Gaussian','same');
 
+%% Identify experimental critical temperature at each field
+% Then we can plot Tc vs uh and fit using equation 
+% f(h) = Tc/Hc*h/atanh(h/Hc) in the curve fitting tool (don't forget to initialize
+% Tc and Hc with reasonable values)
+% From this, we can see that the experimental value of Hc is ~7.326 kOe 
+% and hence correct for demag, knowing the value of critical field Hc0 (see beginning of code)
+M = ones(1,length(uhrf));
+Tcd1 = ones(1,length(uhrf));
+for i=1:length(uhrf)
+    [M(i),I] = min(avgRFData(i).d1Cp);
+    Tcd1(i) = avgRFData(i).T(I);
+end
+HcRF = 7326;% Oe
+
 %% Plot 2D contour of derivative of Cp
 % Use this section to plot the phase diagram to combine with MCE traces
 % from 'AnalyzeMCEinDR_TmVO4-LS5228-DR-HC180731.m'
 figure
 n = 300;
-contourf(Hgm./7326,Tgm/Tc0rf,-d1Cpgm,n,'EdgeColor','none');% 7326 Oe is the value of Hc extracted from fitting Tc vs H in curve fitting tool (see section "Identify experimental critical temperature at each field" below)
+contourf(Hgm./HcRF,Tgm/Tc0rf,-d1Cpgm,n,'EdgeColor','none');% 7326 Oe is the value of Hc extracted from fitting Tc vs H in curve fitting tool (see section "Identify experimental critical temperature at each field" below)
 hold on;
 fplt = fplot(@(h)h/atanh(h),[0 1.1],'Color','k','LineWidth',1);
 xlabel('$H / H_c(T=0)$'); ylabel('$T / T_D(H=0)$');
@@ -351,19 +365,6 @@ ebup = errorbar(hctbl.Hcrup,hctbl.Tr,hctbl.dTr,hctbl.dTr,...
     hctbl.dHcrup,hctbl.dHcrup,'.g','MarkerSize',18,'LineWidth',2);
 legend([ebup,ebdown],'$H_c^{\mathrm{min}}$','$H_c^{\mathrm{max}}$','Location','northeast');
 
-%% Identify experimental critical temperature at each field
-% Then we can plot Tc vs uh and fit using equation 
-% f(h) = Tc/Hc*h/atanh(h/Hc) in the curve fitting tool (don't forget to initialize
-% Tc and Hc with reasonable values)
-% From this, we can see that the experimental value of Hc is ~7.3 kOe 
-% and hence correct for demag, knowing the value of critical field Hc0 (see beginning of code)
-M = ones(1,length(uhrf));
-Tcd1 = ones(1,length(uhrf));
-for i=1:length(uhrf)
-    [M(i),I] = min(avgRFData(i).d1Cp);
-    Tcd1(i) = avgRFData(i).T(I);
-end
-
 %% Prepare MF fit of Cp vs Temperature at given field
 j=1;
 Tfit = avgRFData(j).T;
@@ -394,14 +395,14 @@ fitwghts = 1./fitCpErr;
 clear CpnumRF
 rngNum = 1:length(uhrf);
 for i=rngNum
-CpnumRF(i).h = uhrf(i)*rescaling/Hc;
+CpnumRF(i).h = uhrf(i)/HcRF;
 % CpnumRF(i).rhsgm = 0.09;
 % CpnumRF(i).sgm = CpnumRF(i).h*CpnumRF(i).rhsgm;
 CpnumRF(i).t_single_h_no_e = linspace(0,1.5,601);% reduced temperature, T/Tc
 CpnumRF(i).single_h_no_e = zeros(size(CpnumRF(i).t_single_h_no_e));
 CpnumRF(i).t_single_h_w_e = CpnumRF(i).t_single_h_no_e(2:end-1);%
 CpnumRF(i).single_h_w_e = zeros(size(CpnumRF(i).t_single_h_no_e));
-CpnumRF(i).t_h_dist_noe = [linspace(0.01,.5,50) linspace(0.505,1.1,120) linspace(1.11,1.4,30)];% reduced temperature, T/Tc
+CpnumRF(i).t_h_dist_noe = [linspace(0.01,.5,50) linspace(0.505,1.1,120) linspace(1.11,1.5,40)];% reduced temperature, T/Tc
 CpnumRF(i).normpdf = zeros(size(CpnumRF(i).t_h_dist_noe));
 CpnumRF(i).comsolpdf_no_e = zeros(size(CpnumRF(i).t_h_dist_noe));
 CpnumRF(i).comsolpdf_w_e = zeros(size(CpnumRF(i).t_h_dist_noe));
@@ -436,17 +437,18 @@ sigma =.09*mu;
 gauss = @(x) exp(-0.5 * ((x - mu)./sigma).^2) ./ (sqrt(2*pi) .* sigma);
 
 %% Compute probability distribution of fields at a given value of T and Hext
-Hcnum = Hc;
-for mfdidx=4:14:56
-mfd = Smfd_RF(mfdidx).mfd(Smfd_RF(mfdidx).mfd>0)/Hcnum;% create distribution from non-zero values
-% h = histogram(mfd, 'Normalization', 'pdf');% plot histogram of distribution
-[Smfd_RF(mfdidx).hc, edges] = histcounts(mfd, 100, 'Normalization', 'pdf');% plot histogram of distribution
-% binCenters = h.BinEdges + (h.BinWidth/2);
-Smfd_RF(mfdidx).binCenters = mean([edges(1:end-1);edges(2:end)],1);
-Smfd_RF(mfdidx).binWidths = edges(2:end)-edges(1:end-1);
-end
+% Hcnum = Hc;
+% for mfdidx=4:14:56
+% mfd = Smfd_RF(mfdidx).mfd(Smfd_RF(mfdidx).mfd>0)/Hcnum;% create distribution from non-zero values
+% % h = histogram(mfd, 'Normalization', 'pdf');% plot histogram of distribution
+% [Smfd_RF(mfdidx).hc, edges] = histcounts(mfd, 100, 'Normalization', 'pdf');% plot histogram of distribution
+% % binCenters = h.BinEdges + (h.BinWidth/2);
+% Smfd_RF(mfdidx).binCenters = mean([edges(1:end-1);edges(2:end)],1);
+% Smfd_RF(mfdidx).binWidths = edges(2:end)-edges(1:end-1);
+% end
 
 %% Create table from structure
+% Used for computation of CpnumRF with mfd
 Tmfd_RF = struct2table(Smfd_RF);% 
 uhmfdrf = unique(Tmfd_RF.Hext_Oe);
 
@@ -483,7 +485,7 @@ end
 tic% start clock to measure computation time
 rngMFD = find(ismember(uhrf,10^3*[1:8]));
 
-for idx=[6,8,10:13]%rngNum(2:4)
+for idx=rngNum(3:end)
 % idx = 8
 %     i = rngMFD(idx)
     i = idx
@@ -603,6 +605,13 @@ end
 
 toc 
 
+%% Post-processing: remove specific spikes that were not removed by the above code
+% Caution! Running these commands more than once will delete good data points!
+% CpnumRF(5).comsolpdf_w_e(94) = [];
+% CpnumRF(5).t_h_dist_w_e(94) = [];
+% CpnumRF(9).comsolpdf_w_e(24) = [];
+% CpnumRF(9).t_h_dist_w_e(24) = [];
+
 %% Plot Cp for COMSOL distribution of fields
 
 for idx=1%:length(rngMFD)
@@ -641,41 +650,47 @@ end
 
 %% Prepare exportation of figure/data
 cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2017-07_TmVO4_Cp_MCE\2017-07-20_Cp\2017-07-20_TmVO4_Cp_analysis'
-mfd_ID = '_TmVO4_half-diamond_V=Vsample_Hzm=0p71513';
+mfd_ID = '_TmVO4-RF-E_Hzm=0p71513';
 
 %% Create file name for field i
-for i=rng
-fname_field{i} = sprintf('%s_Cpnum_Hext=%dkOe', mfd_ID, uhrf(i)/10^3);
+for i=rngNum(end)
+fname_field{i} = sprintf('%s_Cpnum_Hext=%dOe', mfd_ID, uhrf(i));
 export_dat = [todaystr fname_field{i} '.dat'];
 import_dat = ['2020-09-09' fname_field{i} '.dat'];
 
+%% Export results to .dat file
+% Note: in order to run a for loop that contains subsections like this
+% one, the cursor has to be outside the loop when executing the run command
+save_Cpnum_data(CpnumRF(i), uhrf(i)/10^3, mfd_ID, e, Tc0rf, export_dat);
+
 %% Import results from .dat file
-fileID = fopen(import_dat,'r');
-A = textscan(fileID, '%f%f', 'delimiter', ',', 'HeaderLines', 7);
-CpnumRF(i).t_h_dist_w_e = A{1}';
-CpnumRF(i).comsolpdf_w_e = A{2}';
-fclose(fileID);
+% fileID = fopen(import_dat,'r');
+% A = textscan(fileID, '%f%f', 'delimiter', ',', 'HeaderLines', 7);
+% CpnumRF(i).t_h_dist_w_e = A{1}';
+% CpnumRF(i).comsolpdf_w_e = A{2}';
+% fclose(fileID);
 
 end
 
 %% Plot data and computed Cp
-plot_Cp_avg_w_fits(rngPlot, avgRFData, CpnumRF, Tc0rf, uhrf/Hc,...
+plot_Cp_avg_w_fits(rngPlot, avgRFData, CpnumRF, Tc0rf, uhrf/HcRF,...
     'TnumStr', 't_h_dist_w_e', 'CpnumStr', 'comsolpdf_w_e')
+annnum = annotation('textbox',[0 0.92 0.1 0.1],'interpreter','latex',...
+    'String',{['(a)']}, 'LineStyle','-','EdgeColor','None',...
+    'BackgroundColor','none','Color','k','VerticalAlignment','bottom');% add numbering annotation
 
 %% Export figure
 % Place cursor on this line to run loop containing subsections
 % for idx=1:4%length(rngMFD)
 % i=rngMFD(idx)
 
+% cd 'C:\Users\Pierre\Desktop\Postdoc\TmVO4\TmVO4_heat-capacity\2017-07_TmVO4_Cp_MCE\2017-07-20_Cp\2017-07-20_TmVO4_Cp_analysis\TmVO4_paper_fig3'
 % formatFigure;
 % printPNG([todaystr mfd_ID '_Cp_vs_T_H'])
-% printPDF(['2019-06-18_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
+% printPDF([todaystr '_TmVO4-RF-E_fit_Schottky_' strrep(hrstr,'.','p') 'xHc']);
 % end
+% printPNG([todaystr '_TmVO4-RF-E+Cpnum-mfd_vs_T_H']);
 
-%% Export results to .dat file
-% Note: in order to run a for loop that contains subsections like this
-% one, the cursor has to be outside the loop when executing the run command
-% save_Cpnum_data(CpnumRF(i), uhrf(i)/10^3, mfd_ID, e, Tc0rf, dat_name);
     
 
 
@@ -705,8 +720,8 @@ eb = cell(size(rng));
 for i=rng
 % fp = fplot(@(t)Cp_TFIM(t/Tc0rf,Cptheo(i).h),[0 3.2],'--','LineWidth',2,'Color',clr(rng==i,:));
 plot(CpnumRF(i).t_single_h_no_e*Tc0rf,CpnumRF(i).single_h_no_e,'--','Color',clr(rng==i,:),'DisplayName',sprintf('h=%.2f',CpnumRF(i).h));
-plot(CpnumRF(i).t_h_dist_noe*Tc0rf,CpnumRF(i).normpdf,'Color',clr(rng==i,:),'DisplayName',...
-    sprintf('h=%.2f,r=%.1e',CpnumRF(i).h,CpnumRF(i).rhsgm));
+% plot(CpnumRF(i).t_h_dist_noe*Tc0rf,CpnumRF(i).normpdf,'Color',clr(rng==i,:),'DisplayName',...
+%     sprintf('h=%.2f,r=%.1e',CpnumRF(i).h,CpnumRF(i).rhsgm));
 end
 for i=rng
 eb{rng==i} = errorbar(avgRFData(i).T,avgRFData(i).Cpelr,avgRFData(i).CpFullErr/R,...
