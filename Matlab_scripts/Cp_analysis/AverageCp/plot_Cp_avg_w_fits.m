@@ -41,8 +41,9 @@ xlim([0 maxTplot])
 ylim([0 1.5])
 % title('Heat capacity of TmVO4-RF-E')
 lgd = legend([eb{:}]); 
-lgd.Title.String = '$H/H_{c,0}$';
+lgd.Title.String = '$H/H_{c,0}^{\mathrm{SC}}$';
 lgd.FontSize = 22;
+lgd.Location = 'northwest';
 ax = gca; ax.YMinorTick = 'on';% Add minor ticks on Y axis
 ax.FontSize = 22;
 grid on;%

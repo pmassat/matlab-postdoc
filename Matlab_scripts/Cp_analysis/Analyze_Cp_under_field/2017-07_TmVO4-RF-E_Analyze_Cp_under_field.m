@@ -110,7 +110,7 @@ annfield = annotation('textbox',[0.5 0.8 0.2 0.1], 'interpreter','latex',...
     'String', param_title{param_select}, 'EdgeColor','none',...
     'FitBoxToText','on', 'BackgroundColor','none', 'Color','k');% add annotation
 
-%% 
+%% Save figure
 % formatFigure;
 % printPNG([todaystr mfd_ID '_Cp_vs_T_H'])
 % printPDF(['2020-09-09_TmVO4-HD-model_MFD_Hext=5kOe']);
@@ -158,6 +158,10 @@ CpErr=CpErr(whichPoints).*M/m*1e-6;%
 [uhrf,~,X] = unique(round(H,-1));
 uhrf(2,:)=[];% When rounding to nearest tens, remove uh=10Oe because it is redundant with uh=0Oe
 
+hmax=max(uhrf);
+tmin = min(Trf);
+tmax = max(Trf);
+
 %% Plot 2D scatter of Cp data at H=0
 figure
 plot(Trf(round(H,-1)<20),Cp(round(H,-1)<20),'.')
@@ -166,9 +170,6 @@ xlabel('Temperature (K)');
 ylabel('Cp (J/K/mol)')
 
 %% Plot 3D scatter of Cp data
-hmax=max(uhrf);
-tmin = min(Trf);
-tmax = max(Trf);
 figure
 scatter3(H,Trf,Cp,'.')
 xlim([0 hmax]);ylim([0 tmax]);
@@ -177,7 +178,7 @@ zlabel('Cp (J/K/mol)')
 
 %% Gaussian convolution
 tstep=0.025; 
-hstep=500*rescaling;
+hstep=500*rescaling;% rescaling = 0.7160
 steps = -50:50;
 x= tstep*steps;
 s=0.05;
@@ -321,13 +322,13 @@ for i=1:length(uhrf)
     [M(i),I] = min(avgRFData(i).d1Cp);
     Tcd1(i) = avgRFData(i).T(I);
 end
-HcRF = 7326;% Oe
 
 %% Plot 2D contour of derivative of Cp
 % Use this section to plot the phase diagram to combine with MCE traces
 % from 'AnalyzeMCEinDR_TmVO4-LS5228-DR-HC180731.m'
-figure
+HcRF = 7326;% Oe; obtained from fitting Tc vs H in curve fitting tool
 n = 300;
+figure
 contourf(Hgm./HcRF,Tgm/Tc0rf,-d1Cpgm,n,'EdgeColor','none');% 7326 Oe is the value of Hc extracted from fitting Tc vs H in curve fitting tool (see section "Identify experimental critical temperature at each field" below)
 hold on;
 fplt = fplot(@(h)h/atanh(h),[0 1.1],'Color','k','LineWidth',1);
@@ -349,10 +350,11 @@ fclose(fid);
 % dlmwrite(filename,-d1Cpgm,'-append','Delimiter','\t')
 
 %% Export X and Y axes values of above matrix
-Hgmr = Hgm(1,:)./5100;
+Hgmr = Hgm(1,:)./HcRF;
 Tgmr = Tgm(:,1)/Tc0rf;
 % Hgmr and Tgmr exported manually on 2019-07-29 by copying from Matlab 
 % variables and pasting into worksheet of TmVO4_phase_diagram_Cp_MCE.opju
+% At that time, HcRF was replaced by 5100 in the definition of Hgmr
 
 %% Plot errorbar plot of Hc(T) from xls file
 % Need to import table from xls file first, e.g.
@@ -425,7 +427,7 @@ toc
 rng = find(ismember(uhrf,10^3*[1:8]))';%[1 5 7 9 13];
 rngPlot = rng(3:end-1);
 
-plot_Cp_avg_w_fits(rngPlot, avgRFData, CpnumRF, Tc0rf, uhrf/Hc)
+plot_Cp_avg_w_fits(rngPlot, avgRFData, CpnumRF, Tc0rf, uhrf/HcRF)
 
 % Fit parameters on data at H=0: Tc=2.125(3), e=1.5(4)e-3
 % Note: the values of amplitude coefficient and Tc extracted from fit 
@@ -485,7 +487,7 @@ end
 tic% start clock to measure computation time
 rngMFD = find(ismember(uhrf,10^3*[1:8]));
 
-for idx=rngNum(3:end)
+for idx=rngNum(2:end)
 % idx = 8
 %     i = rngMFD(idx)
     i = idx
@@ -675,9 +677,18 @@ end
 %% Plot data and computed Cp
 plot_Cp_avg_w_fits(rngPlot, avgRFData, CpnumRF, Tc0rf, uhrf/HcRF,...
     'TnumStr', 't_h_dist_w_e', 'CpnumStr', 'comsolpdf_w_e')
-annnum = annotation('textbox',[0 0.92 0.1 0.1],'interpreter','latex',...
+annnum = annotation('textbox',[0 0.91 0.1 0.1],'interpreter','latex',...
     'String',{['(a)']}, 'LineStyle','-','EdgeColor','None',...
     'BackgroundColor','none','Color','k','VerticalAlignment','bottom');% add numbering annotation
+ax = gca();% Get current axis
+% lgd = ax.Legend;% Assign variable name to axis legend
+% lgd.Title.String = '$H/H_{c,0}^{\mathrm{SC}}$';% Redefine the axis legend
+ax.XRuler.TickLabelGapOffset = 0;% Remove gap between X axis and its labels
+
+% ax.XAxis.Label.Position(2)=-.11;% Move X axis title closer to the labels
+% Don't do that: from https://www.mathworks.com/matlabcentral/answers/95109-how-do-i-insert-more-space-between-my-x-axis-ticklabels-and-the-xlabel-string-in-my-figure:
+% "Changing the xlabel position property results in MATLAB treating the
+% xlabel and the axis as two independent objects so that when the PRINT command resizes the figure to fit the paper, these two objects are not where they should be relative to each other."
 
 %% Export figure
 % Place cursor on this line to run loop containing subsections
