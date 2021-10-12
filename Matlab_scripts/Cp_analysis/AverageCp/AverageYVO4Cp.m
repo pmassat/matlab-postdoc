@@ -1,12 +1,12 @@
 %% Create new workspace for new data analysis
 clear all;% clear workspace, since variables change for each sample
-cd 'C:\Users\Pierre\Desktop\Postdoc\YTmVO4\YTmVO4_HeatCapacity\YVO4\2019-05-10_YVO4-LS5259-HC1905-1\2019-05-10_YVO4-LS5259-HC1905-1_analysis';
+cd 'C:\Users\Pierre\Desktop\Postdoc\YTmVO4\YTmVO4_HeatCapacity\YVO4\2019-05-10_YVO4-LS5259-HC1905-1\';
 % M = 283.87;% molar mass of TmVO4, in g/mol
 M = 203.85;% molar mass of YVO4, in g/mol
 m = 1.79*1e-3;% mass of sample measured, in g
 fileImp = '2019-05-10_YVO4-LS5259-HC1905-1'; 
-DATA=ImportTmVO4Cp([fileImp '.dat']);% Use this data to plot Cp vs H, T superimposed on theoretical curves
-% Average data points at each temperature + field 
+DATA=ImportTmVO4Cp([fileImp '.dat']);% In case of error, first check that the cwd is correct
+
 %%
 % H=[DATA.FieldOersted; DATA(2).FieldOersted];
 % T=[DATA.SampleTempKelvin; DATA(2).SampleTempKelvin];
@@ -32,31 +32,31 @@ figure
 plot(T,Cp,'.')
 
 %% Plot 3D scatter (only for measurements at different magnetic fields)
-figure
-plot(T,Cp,'.')
-% scatter3(H,T,Cp,'.')
-% xlim([0 hmax])
-% ylim([0 3])
-xlabel('Field (Oe)')
-ylabel('Temperature (K)')
-zlabel('C$_p$ ($\mu$J/K)')
-view(90,0)
+% figure
+% plot(T,Cp,'.')
+% % scatter3(H,T,Cp,'.')
+% % xlim([0 hmax])
+% % ylim([0 3])
+% xlabel('Field (Oe)')
+% ylabel('Temperature (K)')
+% zlabel('C$_p$ ($\mu$J/K)')
+% view(90,0)
 
 %% (only for measurements at different magnetic fields)
-
-steps = -50:50;
-x= tstep*steps;
-s=0.05;
-d1Gaussian = -exp(-x.^2/(2*s^2)).*x./sqrt(s^6*2*pi);
-d2Gaussian = exp(-x.^2/(2*s^2)).*(x.^2 - s^2)/sqrt(s^10*2*pi);
-
-figure
-d1Cpg = conv2(Cpg,d1Gaussian','same');
-d2Cpg = conv2(Cpg,d2Gaussian','same');
-surf(Hg,Tg,-d1Cpg,'EdgeColor','none');
-xlabel('Field (Oe)')
-ylabel('Temperature (K)')
-zlabel('-dCp/dT (uJ/K^2)')
+% 
+% steps = -50:50;
+% x= tstep*steps;
+% s=0.05;
+% d1Gaussian = -exp(-x.^2/(2*s^2)).*x./sqrt(s^6*2*pi);
+% d2Gaussian = exp(-x.^2/(2*s^2)).*(x.^2 - s^2)/sqrt(s^10*2*pi);
+% 
+% figure
+% d1Cpg = conv2(Cpg,d1Gaussian','same');
+% d2Cpg = conv2(Cpg,d2Gaussian','same');
+% surf(Hg,Tg,-d1Cpg,'EdgeColor','none');
+% xlabel('Field (Oe)')
+% ylabel('Temperature (K)')
+% zlabel('-dCp/dT (uJ/K^2)')
 
 %% Create structure containing data separated according to magnetic field values
 clear separatedCpData
@@ -96,6 +96,29 @@ fnamesep = strsplit(fileImp,'_');
 date = fnamesep{1};
 sample = fnamesep{2};
 
+%% Fit molar heat capacity data.
+i = 1;
+[xData, yData] = prepareCurveData( averageCpData(i).T, averageCpData(i).Cpm/R );
+
+% Set up fittype and options.
+ft = fittype( '(T/T1)^p', 'independent', 'T', 'dependent', 'y' );
+opts = fitoptions( 'Method', 'NonlinearLeastSquares', 'Weights', 1./averageCpData(i).CpmErr );
+opts.Display = 'Off';
+opts.StartPoint = [10 3];
+
+% Fit model to data.
+[fitresult, gof] = fit( xData, yData, ft, opts );
+fitfunction = @(T) (T/fitresult.T1)^fitresult.p;
+
+% Plot fit with data.
+figure( 'Name', 'untitled fit 1' );
+h = fplot( fitfunction, [0 70], '-r','LineWidth',2);
+legend( h, 'avgCp vs. avgT', 'untitled fit 1', 'Location', 'NorthEast', 'Interpreter', 'none' );
+% Label axes
+xlabel( 'avgT', 'Interpreter', 'none' );
+ylabel( 'avgCp', 'Interpreter', 'none' );
+grid on
+
 %% Plot averaged data at each field separately
 R = 8.314;% gas constant, in J/K/mol
 figure
@@ -109,10 +132,13 @@ for i=1:length(fields)
     ylabel('C$_p$ (uJ/K)')
     end
 end
-title(sample)
-xlabel('Temperature (K)');
-legendCell = cellstr(num2str(fields, '%-d Oe'));
-legend(legendCell,'Location','best')
+fp = fplot( fitfunction, [0 75], '-r','LineWidth',1.5);
+% title(sample)
+xlabel('$T$ (K)');
+legend(fp, sprintf('$(T/%0.2g)^{%0.2g}$',fitresult.T1, fitresult.p), 'Location', 'northwest')
+% legendCell = cellstr(num2str(fields, '%-d Oe'));
+% legend(legendCell,'Location','best')
+grid on
 hold off
 
 %% Prepare curve fit tool
@@ -120,7 +146,9 @@ avgT = averageCpData.T;
 avgCp = averageCpData.Cp;
 
 %% Print figure to pdf
-printPDF([fileImp '_avg']);
+% cd '.\2019-05-10_YVO4-LS5259-HC1905-1_analysis';
+formatFigure
+% printPDF([todaystr '_' sample '_avg']);
 
 %% Concatenate data for exportation 
 if isfield(averageCpData(i),'Cpm')
