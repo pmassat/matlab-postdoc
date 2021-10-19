@@ -1,5 +1,5 @@
 %% Create new workspace for new data analysis
-clear all;% clear workspace, since variables change for each sample
+% clear all;% clear workspace, since variables change for each sample
 cd 'C:\Users\Pierre\Desktop\Postdoc\YTmVO4\YTmVO4_HeatCapacity\YVO4\2019-05-10_YVO4-LS5259-HC1905-1\';
 % M = 283.87;% molar mass of TmVO4, in g/mol
 M = 203.85;% molar mass of YVO4, in g/mol
@@ -96,7 +96,7 @@ fnamesep = strsplit(fileImp,'_');
 date = fnamesep{1};
 sample = fnamesep{2};
 
-%% Fit molar heat capacity data.
+%% Fit molar heat capacity data
 i = 1;
 [xData, yData] = prepareCurveData( averageCpData(i).T, averageCpData(i).Cpm/R );
 
@@ -120,7 +120,7 @@ ylabel( 'avgCp', 'Interpreter', 'none' );
 grid on
 
 %% Plot averaged data at each field separately
-R = 8.314;% gas constant, in J/K/mol
+% R = 8.314;% gas constant, in J/K/mol
 figure
 hold on
 for i=1:length(fields)
@@ -132,23 +132,64 @@ for i=1:length(fields)
     ylabel('C$_p$ (uJ/K)')
     end
 end
-fp = fplot( fitfunction, [0 75], '-r','LineWidth',1.5);
+% fp = fplot( fitfunction, [0 75], '-r','LineWidth',1.5);
 % title(sample)
 xlabel('$T$ (K)');
-legend(fp, sprintf('$(T/%0.2g)^{%0.2g}$',fitresult.T1, fitresult.p), 'Location', 'northwest')
+% legend(fp, sprintf('$(T/%0.2g)^{%0.2g}$',fitresult.T1, fitresult.p), 'Location', 'northwest')
 % legendCell = cellstr(num2str(fields, '%-d Oe'));
 % legend(legendCell,'Location','best')
 grid on
 hold off
 
+%% Print figure to pdf
+% cd '.\2019-05-10_YVO4-LS5259-HC1905-1_analysis';
+formatFigure
+% printPDF([todaystr '_' sample '_Cpm']);
+
 %% Prepare curve fit tool
 avgT = averageCpData.T;
-avgCp = averageCpData.Cp;
+avgTsqr = avgT.^2;
+avgCpm = averageCpData.Cpm;
+avgCpmErr = averageCpData.CpmErr;
+avgCpmT = avgCpm./avgT;
+avgCpmTErr = avgCpmErr./avgT;
+avgWeights = 1./avgCpmTErr;
+
+%% Fit Cp/T vs T^2
+[xTsqr, yCpmT, weightsCpmT] = prepareCurveData( avgTsqr, avgCpmT, avgWeights );
+
+% Set up fittype and options.
+ft = fittype( 'poly1' );
+excludedCpmT = excludedata( xTsqr, yCpmT, 'Domain', [0 25] );
+opts = fitoptions( 'Method', 'LinearLeastSquares' );
+opts.Weights = weightsCpmT;
+opts.Exclude = excludedCpmT;
+opts.Lower = [-Inf 0];
+opts.Upper = [Inf 0];
+
+% Fit model to data.
+fitCpmT = fit( xTsqr, yCpmT, ft, opts );% Adjusted R-square: 0.9695 in Curve Fitting Tool
+fCpmT = @(Tsq) fitCpmT.p1*Tsq + fitCpmT.p2;
+
+%% Plot averaged data at each field separately
+% R = 8.314;% gas constant, in J/K/mol
+figure
+hold on
+errorbar(avgTsqr(~excludedCpmT), avgCpmT(~excludedCpmT), avgCpmTErr(~excludedCpmT),'.b','MarkerSize',18)
+errorbar(avgTsqr(excludedCpmT), avgCpmT(excludedCpmT), avgCpmTErr(excludedCpmT),'.k','MarkerSize',18)
+ylabel('$C_p/T$ (J/K$^2$/mol)')
+fp = fplot(fCpmT, [0 25], '-r','LineWidth',1.5);
+xlabel('$T^2$ (K$^2$)');
+xlim([0 25]);
+% ylim([0 0.15]);
+% legend(fp, sprintf('$%0.2gT^2+%0.2g$',fitCpmT.p1, fitCpmT.p2), 'Location', 'northwest')
+grid on
+hold off
 
 %% Print figure to pdf
 % cd '.\2019-05-10_YVO4-LS5259-HC1905-1_analysis';
 formatFigure
-% printPDF([todaystr '_' sample '_avg']);
+% printPDF([todaystr '_' sample '_CpmT']);
 
 %% Concatenate data for exportation 
 if isfield(averageCpData(i),'Cpm')
